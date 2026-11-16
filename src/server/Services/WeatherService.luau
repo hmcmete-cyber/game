@@ -19,9 +19,9 @@
 -- "Touch" is checked by distance every 0.1 s on the server. That's more
 -- reliable than .Touched for anchored parts and fast-moving players.
 
+local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -164,38 +164,98 @@ local function rewardOf(typeName: string, shiny: boolean): number
 	return Weather.Types[typeName].Reward * (shiny and Weather.ShinyMultiplier or 1)
 end
 
--- The storm itself: a coloured core with particles
+-- Puffy cloud: several soft spheres welded together around a center puff.
+-- Thunder clouds are dark and tagged "LightningCloud" so clients add electric
+-- arcs (see client Effects.luau).
+local PUFFS = {
+	-- offset (in cloud diameters), size (in cloud diameters), colour shade
+	{ Vector3.new(0, 0, 0), 0.55, 1 },
+	{ Vector3.new(0.3, -0.06, 0.02), 0.42, 0.94 },
+	{ Vector3.new(-0.3, -0.05, -0.03), 0.42, 0.96 },
+	{ Vector3.new(0.02, 0.14, 0.22), 0.4, 1.04 },
+	{ Vector3.new(-0.05, 0.12, -0.22), 0.38, 1.02 },
+	{ Vector3.new(0.16, 0.22, -0.08), 0.32, 1.06 },
+	{ Vector3.new(-0.18, -0.12, 0.2), 0.32, 0.92 },
+}
+
+local CLOUD_TINT = {
+	Rain = Color3.fromRGB(190, 205, 225),
+	Tornado = Color3.fromRGB(200, 195, 180),
+	Snow = Color3.fromRGB(250, 252, 255),
+	Thunder = Color3.fromRGB(70, 72, 90),
+}
+
+local function shade(c: Color3, k: number): Color3
+	return Color3.new(math.clamp(c.R * k, 0, 1), math.clamp(c.G * k, 0, 1), math.clamp(c.B * k, 0, 1))
+end
+
+-- Move a part and every BasePart under it, keeping their relative offsets.
+-- (Welds only act once parts are in workspace, so new models must be moved this way.)
+local function moveAssembly(root: BasePart, cf: CFrame)
+	local old = root.CFrame
+	for _, d in root:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CFrame = cf * old:ToObjectSpace(d.CFrame)
+		end
+	end
+	root.CFrame = cf
+end
+
 local function makeCore(typeName: string, shiny: boolean, scale: number): BasePart
 	local def = Weather.Types[typeName]
-	local p = Instance.new("Part")
-	p.Name = "Core"
-	p.Shape = Enum.PartType.Ball
-	p.Size = Vector3.one * def.Size * 0.6 * scale
-	p.Color = shiny and Weather.ShinyColor or def.Color
-	p.Material = shiny and Enum.Material.Neon or Enum.Material.SmoothPlastic
-	p.Anchored = true
-	p.CanCollide = false
-	p.CanQuery = false
-	p.CanTouch = false
-	p.Massless = true
+	local diameter = def.Size * 0.7 * scale
+	local tint = shiny and Weather.ShinyColor or (CLOUD_TINT[typeName] or def.Color)
+	local thunder = typeName == "Thunder"
+
+	local center
+	for i, puff in PUFFS do
+		local p = Instance.new("Part")
+		p.Name = i == 1 and "Core" or ("Puff" .. i)
+		p.Shape = Enum.PartType.Ball
+		p.Size = Vector3.one * diameter * puff[2]
+		p.Color = shade(tint, puff[3])
+		p.Material = shiny and Enum.Material.Neon or (thunder and Enum.Material.Slate or Enum.Material.SmoothPlastic)
+		p.Transparency = thunder and 0.05 or 0.12
+		p.Anchored = i == 1
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.CastShadow = false
+		p.Massless = true
+		if center then
+			p.CFrame = center.CFrame * CFrame.new(puff[1] * diameter)
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = center
+			weld.Part1 = p
+			weld.Parent = p
+			p.Parent = center
+		else
+			center = p
+		end
+	end
 
 	local particles = Instance.new("ParticleEmitter")
 	particles.Color = ColorSequence.new(shiny and Weather.ShinyColor or def.ParticleColor)
 	particles.Acceleration = def.ParticleAcceleration
-	particles.Rate = shiny and 30 or 15
-	particles.Lifetime = NumberRange.new(0.5, 1)
-	particles.Speed = NumberRange.new(0.5, 2)
+	particles.Rate = shiny and 30 or (thunder and 25 or 12)
+	particles.Lifetime = thunder and NumberRange.new(0.1, 0.25) or NumberRange.new(0.5, 1)
+	particles.Speed = thunder and NumberRange.new(4, 9) or NumberRange.new(0.5, 2)
 	particles.SpreadAngle = Vector2.new(180, 180)
-	particles.Size = NumberSequence.new(0.3 * scale)
-	particles.LightEmission = shiny and 1 or 0.3
-	particles.Parent = p
+	particles.Size = NumberSequence.new((thunder and 0.18 or 0.3) * scale)
+	particles.LightEmission = (shiny or thunder) and 1 or 0.3
+	particles.Parent = center
 
 	local light = Instance.new("PointLight")
+	light.Name = "CloudLight"
 	light.Color = shiny and Weather.ShinyColor or def.ParticleColor
-	light.Brightness = (typeName == "Thunder" or shiny) and 2.5 or 1
+	light.Brightness = (thunder or shiny) and 2.5 or 0.8
 	light.Range = 8 * scale
-	light.Parent = p
-	return p
+	light.Parent = center
+
+	if thunder then
+		CollectionService:AddTag(center, "LightningCloud")
+	end
+	return center
 end
 
 -- A weather sphere: glass shell + storm core inside (one assembly)
@@ -207,7 +267,8 @@ local function makeSphere(typeName: string, shiny: boolean, scale: number): Base
 	shell.Size = Vector3.one * def.Size * scale
 	shell.Color = shiny and Weather.ShinyColor or SPHERE_COLOR
 	shell.Material = Enum.Material.Glass
-	shell.Transparency = 0.6
+	shell.Transparency = 0.7
+	shell.Reflectance = 0.08
 	shell.Anchored = true
 	shell.CanCollide = false
 	shell.CanQuery = false
@@ -217,7 +278,7 @@ local function makeSphere(typeName: string, shiny: boolean, scale: number): Base
 	shell:SetAttribute("Shiny", shiny)
 
 	local core = makeCore(typeName, shiny, scale)
-	core.CFrame = shell.CFrame
+	moveAssembly(core, shell.CFrame)
 	core.Anchored = false
 	local weld = Instance.new("WeldConstraint")
 	weld.Part0 = shell
@@ -247,6 +308,7 @@ end
 
 -- Weld a sphere above the player's head
 local function attachOverhead(part: BasePart, root: BasePart, height: number)
+	CollectionService:RemoveTag(part, "FloatingIsland")
 	local label = part:FindFirstChild("Label")
 	if label then
 		label:Destroy()
@@ -325,10 +387,14 @@ local function renderVault(vault: BasePart, entry)
 
 	if entry and Weather.Types[entry.Type] then
 		local def = Weather.Types[entry.Type]
-		local core = makeCore(entry.Type, entry.Shiny == true, vault.Size.X / def.Size * 1.2)
+		local core = makeCore(entry.Type, entry.Shiny == true, vault.Size.X / def.Size * 1.1)
 		core.Name = "Stored"
-		core.Anchored = true
-		core.CFrame = vault.CFrame
+		core.Anchored = false -- welded, so it follows the vault when clients float it
+		moveAssembly(core, vault.CFrame)
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = vault
+		weld.Part1 = core
+		weld.Parent = core
 		core.Parent = vault
 		vault.Transparency = 0.45
 		vault.Color = entry.Shiny and Weather.ShinyColor or def.Color:Lerp(Color3.new(1, 1, 1), 0.5)
@@ -475,6 +541,13 @@ local function deliver(player: Player, c, nest: BasePart)
 		addCoins(player, reward)
 		refreshVaults(player)
 		local vault = MapService.GetVaults(MapService.GetRooftop(player))[slot]
+		if vault then
+			-- clients play the "cloud flies into the sphere" flash
+			local root = getRoot(player)
+			vault:SetAttribute("PulseFrom", root and (root.Position + Vector3.new(0, 4.5, 0)) or nest.Position)
+			vault:SetAttribute("PulseColor", c.Shiny and Weather.ShinyColor or def.ParticleColor)
+			vault:SetAttribute("Pulse", os.clock())
+		end
 		burstAt(vault and vault.Position or nest.Position, c.Shiny and Weather.ShinyColor or def.Color, c.Shiny and 80 or 40)
 		hint(player, c.Victim and `Heist complete! {def.DisplayName} is yours now 😈`
 			or `{def.DisplayName} stored in your vault — it earns coins while it stays!`, 3)
@@ -523,7 +596,7 @@ local function steal(thief: Player, root: BasePart, owner: Player, slot: number,
 
 	local def = Weather.Types[entry.Type]
 	local sphere = makeSphere(entry.Type, entry.Shiny == true, 0.75)
-	sphere.CFrame = vault.CFrame
+	moveAssembly(sphere, vault.CFrame)
 	sphere.Parent = weatherFolder
 	burstAt(vault.Position, THIEF_COLOR, 30)
 	startCarry(thief, root, sphere, entry.Type, entry.Shiny == true, owner)
@@ -582,6 +655,7 @@ local function setupStorm()
 	light.Range = 40
 	light.Brightness = 0
 	light.Parent = storm:FindFirstChild("Puff1")
+	CollectionService:AddTag(storm:FindFirstChild("Puff1"), "LightningCloud") -- clients add arcs
 	storm.Parent = weatherFolder
 
 	-- Occasional lightning flicker inside the storm
@@ -602,7 +676,7 @@ local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean)
 	local def = Weather.Types[typeName]
 	local sphere = makeSphere(typeName, shiny, 1)
 	local base = spawnPart.Position + Vector3.new(0, 1.5, 0)
-	sphere.CFrame = CFrame.new(stormPos) -- born inside the storm
+	moveAssembly(sphere, CFrame.new(stormPos)) -- born inside the storm
 	addLabel(sphere, shiny and `✨ SHINY {def.DisplayName} ✨` or def.DisplayName, shiny and Weather.ShinyColor or Color3.new(1, 1, 1))
 	sphere.Parent = wildFolder
 
@@ -626,6 +700,11 @@ local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean)
 		if wild[sphere] then
 			info.Ready = true
 			burstAt(base, shiny and Weather.ShinyColor or def.Color, 12)
+			-- clients make it bob and spin (see FloatingIslands.luau)
+			sphere:SetAttribute("FloatAmplitude", 0.8)
+			sphere:SetAttribute("FloatSpeed", 2)
+			sphere:SetAttribute("FloatSpin", def.Spin)
+			CollectionService:AddTag(sphere, "FloatingIsland")
 		end
 	end)
 	tween:Play()
@@ -964,18 +1043,6 @@ local function mainLoop()
 	end
 end
 
-local function bobLoop()
-	RunService.Heartbeat:Connect(function()
-		local t = os.clock()
-		for part, info in wild do
-			if info.Ready then
-				part.CFrame = CFrame.new(info.Base + Vector3.new(0, math.sin(t * 2 + info.Phase) * 0.8, 0))
-					* CFrame.Angles(0, t * info.Spin, 0)
-			end
-		end
-	end)
-end
-
 ------------------------------------------------------------------------
 -- Players
 ------------------------------------------------------------------------
@@ -1043,7 +1110,6 @@ function WeatherService.Start(mapService, dataService, remotes)
 	weatherFolder.Parent = workspace
 
 	setupStorm()
-	bobLoop()
 	task.spawn(spawnLoop)
 	task.spawn(mainLoop)
 	task.spawn(incomeLoop)

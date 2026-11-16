@@ -4,6 +4,7 @@
 -- Optional attributes on the tagged object:
 --   FloatAmplitude (number, studs, default 1.2)
 --   FloatSpeed     (number, default 0.6)
+--   FloatSpin      (number, rad/s around Y, default 0 = gentle tilt only)
 --
 -- Runs on the client only, so it's smooth and costs the server nothing.
 -- Use it for decoration (islands, clouds, rocks), not for platforms the
@@ -29,6 +30,7 @@ local function add(inst: Instance)
 		Phase = math.random() * math.pi * 2,
 		Amp = inst:GetAttribute("FloatAmplitude") or 1.2,
 		Speed = inst:GetAttribute("FloatSpeed") or 0.6,
+		Spin = inst:GetAttribute("FloatSpin") or 0,
 	}
 end
 
@@ -50,7 +52,7 @@ function FloatingIslands.Start()
 			end
 			local y = math.sin(t * f.Speed + f.Phase) * f.Amp
 			local tilt = math.sin(t * f.Speed * 0.5 + f.Phase) * 0.02
-			;(inst :: any):PivotTo(f.Base * CFrame.new(0, y, 0) * CFrame.Angles(tilt, 0, tilt * 0.5))
+			;(inst :: any):PivotTo(f.Base * CFrame.new(0, y, 0) * CFrame.Angles(tilt, t * f.Spin, tilt * 0.5))
 		end
 	end)
 end

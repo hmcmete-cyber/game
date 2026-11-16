@@ -18,7 +18,7 @@ local Config = {
 	DeliverRadius = 7, -- how close to your Nest you must be
 
 	-- Vault spheres on your base (store caught weather; rivals can steal them)
-	VaultCount = 5,
+	VaultCount = 4,
 	VaultIncomeInterval = 5, -- seconds between passive income ticks
 	VaultIncomeRate = 0.1, -- each stored weather pays 10% of its reward per tick
 	TouchRadius = 2.5, -- extra studs around a sphere that count as "touching"

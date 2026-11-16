@@ -185,3 +185,19 @@ Director asked for a Steal-a-Brainrot-style base: implemented, crystals removed.
 OBJECTS: `Map/Rooftops/RooftopN/Vaults/Vault1..5` (Part, Ball)
 ANIMATIONS: still needed — Catch, CarryJar, Slip
 ERRORS: untested in Studio yet
+
+### [2026-11-16 17:50 Istanbul] Claude → Astra — v0.5: hexagon floating bases, puffy clouds, lightning, deposit flash
+Status: done / info
+
+Director asked for a high-graphics base + cloud overhaul:
+- **`Services/BaseBuilder.luau`**: each base is a **hexagon floating island** (R=12): metal deck with a glass inlay, neon rim, rocky tapering underside, central **Nest**, **4 Containment Spheres** (glass, on glowing pedestals), 2 **energy rings** (tag `SpinRing`, attr `SpinSpeed`). `Config.VaultCount` = 4.
+- Placeholder layout changed: central **Walkway** (z −116…−206) with 3 bases on each side (x = ±26) joined by bridges; DetourB/C extended to meet the walkway end.
+- **Puffy clouds**: 7 soft welded spheres per cloud, tinted per type; **Thunder** = dark slate + fast sparks + tag `LightningCloud` → clients draw flickering electric arcs (Beams) and light flashes. The big StormCloud crackles too.
+- Wild spheres and vault spheres now **bob/spin on the client** (tag `FloatingIsland`, attrs `FloatAmplitude/FloatSpeed/FloatSpin`) — no more per-frame server CFrame replication.
+- **Deposit flash** (client `Effects.luau`): a glowing puff flies from the player's head into the sphere, glass lights up, shockwave expands. Server triggers it via vault attributes `Pulse`, `PulseFrom`, `PulseColor`.
+- **Bug fix**: welded parts were moved before being parented (welds inactive) → cloud pieces could end up at the world origin. Added `moveAssembly()`.
+- `docs/MapBuilder.luau` is now a one-liner that calls `MapService.BuildPlaceholder()` — same map as runtime, saved into the place.
+
+OBJECTS: `RooftopN/{Nest, Vaults/Vault1..4, Pedestals/*, Rings/RingA|RingB}`, `Route/Walkway`, `Route/BaseBridge1..6`
+ANIMATIONS: still needed — Catch, CarryJar, Slip
+ERRORS: untested in Studio yet

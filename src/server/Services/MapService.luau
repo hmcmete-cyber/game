@@ -6,7 +6,7 @@
 -- Expected structure (see COMMS.md):
 -- workspace.Map
 --   SpawnLocation
---   Rooftops/RooftopN (Model) -> Nest (Part), Vaults/VaultN (Part, glass sphere)
+--   Rooftops/RooftopN (Model) -> Nest (Part), Vaults/VaultN (Part, glass sphere) — see BaseBuilder.luau
 --     (if Vaults is missing, spheres are created above Display/SlotN or around the Nest)
 --   HuntZone/WeatherSpawns/SpawnN (Part)   -- Spawn1 = tutorial spot, always a Rain Cloud
 --   Route/LiftPlatforms/* (Part, placed in LOWERED position)
@@ -19,6 +19,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local BaseBuilder = require(script.Parent:WaitForChild("BaseBuilder"))
 
 local MapService = {}
 
@@ -75,18 +76,6 @@ local function newPart(parent: Instance, name: string, size: Vector3, cf: CFrame
 	return p
 end
 
--- Transparent glass storage sphere
-local function makeVault(parent: Instance, name: string, position: Vector3)
-	local v = newPart(parent, name, Vector3.one * 2.6, CFrame.new(position), Color3.fromRGB(200, 230, 255), {
-		Shape = Enum.PartType.Ball,
-		Material = Enum.Material.Glass,
-		Transparency = 0.55,
-		CanCollide = false,
-		CastShadow = false,
-	})
-	return v
-end
-
 local MARKER = { Transparency = 1, CanCollide = false, CanQuery = false, CanTouch = false }
 
 local function buildPlaceholder(): Instance
@@ -136,35 +125,26 @@ local function buildPlaceholder(): Instance
 
 	-- Long detour: always walkable
 	newPart(route, "DetourA", Vector3.new(50, 2, 12), CFrame.new(55, Y, 0), stone)
-	newPart(route, "DetourB", Vector3.new(12, 2, 152), CFrame.new(80, Y, -70), stone)
-	newPart(route, "DetourC", Vector3.new(36, 2, 12), CFrame.new(68, Y, -141), stone)
+	newPart(route, "DetourB", Vector3.new(12, 2, 212), CFrame.new(80, Y, -100), stone)
+	newPart(route, "DetourC", Vector3.new(80, 2, 12), CFrame.new(46, Y, -200), stone)
 
-	-- Rooftops
-	newPart(m, "RooftopPad", Vector3.new(100, 2, 50), CFrame.new(0, Y, -141), grass)
+	-- Bases: 6 hexagon islands on both sides of a central walkway
+	newPart(route, "Walkway", Vector3.new(12, 2, 90), CFrame.new(0, Y, -161), stone)
 	local roofs = getFolder(m, "Rooftops")
-	local colors = {
-		Color3.fromRGB(255, 170, 170),
-		Color3.fromRGB(255, 210, 150),
-		Color3.fromRGB(255, 245, 160),
-		Color3.fromRGB(170, 235, 170),
-		Color3.fromRGB(165, 205, 255),
-		Color3.fromRGB(215, 175, 255),
+	local accents = {
+		Color3.fromRGB(255, 120, 150),
+		Color3.fromRGB(255, 180, 90),
+		Color3.fromRGB(255, 235, 110),
+		Color3.fromRGB(120, 235, 150),
+		Color3.fromRGB(110, 190, 255),
+		Color3.fromRGB(190, 140, 255),
 	}
+	local zs = { -132, -156, -180 }
 	for i = 1, 6 do
-		local x = -40 + (i - 1) * 16
-		local roof = Instance.new("Model")
-		roof.Name = "Rooftop" .. i
-		local floor = newPart(roof, "Floor", Vector3.new(14, 1, 20), CFrame.new(x, Y + 1.5, -145), colors[i])
-		newPart(roof, "Nest", Vector3.new(6, 0.6, 6), CFrame.new(x, Y + 2.3, -139), Color3.fromRGB(255, 225, 90), {
-			Material = Enum.Material.Neon,
-		})
-		local vaults = getFolder(roof, "Vaults")
-		for n = 1, Config.VaultCount do
-			local offset = (n - (Config.VaultCount + 1) / 2) * 2.8
-			makeVault(vaults, "Vault" .. n, Vector3.new(x + offset, Y + 3.5, -149 + math.abs(offset) * 0.35))
-		end
-		roof.PrimaryPart = floor
-		roof.Parent = roofs
+		local side = i <= 3 and -1 or 1
+		local z = zs[(i - 1) % 3 + 1]
+		BaseBuilder.Build(roofs, "Rooftop" .. i, Vector3.new(side * 26, Y + 1, z), accents[i])
+		newPart(route, "BaseBridge" .. i, Vector3.new(12, 1, 6), CFrame.new(side * 11, Y + 0.5, z), stone)
 	end
 
 	-- Decorative floating islands (client makes them drift; see FloatingIslands.luau)
@@ -222,6 +202,16 @@ local function buildPlaceholder(): Instance
 
 	m.Parent = workspace
 	return m
+end
+
+-- Also used from the Studio Command Bar (docs/MapBuilder.luau) to save the
+-- placeholder into the place. Does nothing if workspace.Map already exists.
+function MapService.BuildPlaceholder(): Instance
+	local existing = workspace:FindFirstChild("Map")
+	if existing then
+		return existing
+	end
+	return buildPlaceholder()
 end
 
 function MapService.Start()
@@ -282,10 +272,15 @@ function MapService.GetVaults(rooftop: Instance): { BasePart }
 				local a = (n / Config.VaultCount) * math.pi * 2
 				pos = nest.Position + Vector3.new(math.cos(a) * 6, 1.6, math.sin(a) * 6)
 			end
-			makeVault(folder, "Vault" .. n, pos)
+			BaseBuilder.Vault(folder, nil, "Vault" .. n, pos, 3)
 		end
 	end
 	local list = sortedParts(folder)
+	for _, v in list do
+		if not CollectionService:HasTag(v, "VaultSphere") then
+			CollectionService:AddTag(v, "VaultSphere")
+		end
+	end
 	while #list > Config.VaultCount do
 		table.remove(list)
 	end

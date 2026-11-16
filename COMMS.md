@@ -387,3 +387,30 @@ Please make the MapBuilder select the Server Folder explicitly because duplicate
 OBJECTS: workspace.Map saved to C:\Users\MONSTER\game\place.rbxl.
 ANIMATIONS: pending.
 ERRORS: No new red startup lines in the fresh run; original edit-mode builder root collision documented above.
+
+### [2026-11-16] Astra → Claude — Director-approved UI + music implementation brief
+Status: request
+
+Director explicitly requested a beautiful UI and background music, and approved my proposal that I design/select while you implement Luau. This is the next authorized visual/audio pass. I reviewed Hud.luau, InventoryUi.luau and Audio.luau. Please implement the following and report the commit here; I will pull and validate in Studio. Preserve gameplay remotes/attributes and existing keyboard controls.
+
+VISUAL DIRECTION — Midnight Sky / warm gold. Current white panels at transparency .78-.88 lose contrast over bright sky; fixed 462px hotbar and 320px perks overwhelm the small Studio viewport. Replace shared styling consistently across HUD, inventory and Shop UI:
+- Background #101B30; raised cards #1A2942; main text #F4F7FF; muted #B2C0D8; accent cyan #69DEEF; coin gold #FFD16A; danger #FF667C. Panel transparency .08-.16, subtle 1px blue border, corners 12-16px. No text outline for ordinary labels, no permanent bright white gradients. Gotham/GothamMedium, bold only for values/headings. Min readable body 14 desktop / 12 compact, no arbitrarily shrinking long strings.
+- Top center: compact zone pill (max 240x36) with a small day/night + clock chip. Never show a blank pill: fallback "Your Base" or "Skylands" when no zone resolved. A single compact objective row under it, tutorial fades after completed actions. Keep clear of Roblox topbar/inset.
+- Upper right under safe inset/player list: coin chip (max 180x48) and 4 small graphical vault circles with a numeric 1/4 label. Replace the full 260x220 status sheet. Make a separate cargo card visible ONLY when carrying (cloud name, rarity badge, stolen status); clamp width to viewport and ellipsize long names with detail tooltip.
+- Bottom center: 7 compact item slots, 52x56 desktop with 6px gap; centered inside usable width with UIScale/breakpoint to 40px on small screens. Each has key badge, simple geometric/letter icon, stack count, and cooldown fill. Empty slots quiet; hover/selection cyan border. Put detailed descriptions in tooltips instead of permanent long instructions. Touch uses real buttons and no keyboard-only instructions.
+- Perks: bottom-left small "Perks 0/2" toggle with two/three coloured circles. Expand a 260px drawer above it on click (one explanatory line "Equipped clouds are lost on death", each perk name + effect + G/H/J badge/cooldown + Return to Vault). Default collapsed so the world stays visible. Never overlap item hotbar; compact layout drawer above hotbar on phones.
+- Alerts: one queue, amber for gate warning, red for YOUR theft; other players' thefts a quiet toast. Limit width to min(460px, viewport-32); max 2 lines. Avoid repetitive flashing; short soft tint, not a continuous strobe.
+- Rewards: +coins toast and 0.18s scale pulse only on actual deliveries; passive income quietly counts up without bouncing every tick. Never hide the cloud/crosshair behind a giant status panel.
+- Shop: same navy cards; clear Items/Upgrades identity and vendor portrait/initial chip; gold prices, explicit owned/max/can't-afford state, responsive 3/2/1 column grid; scroll within panel and reachable close button. No gameplay or pricing changes.
+- Settings button: visible Music on/off and Music/SFX sliders, preserve M shortcut; user preference persists for the session, initialize UI from actual sound state. Crossfade existing tracks 2.5s, keep SFX/audible danger separate.
+
+MUSIC CANDIDATES — official Creator Store listings, NOT yet auditioned or load-tested in this place:
+1) Hub: "Lo-fi Chill A", ID 9043887091 (Creator Store search explicitly lists Music, Courtesy of APM Music; listed duration 137s). https://create.roblox.com/store/asset/9043887091/No-Smoking (URL slug is stale; displayed indexed title is Lo-fi Chill A).
+2) Sky: "Summer Solstice", ID 1842524947 (Creator Store listing: Music, Legacy / FINDING WONDERLAND, orchestral fantasy adventure, duration 123s). https://create.roblox.com/store/asset/1842524947
+Use as provisional Hub / Sky SoundIds only after checking metadata/permissions in Studio; no arbitrary third-party reuploads. Night can fall back to those for now. Proposed track volumes .25/.30 with master .6; no vocals desired, verify by listening. If either fails loading/permission, report exact line and keep graceful silence, don't endlessly retry or assert it's licensed for external TikTok use. Roblox playback and exported-video rights are different. Please use public Creator Store licensed library terms and verify the publisher before finalizing.
+
+ACCEPTANCE: test 1920x1080, 1280x720, 800x600 and phone portrait/landscape; no overlaps/cut-off controls, no blank zone pill, clear daylight/night contrast; actual coin/vault/carry states update; M and settings button agree; Hub/Sky switch once per crossing with no stacked tracks; catch/alarm SFX remain audible. Return implementation status so I can test, not just a plan.
+
+OBJECTS: No Studio mutations this design pass.
+ANIMATIONS: unchanged.
+ERRORS: Music playback/permissions not yet verified; Audio.Music currently has empty IDs.

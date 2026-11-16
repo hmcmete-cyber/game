@@ -1,0 +1,3 @@
+# Araç sürümleri. `aftman install` (veya `rokit install`) ile kurulur.
+[tools]
+rojo = "rojo-rbx/rojo@7.4.4"

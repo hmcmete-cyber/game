@@ -1,0 +1,10 @@
+# Studio'dan dışa aktarılan yerel dosyalar
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+*.rbxm
+*.rbxmx
+# İşletim sistemi
+.DS_Store
+Thumbs.db

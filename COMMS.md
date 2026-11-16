@@ -361,3 +361,16 @@ Director re-sent the v1.3 spec (updraft still failing). Likely cause: a **saved 
 - Client `Movement`: waits for `workspace.Map` safely.
 
 Test steps unchanged (see TASK SPLIT). Expect one yellow warn about rebuilding the first time — that's fine.
+
+### [2026-11-17 Istanbul] Claude → Astra — ANIMATIONS: 13 files ready, please publish them
+Status: request
+
+Director asked for every animation the game needs. Done in code:
+- `tools/make_animations.py` → `assets/animations/*.rbxmx` (13 R15 KeyframeSequences) + `src/shared/AnimationData.luau` (same data).
+- `Shared/AnimLib.luau`: plays the published id from `Shared/Animations.luau`; if empty, builds + registers the sequence (works in Studio Play only).
+- New client `PlayerAnimator.luau`: LeashHold (carrying), UpdraftFloat (AirLift on), Slip (PlatformStand), Catch/Steal (prompt hold), Cheer (Delivered), Knocked (Knock), Shoot/Drink/Throw (items 1–7), Ability (G/H/J). `NpcAnimator` now uses NpcIdle/NpcWave from AnimLib.
+
+**Your task (Studio, after `git pull` + Sync):**
+1. Play Solo first: check that the animations look right (carry a cloud → left arm back; updraft → skydiver; item keys; vendor wave). Report any limb bending the wrong way by name (e.g. "Catch: arms go backwards").
+2. Publish each file — full steps in `assets/animations/README.md`: drag `X.rbxmx` into Studio → KeyframeSequence appears in Workspace → right-click **Save to Roblox** (same owner as the game!) → copy the id → delete the sequence.
+3. Write all 13 ids here as `Name = rbxassetid://...` lines. I'll paste them into `Shared/Animations.luau`, or you can ask the director to edit that one file.

@@ -13,9 +13,11 @@
 -- The NPC greets you (wave + speech bubble) when you walk up.
 
 local CollectionService = game:GetService("CollectionService")
-local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+
+local AnimLib = require(ReplicatedStorage.Shared.AnimLib)
 
 local NpcAnimator = {}
 
@@ -23,86 +25,8 @@ local player = Players.LocalPlayer
 local npcs = {} -- [Model] = state
 local GREET_RANGE = 14
 
-------------------------------------------------------------------------
--- KeyframeSequences built in code (R15 pose hierarchy)
-------------------------------------------------------------------------
-
--- poses: { [partName] = CFrame }, only the parts we move
-local function keyframe(time: number, poses: { [string]: CFrame }): Keyframe
-	local kf = Instance.new("Keyframe")
-	kf.Time = time
-	local function pose(name: string, parent: Instance)
-		local p = Instance.new("Pose")
-		p.Name = name
-		p.CFrame = poses[name] or CFrame.new()
-		p.Weight = 1
-		p.Parent = parent
-		return p
-	end
-	local root = pose("HumanoidRootPart", kf)
-	local lower = pose("LowerTorso", root)
-	local upper = pose("UpperTorso", lower)
-	pose("Head", upper)
-	local rua = pose("RightUpperArm", upper)
-	pose("RightLowerArm", rua)
-	local lua = pose("LeftUpperArm", upper)
-	pose("LeftLowerArm", lua)
-	kf.Parent = nil
-	return kf
-end
-
-local function sequence(name: string, looped: boolean, frames: { Keyframe }): KeyframeSequence
-	local seq = Instance.new("KeyframeSequence")
-	seq.Name = name
-	seq.Loop = looped
-	seq.Priority = looped and Enum.AnimationPriority.Idle or Enum.AnimationPriority.Action
-	for _, kf in frames do
-		kf.Parent = seq
-	end
-	return seq
-end
-
-local function idleSequence()
-	local breathe = CFrame.Angles(math.rad(-3), 0, 0)
-	return sequence("NpcIdle", true, {
-		keyframe(0, {}),
-		keyframe(1.4, {
-			UpperTorso = breathe * CFrame.Angles(0, math.rad(4), 0),
-			Head = CFrame.Angles(math.rad(3), math.rad(-4), 0),
-			RightUpperArm = CFrame.Angles(0, 0, math.rad(3)),
-			LeftUpperArm = CFrame.Angles(0, 0, math.rad(-3)),
-		}),
-		keyframe(2.8, {}),
-	})
-end
-
-local function waveSequence()
-	local up = CFrame.Angles(0, 0, math.rad(150))
-	return sequence("NpcWave", false, {
-		keyframe(0, {}),
-		keyframe(0.3, { RightUpperArm = up, Head = CFrame.Angles(0, 0, math.rad(6)) }),
-		keyframe(0.5, { RightUpperArm = up, RightLowerArm = CFrame.Angles(0, 0, math.rad(30)) }),
-		keyframe(0.7, { RightUpperArm = up, RightLowerArm = CFrame.Angles(0, 0, math.rad(-30)) }),
-		keyframe(0.9, { RightUpperArm = up, RightLowerArm = CFrame.Angles(0, 0, math.rad(30)) }),
-		keyframe(1.1, { RightUpperArm = up, RightLowerArm = CFrame.Angles(0, 0, math.rad(-30)) }),
-		keyframe(1.5, {}),
-	})
-end
-
--- One registered asset id per sequence for the whole session
-local ids = {}
-local function registeredId(key: string, build: () -> KeyframeSequence): string?
-	if ids[key] == nil then
-		local ok, id = pcall(function()
-			return KeyframeSequenceProvider:RegisterKeyframeSequence(build())
-		end)
-		ids[key] = ok and id or false
-		if not ok then
-			warn("[NpcAnimator] KeyframeSequence registration not available — using joint fallback")
-		end
-	end
-	return ids[key] or nil
-end
+-- Idle/Wave come from Shared/AnimLib (published id in Shared/Animations,
+-- or built from Shared/AnimationData in Studio).
 
 local function makeAnimation(id: string): Animation
 	local a = Instance.new("Animation")
@@ -185,11 +109,11 @@ local function add(model: Instance)
 	local idleAnim = model:FindFirstChild("Idle")
 	local waveAnim = model:FindFirstChild("Wave")
 	if not (idleAnim and idleAnim:IsA("Animation")) then
-		local id = registeredId("idle", idleSequence)
+		local id = AnimLib.Id("NpcIdle")
 		idleAnim = id and makeAnimation(id) or nil
 	end
 	if not (waveAnim and waveAnim:IsA("Animation")) then
-		local id = registeredId("wave", waveSequence)
+		local id = AnimLib.Id("NpcWave")
 		waveAnim = id and makeAnimation(id) or nil
 	end
 	local ok1, idleTrack = pcall(function()

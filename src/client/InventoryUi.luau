@@ -18,6 +18,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local PlayerAnimator = require(script.Parent:WaitForChild("PlayerAnimator"))
 local ShopItems = require(ReplicatedStorage.Shared.ShopItems)
 local Weather = require(ReplicatedStorage.Shared.WeatherTypes)
 
@@ -49,6 +50,7 @@ end
 local function useItem(id: string)
 	local def = ShopItems.Types[id]
 	remotes.UseItem:FireServer(id, def and def.Aim and aimPoint() or nil)
+	PlayerAnimator.PlayItem(id)
 end
 local PERK_KEYS = { Enum.KeyCode.G, Enum.KeyCode.H, Enum.KeyCode.J }
 local PERK_KEY_TEXT = { "G", "H", "J" }
@@ -305,6 +307,7 @@ function InventoryUi.Start()
 		for i, key in PERK_KEYS do
 			if input.KeyCode == key then
 				remotes.PerkAbility:FireServer(i)
+				PlayerAnimator.Play("Ability")
 			end
 		end
 	end)

@@ -23,12 +23,15 @@ deliveredEvent.Parent = remotes
 local alarmEvent = Instance.new("RemoteEvent")
 alarmEvent.Name = "Alarm"
 alarmEvent.Parent = remotes
+local stolenEvent = Instance.new("RemoteEvent")
+stolenEvent.Name = "Stolen"
+stolenEvent.Parent = remotes
 remotes.Parent = ReplicatedStorage
 
 LightingService.Apply()
 DataService.Start()
 MapService.Start()
-WeatherService.Start(MapService, DataService, { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent })
+WeatherService.Start(MapService, DataService, { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent })
 
 local function onPlayerAdded(player: Player)
 	DataService.Load(player)

@@ -16,7 +16,17 @@ local Config = {
 
 	-- Delivery
 	DeliverRadius = 7, -- how close to your Nest you must be
-	DisplaySlots = 6,
+
+	-- Vault spheres on your base (store caught weather; rivals can steal them)
+	VaultCount = 5,
+	VaultIncomeInterval = 5, -- seconds between passive income ticks
+	VaultIncomeRate = 0.1, -- each stored weather pays 10% of its reward per tick
+	TouchRadius = 2.5, -- extra studs around a sphere that count as "touching"
+	GrabCooldown = 1.5, -- after dropping/delivering, can't instantly grab again
+
+	-- Carrying slows you a little
+	CarryJumpHeight = 4.5, -- normal R15 jump height is 7.2
+	CarryJumpPower = 38, -- for places that use JumpPower (normal 50)
 
 	-- Rain cloud: slippery puddle trail
 	PuddleInterval = 0.3,
@@ -49,15 +59,10 @@ local Config = {
 	ThunderCarrySpeed = 22,
 	ThunderFlashInterval = 2.5,
 
-	-- Storm Crystals: your displayed creatures produce them around your Nest.
-	-- Rivals can steal them; walking onto your own Nest banks them.
-	CrystalInterval = 10,
-	CrystalBaseValue = 5,
-	CrystalValuePerPet = 2, -- +2 per creature on your display
-	MaxCrystals = 8,
+	-- Stealing
 	AlarmCooldown = 4,
-	IntruderRadius = 12, -- rival this close to your Nest (with crystals) = alarm
-	TagRadius = 5, -- owner touching the thief returns the crystal
+	IntruderRadius = 14, -- rival this close to your Nest (with a full vault) = alarm
+	TagRadius = 5, -- owner touching the thief sends the storm back
 
 	-- Central storm cloud that spawns weather
 	StormHeight = 28,

@@ -6,7 +6,8 @@
 -- Expected structure (see COMMS.md):
 -- workspace.Map
 --   SpawnLocation
---   Rooftops/RooftopN (Model) -> Nest (Part), Display/SlotN (Part)
+--   Rooftops/RooftopN (Model) -> Nest (Part), Vaults/VaultN (Part, glass sphere)
+--     (if Vaults is missing, spheres are created above Display/SlotN or around the Nest)
 --   HuntZone/WeatherSpawns/SpawnN (Part)   -- Spawn1 = tutorial spot, always a Rain Cloud
 --   Route/LiftPlatforms/* (Part, placed in LOWERED position)
 --   Route/WaterGaps/* (Part, CanCollide off; Snow freezes them solid)
@@ -15,6 +16,9 @@
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 
 local MapService = {}
 
@@ -69,6 +73,18 @@ local function newPart(parent: Instance, name: string, size: Vector3, cf: CFrame
 	end
 	p.Parent = parent
 	return p
+end
+
+-- Transparent glass storage sphere
+local function makeVault(parent: Instance, name: string, position: Vector3)
+	local v = newPart(parent, name, Vector3.one * 2.6, CFrame.new(position), Color3.fromRGB(200, 230, 255), {
+		Shape = Enum.PartType.Ball,
+		Material = Enum.Material.Glass,
+		Transparency = 0.55,
+		CanCollide = false,
+		CastShadow = false,
+	})
+	return v
 end
 
 local MARKER = { Transparency = 1, CanCollide = false, CanQuery = false, CanTouch = false }
@@ -142,12 +158,10 @@ local function buildPlaceholder(): Instance
 		newPart(roof, "Nest", Vector3.new(6, 0.6, 6), CFrame.new(x, Y + 2.3, -139), Color3.fromRGB(255, 225, 90), {
 			Material = Enum.Material.Neon,
 		})
-		local display = getFolder(roof, "Display")
-		for row = 0, 1 do
-			for col = 0, 2 do
-				local n = row * 3 + col + 1
-				newPart(display, "Slot" .. n, Vector3.new(2.5, 0.6, 2.5), CFrame.new(x - 4 + col * 4, Y + 2.3, -149 - row * 4), Color3.fromRGB(90, 90, 110))
-			end
+		local vaults = getFolder(roof, "Vaults")
+		for n = 1, Config.VaultCount do
+			local offset = (n - (Config.VaultCount + 1) / 2) * 2.8
+			makeVault(vaults, "Vault" .. n, Vector3.new(x + offset, Y + 3.5, -149 + math.abs(offset) * 0.35))
 		end
 		roof.PrimaryPart = floor
 		roof.Parent = roofs
@@ -253,8 +267,29 @@ function MapService.GetWaterGaps(): { BasePart }
 	return sortedParts(map.Route.WaterGaps)
 end
 
-function MapService.GetSlots(rooftop: Instance): { BasePart }
-	return sortedParts(rooftop:FindFirstChild("Display"))
+-- Vault spheres of a rooftop. Creates them if the map doesn't have any.
+function MapService.GetVaults(rooftop: Instance): { BasePart }
+	local folder = rooftop:FindFirstChild("Vaults")
+	if not folder then
+		folder = getFolder(rooftop, "Vaults")
+		local slots = sortedParts(rooftop:FindFirstChild("Display"))
+		local nest = rooftop:FindFirstChild("Nest") :: BasePart
+		for n = 1, Config.VaultCount do
+			local pos
+			if slots[n] then
+				pos = slots[n].Position + Vector3.new(0, slots[n].Size.Y / 2 + 1.5, 0)
+			else
+				local a = (n / Config.VaultCount) * math.pi * 2
+				pos = nest.Position + Vector3.new(math.cos(a) * 6, 1.6, math.sin(a) * 6)
+			end
+			makeVault(folder, "Vault" .. n, pos)
+		end
+	end
+	local list = sortedParts(folder)
+	while #list > Config.VaultCount do
+		table.remove(list)
+	end
+	return list
 end
 
 function MapService.GetRooftop(player: Player)
@@ -312,12 +347,6 @@ function MapService.ReleaseRooftop(player: Player)
 	local sign = roof.Nest:FindFirstChild("OwnerSign")
 	if sign then
 		sign:Destroy()
-	end
-	for _, slot in MapService.GetSlots(roof) do
-		local shown = slot:FindFirstChild("Shown")
-		if shown then
-			shown:Destroy()
-		end
 	end
 end
 

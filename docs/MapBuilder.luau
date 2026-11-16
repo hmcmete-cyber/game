@@ -24,11 +24,11 @@
 	                         → LiftPlatform1 (rests 12 studs LOW; Tornado lifts it)
 	  Detour (always walkable): DetourA (+X) → DetourB (down -Z) → DetourC
 	  RooftopPad (100x50) centered (0, 40, -141), 6 rooftops along X
-	  Each RooftopN: Floor, Nest, Display/Slot1..6
+	  Each RooftopN: Floor, Nest, Vaults/Vault1..5 (glass storage spheres)
 	  Abyss/AbyssFloor: invisible kill layer at Y = 15
 
 	Expected counts after a fresh run:
-	  Rooftops: 6 models, each 1 Nest + 6 Slots
+	  Rooftops: 6 models, each 1 Nest + 5 Vaults
 	  WeatherSpawns: 6, LiftPlatforms: 1, WaterGaps: 1, CrateSpawns: 0
 ]]
 
@@ -140,13 +140,17 @@ for i = 1, 6 do
 	part(roof, "Nest", Vector3.new(6, 0.6, 6), CFrame.new(x, Y + 2.3, -139), Color3.fromRGB(255, 225, 90), {
 		Material = Enum.Material.Neon,
 	})
-	local display = folder(roof, "Display")
-	for row = 0, 1 do
-		for col = 0, 2 do
-			local n = row * 3 + col + 1
-			part(display, "Slot" .. n, Vector3.new(2.5, 0.6, 2.5),
-				CFrame.new(x - 4 + col * 4, Y + 2.3, -149 - row * 4), Color3.fromRGB(90, 90, 110))
-		end
+	local vaults = folder(roof, "Vaults")
+	for n = 1, 5 do
+		local offset = (n - 3) * 2.8
+		part(vaults, "Vault" .. n, Vector3.one * 2.6, CFrame.new(x + offset, Y + 3.5, -149 + math.abs(offset) * 0.35),
+			Color3.fromRGB(200, 230, 255), {
+				Shape = Enum.PartType.Ball,
+				Material = Enum.Material.Glass,
+				Transparency = 0.55,
+				CanCollide = false,
+				CastShadow = false,
+			})
 	end
 	if not roof.PrimaryPart then
 		roof.PrimaryPart = floor

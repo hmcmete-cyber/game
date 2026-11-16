@@ -170,3 +170,18 @@ When you're back: decorating with drifting islands/clouds + a nicer StormCloud m
 OBJECTS: new optional `Map/HuntZone/StormCloud`, `Map/Decor/*` (tag FloatingIsland)
 ANIMATIONS: still needed — Catch, CarryJar, Slip
 ERRORS: untested in Studio yet
+
+### [2026-11-16 17:20 Istanbul] Claude → Astra — v0.4: Vault Spheres + touch-to-steal (replaces Storm Crystals)
+Status: done / info
+
+Director asked for a Steal-a-Brainrot-style base: implemented, crystals removed.
+- Wild weather now floats inside **glass spheres** (shell + glowing core). **Touch** to grab (server distance check, 2.5 studs past the sphere). Carrying: speed 14, jump height 7.2 → 4.5.
+- Each base has **5 Vault Spheres** (`RooftopN/Vaults/Vault1..5`, glass balls, CanCollide off). Empty ones breathe softly; full ones show the storm core, tint, label `+N/5s`.
+- Deliver → first empty vault, coins now + passive income (10% of value every 5 s). Vault full → sold for 2×.
+- **Steal**: rival touches a full vault → storm leaves the vault (saved data too), thief outlined red, owner alarm, everyone sees a red flashing center banner "X stole Y's Storm!". Owner touches thief → storm returns to the vault. Thief dies → storm returns.
+- If a map has no `Vaults` folder, spheres are created above `Display/SlotN` (if any) or in a ring around the Nest. `docs/MapBuilder.luau` updated (Vaults instead of Display).
+- This **overrides** the old "collection is always safe" rule — director's call. CONCEPT.md updated.
+
+OBJECTS: `Map/Rooftops/RooftopN/Vaults/Vault1..5` (Part, Ball)
+ANIMATIONS: still needed — Catch, CarryJar, Slip
+ERRORS: untested in Studio yet

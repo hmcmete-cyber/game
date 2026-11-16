@@ -10,6 +10,7 @@
 --     │   └── Value (TextLabel)
 --     ├── CarryPill (Frame, glass)       bottom center
 --     ├── Hint (TextLabel)               under the score panel
+--     ├── StealBanner (Frame, red glass) center of the screen, flashes on thefts
 --     └── AlarmFlash (Frame, red)        full screen, normally invisible
 
 local Players = game:GetService("Players")
@@ -24,7 +25,6 @@ local player = Players.LocalPlayer
 local gui: ScreenGui
 
 local GOLD = Color3.fromRGB(255, 220, 90)
-local CRYSTAL = Color3.fromRGB(120, 225, 255)
 local THIEF = Color3.fromRGB(255, 70, 70)
 
 ------------------------------------------------------------------------
@@ -97,6 +97,7 @@ local scorePanel, scoreValue, scoreScale
 local carryPill, carryText
 local hintLabel
 local alarmFlash
+local stealBanner, stealText, stealScale
 
 local function buildUi()
 	gui = Instance.new("ScreenGui")
@@ -156,6 +157,25 @@ local function buildUi()
 		Visible = false,
 	})
 
+	-- "X stole Y's Storm!" banner, center screen
+	stealBanner = glass("StealBanner", gui)
+	stealBanner.AnchorPoint = Vector2.new(0.5, 0.5)
+	stealBanner.Position = UDim2.fromScale(0.5, 0.38)
+	stealBanner.Size = UDim2.fromOffset(520, 70)
+	stealBanner.BackgroundColor3 = THIEF
+	stealBanner.BackgroundTransparency = 0.35
+	stealBanner.Visible = false
+	stealBanner.ZIndex = 5
+	stealScale = Instance.new("UIScale")
+	stealScale.Parent = stealBanner
+	stealText = text("Text", stealBanner, {
+		Position = UDim2.fromOffset(16, 10),
+		Size = UDim2.new(1, -32, 1, -20),
+		Font = Enum.Font.GothamBlack,
+		TextStrokeTransparency = 0.3,
+		ZIndex = 6,
+	})
+
 	-- Theft alarm screen flash
 	alarmFlash = Instance.new("Frame")
 	alarmFlash.Name = "AlarmFlash"
@@ -209,9 +229,9 @@ end
 
 local function updateCarry()
 	local kind = player:GetAttribute("Carrying")
-	if kind == "Crystal" then
+	if kind and player:GetAttribute("CarryingStolen") then
 		carryPill.Visible = true
-		carryText.Text = "🚨 Carrying a STOLEN crystal — run home!"
+		carryText.Text = `🚨 STOLEN {Weather.Types[kind] and Weather.Types[kind].DisplayName or "storm"} — run home!`
 		carryText.TextColor3 = THIEF
 	elseif kind and Weather.Types[kind] then
 		local def = Weather.Types[kind]
@@ -269,7 +289,7 @@ local function updateBeam()
 	beam.Width1 = 0.6
 	beam.FaceCamera = true
 	beam.LightEmission = 1
-	beam.Color = ColorSequence.new(kind == "Crystal" and CRYSTAL or GOLD)
+	beam.Color = ColorSequence.new(player:GetAttribute("CarryingStolen") and THIEF or GOLD)
 	beam.Transparency = NumberSequence.new(0.2)
 	beam.Parent = root
 end
@@ -311,13 +331,41 @@ local function floatText(position: Vector3, message: string, color: Color3)
 end
 
 local function onDelivered(reward: number, kind: string, shiny: boolean, nestPos: Vector3)
-	local color = shiny and Weather.ShinyColor or (kind == "Crystal" and CRYSTAL or GOLD)
+	local color = shiny and Weather.ShinyColor or GOLD
 	floatText(nestPos, shiny and `✨ +{reward} ✨` or `+{reward}`, color)
 	playSound(PING, 0.7, shiny and 0.8 or 1.2)
 end
 
+local stealToken = 0
+local function onStolen(thiefName: string, victimName: string, stormName: string)
+	stealToken += 1
+	local mine = stealToken
+	if victimName == player.DisplayName then
+		stealText.Text = `🚨 {thiefName} STOLE YOUR {string.upper(stormName)}! 🚨`
+	else
+		stealText.Text = `{thiefName} stole {victimName}'s {stormName}!`
+	end
+	stealBanner.Visible = true
+	stealScale.Scale = 0.6
+	TweenService:Create(stealScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	-- blink red
+	task.spawn(function()
+		for i = 1, 6 do
+			if stealToken ~= mine then
+				return
+			end
+			stealBanner.BackgroundTransparency = (i % 2 == 1) and 0.1 or 0.45
+			task.wait(0.25)
+		end
+		task.wait(1.5)
+		if stealToken == mine then
+			stealBanner.Visible = false
+		end
+	end)
+end
+
 local function onAlarm(thiefName: string)
-	showHint(`🚨 {thiefName} is on your roof! Tag them to get your crystal back!`, 5)
+	showHint(`🚨 {thiefName} is on your base! Touch them to take your storm back!`, 5)
 	for i = 1, 3 do
 		task.delay((i - 1) * 0.35, function()
 			playSound(PING, 0.9, 0.6)
@@ -336,10 +384,13 @@ function Hud.Start()
 	remotes:WaitForChild("Hint").OnClientEvent:Connect(showHint)
 	remotes:WaitForChild("Delivered").OnClientEvent:Connect(onDelivered)
 	remotes:WaitForChild("Alarm").OnClientEvent:Connect(onAlarm)
+	remotes:WaitForChild("Stolen").OnClientEvent:Connect(onStolen)
 
 	player:GetAttributeChangedSignal("Carrying"):Connect(function()
-		updateCarry()
-		updateBeam()
+		task.defer(function() -- wait for CarryingStolen to be set too
+			updateCarry()
+			updateBeam()
+		end)
 	end)
 	player.CharacterAdded:Connect(clearBeam)
 

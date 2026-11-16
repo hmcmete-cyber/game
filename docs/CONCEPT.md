@@ -28,6 +28,12 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - Weather is born in a central **storm cloud** and flies to its spawn spot.
 - High-graphics pass: lighting/atmosphere preset, glass UI, burst VFX, drifting decorative islands (tag `FloatingIsland`).
 
+## Update 2 — Vault Spheres (director request, replaces Storm Crystals)
+
+- Wild weather floats inside **glass spheres**. **Touch** to grab; carrying slows speed and jump a bit.
+- Each base has **5 Vault Spheres**. Delivering drops the storm into an empty vault: coins now + **passive income** while it stays (10% of its value every 5 s). Vault full → it's sold for double.
+- **Rivals can touch a full vault to steal its storm** (this supersedes "the permanent collection is always safe"). Owner gets an alarm; everyone sees a red center banner "X stole Y's Storm!"; the thief is outlined red. If the owner touches the thief, the storm flies back to the vault.
+
 ## Core loop
 
 1. **Hunt** weather creatures in the shared zone.

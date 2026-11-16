@@ -1,19 +1,23 @@
--- Weather creatures + Storm Crystals: spawning, catching, carrying, stealing,
--- world effects, delivery.
+-- Weather spheres: spawning, catching, carrying, vault storage, stealing,
+-- world effects.
 --
--- Rain cloud      -> leaves slippery puddles behind you
--- Pocket tornado  -> lifts nearby LiftPlatforms (shortcut)
--- Snow cloud      -> freezes nearby WaterGaps into bridges
--- Thunder cloud   -> rarest; you run faster but glow for everyone
--- Combos: Snow near puddles = ice road (speed), Tornado near puddles = launch pad
+-- Wild weather floats inside glass spheres. TOUCH one to grab it: it sticks
+-- above your head and you get a bit slower (speed + jump).
+-- Bring it to your base: it drops into an empty Vault sphere, pays coins now
+-- and keeps paying passive income while it stays in your vault.
+-- Rivals can sneak onto your base and TOUCH a full vault to steal its storm.
+-- Everyone sees "X stole Y's Storm!". If the owner touches the thief, the
+-- storm flies back.
 --
--- Storm Crystals: creatures on your display produce crystals around your Nest.
--- Rivals can grab them (alarm!) and run them to their own Nest. If the owner
--- touches the thief, the crystal goes back. Your display collection is never
--- stealable.
+-- Weather effects while carrying:
+--   Rain cloud      -> slippery puddles behind you
+--   Pocket tornado  -> lifts nearby LiftPlatforms (shortcut)
+--   Snow cloud      -> freezes nearby WaterGaps into bridges
+--   Thunder cloud   -> rarest; faster but glows for everyone
+--   Combos: Snow near puddles = ice road, Tornado near puddles = launch pad
 --
--- Movement effects (slip / ice / launch) are applied by the client, which
--- reads the puddle attributes. The server owns everything else.
+-- "Touch" is checked by distance every 0.1 s on the server. That's more
+-- reliable than .Touched for anchored parts and fast-moving players.
 
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,21 +31,21 @@ local WeatherService = {}
 
 local MapService, DataService, Remotes
 
-local weatherFolder, wildFolder, puddleFolder, crystalFolder
+local weatherFolder, wildFolder, puddleFolder
 local stormPos: Vector3 = Vector3.zero
 
 local wild = {} -- [Part] = { Type, Shiny, Spawn, Base, Phase, Spin, Ready }
 local occupied = {} -- [spawn marker] = Part
-local carriers = {} -- [Player] = { Kind = "Weather"|"Crystal", Type, Shiny, Value, Victim, Part, NextPuddle, LastPuddlePos, NextFlash }
-local crystals = {} -- [Player owner] = { [Part] = true }
-local crystalInfo = {} -- [Part] = { Owner, Value, Base }
+local carriers = {} -- [Player] = { Type, Shiny, Part, Victim?, NextPuddle, LastPuddlePos, NextFlash }
+local grabCooldown = {} -- [Player] = os.clock() when they may grab again
 local puddleExpire = {} -- [Part] = os.clock() time
 local liftState = {} -- [Part] = { Rest, Up, LastNear }
 local gapState = {} -- [Part] = { CanCollide, Material, Color, Transparency, FrozenUntil, Frozen }
 local lastAlarm = {} -- [Player owner] = os.clock()
+local vaultGlow = {} -- [vault Part] = PointLight
 
-local CRYSTAL_COLOR = Color3.fromRGB(120, 225, 255)
 local THIEF_COLOR = Color3.fromRGB(255, 60, 60)
+local SPHERE_COLOR = Color3.fromRGB(200, 230, 255)
 
 ------------------------------------------------------------------------
 -- Helpers
@@ -70,11 +74,14 @@ local function getNest(player: Player): BasePart?
 	return roof and roof:FindFirstChild("Nest")
 end
 
-local function setSpeed(player: Player, speed: number)
+-- Speed + jump. Carrying = slower and lower jumps.
+local function setMovement(player: Player, speed: number, carrying: boolean)
 	player:SetAttribute("BaseSpeed", speed)
 	local _, hum = getRoot(player)
 	if hum then
 		hum.WalkSpeed = speed
+		hum.JumpHeight = carrying and Config.CarryJumpHeight or 7.2
+		hum.JumpPower = carrying and Config.CarryJumpPower or 50
 	end
 end
 
@@ -153,49 +160,79 @@ local function rollType(): string
 	return Weather.Order[1]
 end
 
-local function makeCreature(typeName: string, shiny: boolean, scale: number): BasePart
+local function rewardOf(typeName: string, shiny: boolean): number
+	return Weather.Types[typeName].Reward * (shiny and Weather.ShinyMultiplier or 1)
+end
+
+-- The storm itself: a coloured core with particles
+local function makeCore(typeName: string, shiny: boolean, scale: number): BasePart
 	local def = Weather.Types[typeName]
 	local p = Instance.new("Part")
-	p.Name = typeName
+	p.Name = "Core"
 	p.Shape = Enum.PartType.Ball
-	p.Size = Vector3.one * def.Size * scale
+	p.Size = Vector3.one * def.Size * 0.6 * scale
 	p.Color = shiny and Weather.ShinyColor or def.Color
 	p.Material = shiny and Enum.Material.Neon or Enum.Material.SmoothPlastic
 	p.Anchored = true
 	p.CanCollide = false
 	p.CanQuery = false
 	p.CanTouch = false
-	p:SetAttribute("WeatherType", typeName)
-	p:SetAttribute("Shiny", shiny)
+	p.Massless = true
 
 	local particles = Instance.new("ParticleEmitter")
 	particles.Color = ColorSequence.new(shiny and Weather.ShinyColor or def.ParticleColor)
 	particles.Acceleration = def.ParticleAcceleration
 	particles.Rate = shiny and 30 or 15
-	particles.Lifetime = NumberRange.new(0.6, 1.2)
-	particles.Speed = NumberRange.new(1, 3)
+	particles.Lifetime = NumberRange.new(0.5, 1)
+	particles.Speed = NumberRange.new(0.5, 2)
 	particles.SpreadAngle = Vector2.new(180, 180)
-	particles.Size = NumberSequence.new(0.35 * scale)
+	particles.Size = NumberSequence.new(0.3 * scale)
 	particles.LightEmission = shiny and 1 or 0.3
 	particles.Parent = p
 
-	if typeName == "Thunder" or shiny then
-		local light = Instance.new("PointLight")
-		light.Color = shiny and Weather.ShinyColor or def.ParticleColor
-		light.Brightness = 2
-		light.Range = 10 * scale
-		light.Parent = p
-	end
-
+	local light = Instance.new("PointLight")
+	light.Color = shiny and Weather.ShinyColor or def.ParticleColor
+	light.Brightness = (typeName == "Thunder" or shiny) and 2.5 or 1
+	light.Range = 8 * scale
+	light.Parent = p
 	return p
 end
 
-local function addLabel(part: BasePart, text: string, color: Color3)
+-- A weather sphere: glass shell + storm core inside (one assembly)
+local function makeSphere(typeName: string, shiny: boolean, scale: number): BasePart
+	local def = Weather.Types[typeName]
+	local shell = Instance.new("Part")
+	shell.Name = typeName
+	shell.Shape = Enum.PartType.Ball
+	shell.Size = Vector3.one * def.Size * scale
+	shell.Color = shiny and Weather.ShinyColor or SPHERE_COLOR
+	shell.Material = Enum.Material.Glass
+	shell.Transparency = 0.6
+	shell.Anchored = true
+	shell.CanCollide = false
+	shell.CanQuery = false
+	shell.CanTouch = false
+	shell.CastShadow = false
+	shell:SetAttribute("WeatherType", typeName)
+	shell:SetAttribute("Shiny", shiny)
+
+	local core = makeCore(typeName, shiny, scale)
+	core.CFrame = shell.CFrame
+	core.Anchored = false
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = shell
+	weld.Part1 = core
+	weld.Parent = core
+	core.Parent = shell
+	return shell
+end
+
+local function addLabel(part: BasePart, text: string, color: Color3, maxDistance: number?)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
 	gui.Size = UDim2.fromOffset(200, 40)
 	gui.StudsOffset = Vector3.new(0, part.Size.Y / 2 + 1.5, 0)
-	gui.MaxDistance = 80
+	gui.MaxDistance = maxDistance or 80
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)
 	label.BackgroundTransparency = 1
@@ -208,47 +245,22 @@ local function addLabel(part: BasePart, text: string, color: Color3)
 	gui.Parent = part
 end
 
--- Weld a part above the player's head
+-- Weld a sphere above the player's head
 local function attachOverhead(part: BasePart, root: BasePart, height: number)
-	for _, child in part:GetChildren() do
-		if child:IsA("ProximityPrompt") or child.Name == "Label" then
-			child:Destroy()
-		end
+	local label = part:FindFirstChild("Label")
+	if label then
+		label:Destroy()
 	end
 	part.Anchored = false
 	part.Massless = true
 	part.CanCollide = false
 	part.CFrame = root.CFrame * CFrame.new(0, height, 0)
 	local weld = Instance.new("WeldConstraint")
+	weld.Name = "CarryWeld"
 	weld.Part0 = root
 	weld.Part1 = part
 	weld.Parent = part
 	part.Parent = root.Parent
-end
-
-------------------------------------------------------------------------
--- Display (safe collection)
-------------------------------------------------------------------------
-
-local function refreshDisplay(player: Player)
-	local roof = MapService.GetRooftop(player)
-	local data = DataService.Get(player)
-	if not roof or not data then
-		return
-	end
-	for i, slot in MapService.GetSlots(roof) do
-		local old = slot:FindFirstChild("Shown")
-		if old then
-			old:Destroy()
-		end
-		local entry = data.Recent[i]
-		if entry and Weather.Types[entry.Type] then
-			local mini = makeCreature(entry.Type, entry.Shiny == true, 0.5)
-			mini.Name = "Shown"
-			mini.CFrame = slot.CFrame * CFrame.new(0, slot.Size.Y / 2 + mini.Size.Y / 2 + 0.3, 0)
-			mini.Parent = slot
-		end
-	end
 end
 
 local function addCoins(player: Player, amount: number)
@@ -260,64 +272,111 @@ local function addCoins(player: Player, amount: number)
 end
 
 ------------------------------------------------------------------------
--- Storm Crystals
+-- Vaults
 ------------------------------------------------------------------------
 
-local createCrystal -- forward declaration
-
-local function crystalCount(owner: Player): number
-	local n = 0
-	for _ in crystals[owner] or {} do
-		n += 1
+-- data.Vault = array of { Type, Shiny } or false (empty), length VaultCount
+local function getVaultData(player: Player)
+	local data = DataService.Get(player)
+	if not data then
+		return nil
 	end
-	return n
+	if type(data.Vault) ~= "table" then
+		data.Vault = {}
+		-- migrate the old display list
+		for i, entry in data.Recent or {} do
+			if i <= Config.VaultCount then
+				data.Vault[i] = entry
+			end
+		end
+	end
+	for i = 1, Config.VaultCount do
+		if data.Vault[i] == nil then
+			data.Vault[i] = false
+		end
+	end
+	return data.Vault
 end
 
--- Arrange an owner's crystals in a ring around their Nest
-local function layoutCrystals(owner: Player)
-	local nest = getNest(owner)
-	local set = crystals[owner]
-	if not nest or not set then
+-- Empty spheres breathe softly; full spheres show their storm
+local function renderVault(vault: BasePart, entry)
+	local old = vault:FindFirstChild("Stored")
+	if old then
+		old:Destroy()
+	end
+	local oldLabel = vault:FindFirstChild("Label")
+	if oldLabel then
+		oldLabel:Destroy()
+	end
+
+	local glow = vaultGlow[vault]
+	if not glow then
+		glow = Instance.new("PointLight")
+		glow.Name = "VaultGlow"
+		glow.Range = 8
+		glow.Parent = vault
+		vaultGlow[vault] = glow
+		local pulse = TweenService:Create(glow, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+			Brightness = 1.6,
+		})
+		glow.Brightness = 0.4
+		pulse:Play()
+	end
+
+	if entry and Weather.Types[entry.Type] then
+		local def = Weather.Types[entry.Type]
+		local core = makeCore(entry.Type, entry.Shiny == true, vault.Size.X / def.Size * 1.2)
+		core.Name = "Stored"
+		core.Anchored = true
+		core.CFrame = vault.CFrame
+		core.Parent = vault
+		vault.Transparency = 0.45
+		vault.Color = entry.Shiny and Weather.ShinyColor or def.Color:Lerp(Color3.new(1, 1, 1), 0.5)
+		glow.Color = entry.Shiny and Weather.ShinyColor or def.ParticleColor
+		local perTick = math.max(1, math.floor(rewardOf(entry.Type, entry.Shiny) * Config.VaultIncomeRate))
+		addLabel(vault, `{entry.Shiny and "✨ " or ""}{def.DisplayName}  +{perTick}/{Config.VaultIncomeInterval}s`,
+			entry.Shiny and Weather.ShinyColor or Color3.new(1, 1, 1), 50)
+	else
+		vault.Transparency = 0.6
+		vault.Color = SPHERE_COLOR
+		glow.Color = SPHERE_COLOR
+	end
+end
+
+local function refreshVaults(player: Player)
+	local roof = MapService.GetRooftop(player)
+	local slots = getVaultData(player)
+	if not roof or not slots then
 		return
 	end
-	local list = {}
-	for part in set do
-		table.insert(list, part)
-	end
-	for i, part in list do
-		local angle = (i / #list) * math.pi * 2
-		local pos = nest.Position + Vector3.new(math.cos(angle) * 4.5, 2.2, math.sin(angle) * 4.5)
-		crystalInfo[part].Base = pos
-		part.CFrame = CFrame.new(pos)
+	for i, vault in MapService.GetVaults(roof) do
+		renderVault(vault, slots[i])
 	end
 end
 
-local function removeCrystal(part: BasePart)
-	local info = crystalInfo[part]
-	if info and crystals[info.Owner] then
-		crystals[info.Owner][part] = nil
-	end
-	crystalInfo[part] = nil
-end
-
-local function bankCrystals(owner: Player)
-	local set = crystals[owner]
-	local nest = getNest(owner)
-	if not set or not nest then
+local function clearVaultVisuals(player: Player)
+	local roof = MapService.GetRooftop(player)
+	if not roof then
 		return
 	end
-	local total = 0
-	for part in set do
-		total += crystalInfo[part] and crystalInfo[part].Value or 0
-		crystalInfo[part] = nil
-		part:Destroy()
+	for _, vault in MapService.GetVaults(roof) do
+		renderVault(vault, nil)
 	end
-	crystals[owner] = {}
-	if total > 0 then
-		addCoins(owner, total)
-		burstAt(nest.Position + Vector3.new(0, 2, 0), CRYSTAL_COLOR, 40)
-		Remotes.Delivered:FireClient(owner, total, "Crystal", false, nest.Position)
+end
+
+-- Put a storm into the first empty vault. Returns slot index or nil if full.
+local function storeInVault(player: Player, typeName: string, shiny: boolean)
+	local slots = getVaultData(player)
+	if not slots then
+		return nil
 	end
+	for i = 1, Config.VaultCount do
+		if not slots[i] then
+			slots[i] = { Type = typeName, Shiny = shiny }
+			return i
+		end
+	end
+	return nil
 end
 
 local function alarm(owner: Player, thief: Player)
@@ -328,7 +387,7 @@ local function alarm(owner: Player, thief: Player)
 	lastAlarm[owner] = now
 	Remotes.Alarm:FireClient(owner, thief.DisplayName)
 
-	-- Red flashing light on the roof, visible to everyone
+	-- Red flashing light on the base, visible to everyone
 	local nest = getNest(owner)
 	if nest then
 		local light = Instance.new("PointLight")
@@ -348,182 +407,130 @@ local function alarm(owner: Player, thief: Player)
 	end
 end
 
-local function onCrystalTriggered(player: Player, part: BasePart)
-	local info = crystalInfo[part]
-	if not info then
-		return
-	end
-	local owner = info.Owner
-	if player == owner then
-		bankCrystals(owner)
-		return
-	end
-	if carriers[player] then
-		return
-	end
-	local root = getRoot(player)
-	if not root then
-		return
-	end
-
-	local value = info.Value
-	removeCrystal(part)
-	layoutCrystals(owner)
-	attachOverhead(part, root, 4)
-
-	carriers[player] = { Kind = "Crystal", Type = "Crystal", Value = value, Victim = owner, Part = part }
-	player:SetAttribute("Carrying", "Crystal")
-	setSpeed(player, Config.CarrySpeed)
-	setHighlight(player, THIEF_COLOR)
-	burstAt(root.Position + Vector3.new(0, 4, 0), THIEF_COLOR, 20)
-	alarm(owner, player)
-	hint(player, `You grabbed a Storm Crystal (+{value})! Run home — if {owner.DisplayName} tags you, it goes back!`, 5)
-end
-
-createCrystal = function(owner: Player, value: number)
-	local p = Instance.new("Part")
-	p.Name = "StormCrystal"
-	p.Shape = Enum.PartType.Ball
-	p.Size = Vector3.one * 1.6
-	p.Color = CRYSTAL_COLOR
-	p.Material = Enum.Material.Neon
-	p.Anchored = true
-	p.CanCollide = false
-	p.CanQuery = false
-	p.CanTouch = false
-
-	local light = Instance.new("PointLight")
-	light.Color = CRYSTAL_COLOR
-	light.Brightness = 1.5
-	light.Range = 6
-	light.Parent = p
-
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Grab"
-	prompt.ObjectText = `Storm Crystal (+{value})`
-	prompt.HoldDuration = 0.4 -- a short hold: stealing takes nerve
-	prompt.MaxActivationDistance = 8
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = p
-	prompt.Triggered:Connect(function(player)
-		onCrystalTriggered(player, p)
-	end)
-
-	crystals[owner] = crystals[owner] or {}
-	crystals[owner][p] = true
-	crystalInfo[p] = { Owner = owner, Value = value, Base = Vector3.zero }
-	p.Parent = crystalFolder
-	layoutCrystals(owner)
-	return p
-end
-
-local function crystalLoop()
-	while true do
-		task.wait(Config.CrystalInterval)
-		for owner in crystals do
-			local data = DataService.Get(owner)
-			local pets = data and #data.Recent or 0
-			if owner.Parent and pets > 0 and crystalCount(owner) < Config.MaxCrystals then
-				createCrystal(owner, Config.CrystalBaseValue + Config.CrystalValuePerPet * pets)
-			end
-		end
-	end
-end
-
 ------------------------------------------------------------------------
 -- Carrying
 ------------------------------------------------------------------------
 
--- returnStolen: a dropped stolen crystal goes back to its owner
-local function clearCarry(player: Player, returnStolen: boolean?)
+local function startCarry(player: Player, root: BasePart, sphere: BasePart, typeName: string, shiny: boolean, victim: Player?)
+	attachOverhead(sphere, root, 4.5)
+	carriers[player] = {
+		Type = typeName,
+		Shiny = shiny,
+		Part = sphere,
+		Victim = victim,
+		NextPuddle = 0,
+		LastPuddlePos = nil,
+		NextFlash = 0,
+	}
+	player:SetAttribute("Carrying", typeName)
+	player:SetAttribute("CarryingStolen", victim ~= nil)
+
+	if typeName == "Thunder" then
+		setMovement(player, Config.ThunderCarrySpeed, true)
+	else
+		setMovement(player, Config.CarrySpeed, true)
+	end
+	if victim then
+		setHighlight(player, THIEF_COLOR)
+	elseif typeName == "Thunder" then
+		setHighlight(player, Weather.Types.Thunder.ParticleColor)
+	end
+end
+
+-- sendBack: a stolen storm that is dropped returns to its victim's vault
+local function clearCarry(player: Player, sendBack: boolean?)
 	local c = carriers[player]
 	if not c then
 		return nil
 	end
 	carriers[player] = nil
+	grabCooldown[player] = os.clock() + Config.GrabCooldown
 	player:SetAttribute("Carrying", nil)
+	player:SetAttribute("CarryingStolen", nil)
 	setHighlight(player, nil)
 	if c.Part then
 		c.Part:Destroy()
 	end
-	setSpeed(player, Config.WalkSpeed)
-	if returnStolen and c.Kind == "Crystal" and c.Victim and c.Victim.Parent and crystals[c.Victim] then
-		createCrystal(c.Victim, c.Value)
+	setMovement(player, Config.WalkSpeed, false)
+	if sendBack and c.Victim and c.Victim.Parent then
+		if storeInVault(c.Victim, c.Type, c.Shiny) then
+			refreshVaults(c.Victim)
+		end
 	end
 	return c
 end
 
 local function deliver(player: Player, c, nest: BasePart)
-	if c.Kind == "Crystal" then
-		addCoins(player, c.Value)
-		burstAt(nest.Position + Vector3.new(0, 2, 0), CRYSTAL_COLOR, 45)
-		Remotes.Delivered:FireClient(player, c.Value, "Crystal", false, nest.Position)
-		hint(player, `Heist complete! +{c.Value} coins 😈`, 3)
-		return
-	end
-
 	local def = Weather.Types[c.Type]
-	local reward = def.Reward * (c.Shiny and Weather.ShinyMultiplier or 1)
+	local reward = rewardOf(c.Type, c.Shiny)
 	local data = DataService.Get(player)
 	if data then
 		data.Delivered += 1
 		local key = c.Shiny and (c.Type .. "_Shiny") or c.Type
 		data.Collection[key] = (data.Collection[key] or 0) + 1
-		table.insert(data.Recent, 1, { Type = c.Type, Shiny = c.Shiny })
-		while #data.Recent > Config.DisplaySlots do
-			table.remove(data.Recent)
-		end
 	end
-	addCoins(player, reward)
-	refreshDisplay(player)
 
-	burstAt(nest.Position + Vector3.new(0, 2, 0), c.Shiny and Weather.ShinyColor or def.Color, c.Shiny and 80 or 40)
+	local slot = storeInVault(player, c.Type, c.Shiny)
+	if slot then
+		addCoins(player, reward)
+		refreshVaults(player)
+		local vault = MapService.GetVaults(MapService.GetRooftop(player))[slot]
+		burstAt(vault and vault.Position or nest.Position, c.Shiny and Weather.ShinyColor or def.Color, c.Shiny and 80 or 40)
+		hint(player, c.Victim and `Heist complete! {def.DisplayName} is yours now 😈`
+			or `{def.DisplayName} stored in your vault — it earns coins while it stays!`, 3)
+	else
+		-- Vault full: sell it for double
+		reward *= 2
+		addCoins(player, reward)
+		burstAt(nest.Position + Vector3.new(0, 2, 0), Weather.ShinyColor, 40)
+		hint(player, `Vault full — sold {def.DisplayName} for {reward} coins!`, 3)
+	end
 	Remotes.Delivered:FireClient(player, reward, c.Type, c.Shiny, nest.Position)
-	hint(player, `{def.DisplayName} added to your roof. It makes Storm Crystals — guard them!`, 3)
 end
 
-local function catch(player: Player, creature: BasePart)
-	local info = wild[creature]
-	if not info or not info.Ready or carriers[player] then
+local function catch(player: Player, sphere: BasePart, root: BasePart)
+	local info = wild[sphere]
+	if not info or not info.Ready then
 		return
 	end
-	local root = getRoot(player)
-	if not root then
-		return
-	end
-
-	wild[creature] = nil
+	wild[sphere] = nil
 	if info.Spawn then
 		occupied[info.Spawn] = nil
 	end
 
-	burstAt(creature.Position, info.Shiny and Weather.ShinyColor or Weather.Types[info.Type].Color, 25)
-	creature.Size *= 0.7
-	attachOverhead(creature, root, 4.5)
-
-	carriers[player] = {
-		Kind = "Weather",
-		Type = info.Type,
-		Shiny = info.Shiny,
-		Part = creature,
-		NextPuddle = 0,
-		LastPuddlePos = nil,
-		NextFlash = 0,
-	}
-	player:SetAttribute("Carrying", info.Type)
-
 	local def = Weather.Types[info.Type]
+	burstAt(sphere.Position, info.Shiny and Weather.ShinyColor or def.Color, 25)
+	sphere.Size *= 0.75
+	startCarry(player, root, sphere, info.Type, info.Shiny, nil)
+
+	hint(player, `You caught a {def.DisplayName}! Bring it to your base — follow the beam`, 5)
 	if info.Type == "Thunder" then
-		setSpeed(player, Config.ThunderCarrySpeed)
-		setHighlight(player, def.ParticleColor)
 		hintAll(`⚡ {player.DisplayName} has a THUNDER CLOUD! ⚡`, 4)
-	else
-		setSpeed(player, Config.CarrySpeed)
 	end
-	hint(player, `You caught a {def.DisplayName}! Bring it to your roof — follow the beam`, 5)
 	if info.Shiny then
 		hintAll(`✨ {player.DisplayName} caught a SHINY {def.DisplayName}! ✨`, 6)
 	end
+end
+
+local function steal(thief: Player, root: BasePart, owner: Player, slot: number, vault: BasePart)
+	local slots = getVaultData(owner)
+	local entry = slots and slots[slot]
+	if not entry then
+		return
+	end
+	slots[slot] = false
+	refreshVaults(owner)
+
+	local def = Weather.Types[entry.Type]
+	local sphere = makeSphere(entry.Type, entry.Shiny == true, 0.75)
+	sphere.CFrame = vault.CFrame
+	sphere.Parent = weatherFolder
+	burstAt(vault.Position, THIEF_COLOR, 30)
+	startCarry(thief, root, sphere, entry.Type, entry.Shiny == true, owner)
+
+	alarm(owner, thief)
+	Remotes.Stolen:FireAllClients(thief.DisplayName, owner.DisplayName, def.DisplayName)
+	hint(thief, `You stole {owner.DisplayName}'s {def.DisplayName}! Run home — if they tag you, it flies back!`, 5)
 end
 
 ------------------------------------------------------------------------
@@ -593,24 +600,12 @@ end
 
 local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean)
 	local def = Weather.Types[typeName]
-	local creature = makeCreature(typeName, shiny, 1)
+	local sphere = makeSphere(typeName, shiny, 1)
 	local base = spawnPart.Position + Vector3.new(0, 1.5, 0)
-	creature.CFrame = CFrame.new(stormPos) -- born inside the storm
-	addLabel(creature, shiny and `✨ SHINY {def.DisplayName} ✨` or def.DisplayName, shiny and Weather.ShinyColor or Color3.new(1, 1, 1))
+	sphere.CFrame = CFrame.new(stormPos) -- born inside the storm
+	addLabel(sphere, shiny and `✨ SHINY {def.DisplayName} ✨` or def.DisplayName, shiny and Weather.ShinyColor or Color3.new(1, 1, 1))
+	sphere.Parent = wildFolder
 
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Catch"
-	prompt.ObjectText = def.DisplayName
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 10
-	prompt.RequiresLineOfSight = false
-	prompt.Enabled = false
-	prompt.Parent = creature
-	prompt.Triggered:Connect(function(player)
-		catch(player, creature)
-	end)
-
-	creature.Parent = wildFolder
 	local info = {
 		Type = typeName,
 		Shiny = shiny,
@@ -620,17 +615,16 @@ local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean)
 		Spin = def.Spin,
 		Ready = false,
 	}
-	wild[creature] = info
-	occupied[spawnPart] = creature
+	wild[sphere] = info
+	occupied[spawnPart] = sphere
 
 	-- Fly from the storm down to its spot
-	local tween = TweenService:Create(creature, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+	local tween = TweenService:Create(sphere, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		CFrame = CFrame.new(base),
 	})
 	tween.Completed:Connect(function()
-		if wild[creature] then
+		if wild[sphere] then
 			info.Ready = true
-			prompt.Enabled = true
 			burstAt(base, shiny and Weather.ShinyColor or def.Color, 12)
 		end
 	end)
@@ -663,6 +657,27 @@ local function spawnLoop()
 			end
 		end
 		task.wait(Config.SpawnInterval)
+	end
+end
+
+local function incomeLoop()
+	while true do
+		task.wait(Config.VaultIncomeInterval)
+		for _, player in game:GetService("Players"):GetPlayers() do
+			local slots = getVaultData(player)
+			if slots then
+				local total = 0
+				for i = 1, Config.VaultCount do
+					local entry = slots[i]
+					if entry and Weather.Types[entry.Type] then
+						total += math.max(1, math.floor(rewardOf(entry.Type, entry.Shiny == true) * Config.VaultIncomeRate))
+					end
+				end
+				if total > 0 then
+					addCoins(player, total)
+				end
+			end
+		end
 	end
 end
 
@@ -832,57 +847,44 @@ local function updateWorld(now: number)
 	end
 end
 
--- Alarm when a rival walks onto a roof that has crystals
-local function checkIntruders(players: { [Player]: BasePart })
-	for owner, set in crystals do
-		if next(set) == nil then
-			continue
-		end
-		local nest = getNest(owner)
-		if not nest then
-			continue
-		end
-		for player, root in players do
-			if player ~= owner and (root.Position - nest.Position).Magnitude <= Config.IntruderRadius then
-				alarm(owner, player)
-			end
-		end
-	end
+local function touching(root: BasePart, part: BasePart): boolean
+	return (root.Position - part.Position).Magnitude <= part.Size.X / 2 + Config.TouchRadius
 end
 
 local function mainLoop()
+	local Players = game:GetService("Players")
 	while true do
 		task.wait(0.1)
 		local now = os.clock()
 
 		local roots = {}
-		for player in crystals do
+		for _, player in Players:GetPlayers() do
 			local root = getRoot(player)
 			if root then
 				roots[player] = root
 			end
 		end
 
+		-- Carriers: tag-back, delivery, weather effects
 		for player, c in carriers do
-			local root = roots[player] or getRoot(player)
+			local root = roots[player]
 			if not root or not c.Part or not c.Part.Parent then
 				clearCarry(player, true)
 				continue
 			end
 
-			-- Owner tags the thief -> crystal goes back
-			if c.Kind == "Crystal" then
-				local victimRoot = c.Victim and roots[c.Victim]
+			if c.Victim then
+				local victimRoot = roots[c.Victim]
 				if victimRoot and (victimRoot.Position - root.Position).Magnitude <= Config.TagRadius then
 					burstAt(root.Position + Vector3.new(0, 3, 0), THIEF_COLOR, 30)
+					local victim = c.Victim
 					clearCarry(player, true)
-					hint(player, `{c.Victim.DisplayName} caught you! The crystal flew back.`, 4)
-					hint(c.Victim, `You caught {player.DisplayName}! Crystal recovered 🛡️`, 4)
+					hint(player, `{victim.DisplayName} caught you! The storm flew back.`, 4)
+					hint(victim, `You caught {player.DisplayName}! Storm recovered 🛡️`, 4)
 					continue
 				end
 			end
 
-			-- Delivery at your own Nest
 			local nest = getNest(player)
 			if nest and (root.Position - nest.Position).Magnitude <= Config.DeliverRadius then
 				local delivered = clearCarry(player, false)
@@ -900,16 +902,64 @@ local function mainLoop()
 			end
 		end
 
-		-- Owners standing on their Nest bank their crystals
-		for owner, root in roots do
-			local nest = getNest(owner)
-			if nest and not carriers[owner] and next(crystals[owner]) ~= nil
-				and (root.Position - nest.Position).Magnitude <= Config.DeliverRadius then
-				bankCrystals(owner)
+		-- Empty-handed players: touch wild spheres to catch, full vaults to steal
+		for player, root in roots do
+			if carriers[player] or now < (grabCooldown[player] or 0) then
+				continue
+			end
+			local grabbed = false
+			for sphere, info in wild do
+				if info.Ready and touching(root, sphere) then
+					catch(player, sphere, root)
+					grabbed = true
+					break
+				end
+			end
+			if grabbed then
+				continue
+			end
+			for _, owner in Players:GetPlayers() do
+				if owner == player then
+					continue
+				end
+				local roof = MapService.GetRooftop(owner)
+				local slots = roof and getVaultData(owner)
+				if not slots then
+					continue
+				end
+				for i, vault in MapService.GetVaults(roof) do
+					if slots[i] and touching(root, vault) then
+						steal(player, root, owner, i, vault)
+						grabbed = true
+						break
+					end
+				end
+				if grabbed then
+					break
+				end
 			end
 		end
 
-		checkIntruders(roots)
+		-- Alarm when a rival walks onto a base with a full vault
+		for _, owner in Players:GetPlayers() do
+			local nest = getNest(owner)
+			local slots = nest and getVaultData(owner)
+			local hasLoot = false
+			for i = 1, Config.VaultCount do
+				if slots and slots[i] then
+					hasLoot = true
+					break
+				end
+			end
+			if hasLoot then
+				for player, root in roots do
+					if player ~= owner and (root.Position - nest.Position).Magnitude <= Config.IntruderRadius then
+						alarm(owner, player)
+					end
+				end
+			end
+		end
+
 		updateWorld(now)
 	end
 end
@@ -923,11 +973,6 @@ local function bobLoop()
 					* CFrame.Angles(0, t * info.Spin, 0)
 			end
 		end
-		for part, info in crystalInfo do
-			if part.Parent == crystalFolder then
-				part.CFrame = CFrame.new(info.Base + Vector3.new(0, math.sin(t * 3 + info.Base.X) * 0.4, 0))
-			end
-		end
 	end)
 end
 
@@ -937,8 +982,7 @@ end
 
 function WeatherService.OnPlayerAdded(player: Player)
 	player:SetAttribute("BaseSpeed", Config.WalkSpeed)
-	crystals[player] = {}
-	refreshDisplay(player)
+	refreshVaults(player)
 
 	local function onCharacter(char: Model)
 		local hum = char:WaitForChild("Humanoid") :: Humanoid
@@ -953,9 +997,9 @@ function WeatherService.OnPlayerAdded(player: Player)
 			end
 			local data = DataService.Get(player)
 			if data and data.Delivered == 0 then
-				hint(player, "Catch the cloud! ☁️  Walk up to it and press E", 8)
+				hint(player, "Touch the cloud sphere to catch it! ☁️", 8)
 			else
-				hint(player, "Catch weather, guard your crystals, raid other roofs!", 5)
+				hint(player, "Catch storms, fill your vaults, raid other bases!", 5)
 			end
 		end)
 	end
@@ -969,14 +1013,18 @@ function WeatherService.OnPlayerAdded(player: Player)
 	end)
 end
 
+-- Call BEFORE the rooftop is released
 function WeatherService.OnPlayerRemoving(player: Player)
 	clearCarry(player, true)
-	for part in crystals[player] or {} do
-		crystalInfo[part] = nil
-		part:Destroy()
-	end
-	crystals[player] = nil
+	clearVaultVisuals(player)
 	lastAlarm[player] = nil
+	grabCooldown[player] = nil
+	-- thieves carrying this player's storms just keep them
+	for _, c in carriers do
+		if c.Victim == player then
+			c.Victim = nil
+		end
+	end
 end
 
 function WeatherService.Start(mapService, dataService, remotes)
@@ -992,16 +1040,13 @@ function WeatherService.Start(mapService, dataService, remotes)
 	puddleFolder = Instance.new("Folder")
 	puddleFolder.Name = "Puddles"
 	puddleFolder.Parent = weatherFolder
-	crystalFolder = Instance.new("Folder")
-	crystalFolder.Name = "Crystals"
-	crystalFolder.Parent = weatherFolder
 	weatherFolder.Parent = workspace
 
 	setupStorm()
 	bobLoop()
 	task.spawn(spawnLoop)
 	task.spawn(mainLoop)
-	task.spawn(crystalLoop)
+	task.spawn(incomeLoop)
 end
 
 return WeatherService

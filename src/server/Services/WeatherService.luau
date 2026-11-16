@@ -158,7 +158,7 @@ local function refreshDisplay(player: Player)
 	end
 end
 
-local function deliver(player: Player, c)
+local function deliver(player: Player, c, nest: BasePart)
 	local def = Weather.Types[c.Type]
 	local reward = def.Reward * (c.Shiny and Weather.ShinyMultiplier or 1)
 	local data = DataService.Get(player)
@@ -174,7 +174,27 @@ local function deliver(player: Player, c)
 	end
 	DataService.Sync(player)
 	refreshDisplay(player)
-	hint(player, `+{reward} coins! {def.DisplayName} added to your roof. Catch another one!`, 4)
+
+	-- Celebration burst everyone can see
+	local burst = nest:FindFirstChild("DeliverBurst")
+	if not burst then
+		burst = Instance.new("ParticleEmitter")
+		burst.Name = "DeliverBurst"
+		burst.Enabled = false
+		burst.Lifetime = NumberRange.new(0.6, 1)
+		burst.Speed = NumberRange.new(12, 20)
+		burst.SpreadAngle = Vector2.new(60, 60)
+		burst.EmissionDirection = Enum.NormalId.Top
+		burst.Acceleration = Vector3.new(0, -30, 0)
+		burst.Size = NumberSequence.new(0.5, 0)
+		burst.LightEmission = 1
+		burst.Parent = nest
+	end
+	burst.Color = ColorSequence.new(c.Shiny and Weather.ShinyColor or def.Color)
+	burst:Emit(c.Shiny and 80 or 35)
+
+	Remotes.Delivered:FireClient(player, reward, c.Type, c.Shiny, nest.Position)
+	hint(player, `{def.DisplayName} added to your roof. Catch another one!`, 3)
 end
 
 local function catch(player: Player, creature: BasePart)
@@ -474,7 +494,7 @@ local function mainLoop()
 			if nest and (root.Position - nest.Position).Magnitude <= Config.DeliverRadius then
 				local delivered = clearCarry(player)
 				if delivered then
-					deliver(player, delivered)
+					deliver(player, delivered, nest)
 				end
 				continue
 			end

@@ -135,3 +135,20 @@ Re your blockers: noted the nested path `C:\Users\MONSTER\game\game` — that's 
 OBJECTS: (expects the structure above)
 ANIMATIONS: still needed later — Catch, CarryJar, Slip
 ERRORS: none known; untested in Studio yet — please playtest after pulling and report F9 lines.
+
+### [2026-11-16 16:25 Istanbul] Claude → Astra — v0.2: playtest feedback applied
+Status: done / info
+
+Director playtested v0.1: **no errors, works as intended.** Feedback + what I changed:
+- "Slip is too harsh" → softened: push 40→22, hop 18→8, spin 8→3, duration 1.3→0.8 s, cooldown 2→3 s (`Config.luau`).
+- "Earning coins isn't satisfying" → added a reward moment: particle burst at the Nest (visible to everyone), floating `+N` text, ping sound, coin counter HUD (bottom center) that counts up and bounces, "Carrying: X" panel, a pop sound on catch.
+- Carry speed is fine (kept 14).
+- Combos weren't tested: they need 2 players (one Rain trail + one Snow/Tornado). Test via Studio Test → Clients and Servers → 2 players.
+
+Info: director says your credits ran out. I'll keep developing and logging here so you can catch up when you're back.
+
+Next: harvest crates (CrateArena snatch), first-run tutorial arrow, then catch mini-game for Tornado/Snow.
+
+OBJECTS: unchanged
+ANIMATIONS: still needed — Catch, CarryJar, Slip
+ERRORS: none reported

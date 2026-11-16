@@ -23,9 +23,11 @@ local Config = {
 	PuddleMinDistance = 3, -- don't stack puddles when standing still
 	PuddleLifetime = 6,
 	OwnerPuddleGrace = 1.5, -- your own fresh puddles don't make you slip
-	SlipCooldown = 2,
-	SlipDuration = 1.3,
-	SlipPush = 40,
+	SlipCooldown = 3,
+	SlipDuration = 0.8,
+	SlipPush = 22, -- forward slide
+	SlipLift = 8, -- small hop
+	SlipSpin = 3, -- how much you tip over
 
 	-- Combo: Snow + rain puddle = ice road (speed boost)
 	IceLifetime = 12,

@@ -143,8 +143,8 @@ local function slip(hum: Humanoid, root: BasePart)
 	slipping = true
 	local dir = hum.MoveDirection.Magnitude > 0.1 and hum.MoveDirection or root.CFrame.LookVector
 	hum.PlatformStand = true
-	root.AssemblyLinearVelocity = dir * Config.SlipPush + Vector3.new(0, 18, 0)
-	root.AssemblyAngularVelocity = Vector3.new(dir.Z, 0, -dir.X) * 8
+	root.AssemblyLinearVelocity = dir * Config.SlipPush + Vector3.new(0, Config.SlipLift, 0)
+	root.AssemblyAngularVelocity = Vector3.new(dir.Z, 0, -dir.X) * Config.SlipSpin
 	task.delay(Config.SlipDuration, function()
 		if hum.Parent then
 			hum.PlatformStand = false
@@ -199,5 +199,166 @@ RunService.Heartbeat:Connect(function()
 	if iceNow ~= onIce then
 		onIce = iceNow
 		applySpeed()
+	end
+end)
+
+------------------------------------------------------------------------
+-- HUD: coin counter + carrying panel + delivery celebration
+------------------------------------------------------------------------
+
+local TweenService = game:GetService("TweenService")
+local Weather = require(ReplicatedStorage.Shared.WeatherTypes)
+local deliveredEvent = remotes:WaitForChild("Delivered")
+
+local function makePanel(name: string, position: UDim2, size: UDim2)
+	local frame = Instance.new("Frame")
+	frame.Name = name
+	frame.AnchorPoint = Vector2.new(0.5, 1)
+	frame.Position = position
+	frame.Size = size
+	frame.BackgroundColor3 = Color3.fromRGB(25, 30, 45)
+	frame.BackgroundTransparency = 0.2
+	frame.Parent = gui
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 14)
+	c.Parent = frame
+	local label = Instance.new("TextLabel")
+	label.Name = "Text"
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.GothamBlack
+	label.TextScaled = true
+	label.TextColor3 = Color3.fromRGB(255, 220, 80)
+	label.Parent = frame
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 6)
+	pad.PaddingBottom = UDim.new(0, 6)
+	pad.PaddingLeft = UDim.new(0, 10)
+	pad.PaddingRight = UDim.new(0, 10)
+	pad.Parent = label
+	return frame, label
+end
+
+local coinFrame, coinLabel = makePanel("Coins", UDim2.new(0.5, 0, 1, -20), UDim2.fromOffset(200, 52))
+local coinScale = Instance.new("UIScale")
+coinScale.Parent = coinFrame
+
+local carryFrame, carryLabel = makePanel("Carrying", UDim2.new(0.5, 0, 1, -80), UDim2.fromOffset(300, 40))
+carryLabel.TextColor3 = Color3.new(1, 1, 1)
+carryFrame.Visible = false
+
+local shownCoins = 0
+local function setCoinText(value: number)
+	coinLabel.Text = `🪙 {value}`
+end
+
+-- Count up smoothly and bounce
+local function animateCoins(target: number)
+	local from = shownCoins
+	shownCoins = target
+	if target <= from then
+		setCoinText(target)
+		return
+	end
+	coinScale.Scale = 1.25
+	TweenService:Create(coinScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	local steps = 15
+	for i = 1, steps do
+		if shownCoins ~= target then
+			return -- a newer update took over
+		end
+		setCoinText(math.floor(from + (target - from) * i / steps))
+		task.wait(0.03)
+	end
+end
+
+task.spawn(function()
+	local leaderstats = player:WaitForChild("leaderstats")
+	local coins = leaderstats:WaitForChild("Coins") :: IntValue
+	shownCoins = coins.Value
+	setCoinText(coins.Value)
+	coins.Changed:Connect(function(v)
+		task.spawn(animateCoins, v)
+	end)
+end)
+
+local function updateCarryPanel()
+	local typeName = player:GetAttribute("Carrying")
+	local def = typeName and Weather.Types[typeName]
+	if def then
+		carryFrame.Visible = true
+		carryLabel.Text = `Carrying: {def.DisplayName}`
+		carryFrame.BackgroundColor3 = def.Color:Lerp(Color3.new(0, 0, 0), 0.55)
+	else
+		carryFrame.Visible = false
+	end
+end
+player:GetAttributeChangedSignal("Carrying"):Connect(updateCarryPanel)
+
+local function playSound(id: string, volume: number, pitch: number)
+	local s = Instance.new("Sound")
+	s.SoundId = id
+	s.Volume = volume
+	s.PlaybackSpeed = pitch
+	s.Parent = gui
+	s:Play()
+	s.Ended:Connect(function()
+		s:Destroy()
+	end)
+	task.delay(5, function()
+		if s.Parent then
+			s:Destroy()
+		end
+	end)
+end
+
+-- Floating "+N" above the nest
+local function floatText(position: Vector3, text: string, color: Color3)
+	local anchor = Instance.new("Part")
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.one
+	anchor.Position = position + Vector3.new(0, 3, 0)
+	anchor.Parent = workspace
+
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.fromOffset(240, 80)
+	bb.AlwaysOnTop = true
+	bb.Parent = anchor
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.GothamBlack
+	label.TextScaled = true
+	label.Text = text
+	label.TextColor3 = color
+	label.TextStrokeTransparency = 0
+	label.Parent = bb
+
+	TweenService:Create(anchor, TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Position = anchor.Position + Vector3.new(0, 7, 0),
+	}):Play()
+	TweenService:Create(label, TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		TextTransparency = 1,
+		TextStrokeTransparency = 1,
+	}):Play()
+	task.delay(1.5, function()
+		anchor:Destroy()
+	end)
+end
+
+deliveredEvent.OnClientEvent:Connect(function(reward: number, typeName: string, shiny: boolean, nestPos: Vector3)
+	local color = shiny and Weather.ShinyColor or Color3.fromRGB(255, 220, 80)
+	floatText(nestPos, shiny and `✨ +{reward} ✨` or `+{reward}`, color)
+	playSound("rbxasset://sounds/electronicpingshort.wav", 0.7, shiny and 0.8 or 1.2)
+end)
+
+-- Little "pop" when you catch something
+player:GetAttributeChangedSignal("Carrying"):Connect(function()
+	if player:GetAttribute("Carrying") then
+		playSound("rbxasset://sounds/electronicpingshort.wav", 0.5, 1.8)
 	end
 end)

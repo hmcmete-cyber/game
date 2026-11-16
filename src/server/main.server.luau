@@ -16,11 +16,14 @@ remotes.Name = "Remotes"
 local hintEvent = Instance.new("RemoteEvent")
 hintEvent.Name = "Hint"
 hintEvent.Parent = remotes
+local deliveredEvent = Instance.new("RemoteEvent")
+deliveredEvent.Name = "Delivered"
+deliveredEvent.Parent = remotes
 remotes.Parent = ReplicatedStorage
 
 DataService.Start()
 MapService.Start()
-WeatherService.Start(MapService, DataService, { Hint = hintEvent })
+WeatherService.Start(MapService, DataService, { Hint = hintEvent, Delivered = deliveredEvent })
 
 local function onPlayerAdded(player: Player)
 	DataService.Load(player)

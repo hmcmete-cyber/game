@@ -447,7 +447,8 @@ local function renderVault(vault: BasePart, entry, owner: Player?)
 			entry.Shiny and Weather.ShinyColor or Color3.new(1, 1, 1), 50)
 
 		if owner then
-			local steal = makePrompt(vault, "StealPrompt", "Steal", def.DisplayName, Config.StealHold, "Steal", owner.UserId)
+			local steal = makePrompt(vault, "StealPrompt", "Steal", def.DisplayName,
+				workspace:GetAttribute("Event") == "Fog" and Config.FogStealHold or Config.StealHold, "Steal", owner.UserId)
 			steal.Triggered:Connect(function(player)
 				onStealPrompt(player, owner, vault)
 			end)
@@ -631,6 +632,17 @@ local function deliver(player: Player, c, nest: BasePart)
 		burstAt(nest.Position + Vector3.new(0, 2, 0), Weather.ShinyColor, 40)
 		hint(player, `Vault full — sold {def.DisplayName} for {reward} coins!`, 3)
 	end
+	-- XP + Economic cloud bonuses
+	local levelUp = DataService.AddXP(player, def.XP * (c.Shiny and 2 or 1))
+	if levelUp then
+		hint(player, `LEVEL UP! You are now level {levelUp}`, 4)
+	end
+	if def.ItemChance > 0 and math.random() < def.ItemChance then
+		local itemId = InventoryService.GiveRandomItem(player)
+		if itemId then
+			hint(player, `Bonus drop from {def.DisplayName}: {itemId}!`, 3)
+		end
+	end
 	Remotes.Delivered:FireClient(player, reward, c.Type, c.Shiny, nest.Position)
 end
 
@@ -811,11 +823,11 @@ local function setupStorm()
 	end)
 end
 
-local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean)
+local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean, fromPos: Vector3?)
 	local def = Weather.Types[typeName]
 	local sphere = makeSphere(typeName, shiny, 1)
 	local base = spawnPart.Position + Vector3.new(0, 1.5, 0)
-	moveAssembly(sphere, CFrame.new(stormPos)) -- born inside the storm
+	moveAssembly(sphere, CFrame.new(fromPos or stormPos)) -- born inside the storm (or a meteor)
 	addLabel(sphere, shiny and `* SHINY {def.DisplayName} *` or def.DisplayName, shiny and Weather.ShinyColor or Color3.new(1, 1, 1))
 	local prompt = makePrompt(sphere, "CatchPrompt", "Catch", def.DisplayName,
 		typeName == "Mythic" and Config.MythicCatchHold or Config.CatchHold)
@@ -879,6 +891,20 @@ local function freeSpawns()
 		end
 	end
 	return list
+end
+
+-- World events (EventService): drop a cloud of the given tiers on a spawn.
+-- Returns the cloud key, or nil if the spot is taken / nothing fits.
+function WeatherService.SpawnEventCloud(spawnPart: BasePart, tierChances: { [string]: number }, fromPos: Vector3?): string?
+	local current = occupied[spawnPart]
+	if current and current.Parent then
+		return nil
+	end
+	local typeName = rollCloud(spawnPart:GetAttribute("Biome") or "Plateau", tierChances)
+	if typeName then
+		spawnWild(spawnPart, typeName, math.random() < Weather.ShinyChance, fromPos)
+	end
+	return typeName
 end
 
 -- Wild clouds that don't belong to the current time of day fade away
@@ -1226,7 +1252,11 @@ function WeatherService.OnPlayerAdded(player: Player)
 		task.defer(function()
 			local nest = getNest(player)
 			if nest and char.Parent then
-				char:PivotTo(CFrame.new(nest.Position + Vector3.new(0, 4, 0)))
+				local target = nest.Position + Vector3.new(0, 4, 0)
+				pcall(function()
+					player:RequestStreamAroundAsync(target, 5) -- StreamingEnabled: load the base first
+				end)
+				char:PivotTo(CFrame.new(target))
 			end
 		end)
 		hum.WalkSpeed = Config.WalkSpeed

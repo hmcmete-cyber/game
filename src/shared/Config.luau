@@ -11,7 +11,7 @@ local Config = {
 
 	-- Wild weather spawning
 	SpawnInterval = 1, -- seconds between spawns
-	MaxWild = 34, -- max wild clouds in the world (big continent)
+	MaxWild = 60, -- max wild clouds in the world (huge continent)
 
 	-- Cloud Altars (rare spawner)
 	AltarInterval = 45, -- seconds between altar spawns
@@ -150,5 +150,22 @@ local Config = {
 	DataStoreName = "PocketStorm_v1",
 	AutosaveInterval = 60,
 }
+
+-- v1.4 perks
+Config.QuakeRadius = 22
+Config.QuakeKnock = 70
+Config.QuakeCooldown = 20
+Config.ChaosInterval = 20
+Config.ChaosDuration = 8
+Config.LavaDamage = 30 -- per second (Fire perks are immune)
+
+-- v1.4 world events
+Config.EventMinGap = 240 -- seconds between world events
+Config.EventMaxGap = 420
+Config.EventDuration = 75
+Config.AcidDamage = 6 -- per second outside shelter (Poison perks are immune)
+Config.FogStealHold = 0.7 -- steal hold during the Fog event (normal = StealHold)
+Config.MeteorClouds = 4 -- clouds a meteor shower drops
+Config.MeteorTiers = { Epic = 60, Legendary = 32, Mythic = 8 }
 
 return Config

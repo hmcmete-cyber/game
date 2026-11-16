@@ -6,6 +6,7 @@
 --   "Storm"    Gate 3 · narrow bridge: lightning strikes random spots
 --              (red warning circle first) + side wind (client)
 --   "Electric" always-on electric ground (slow + damage)
+--   "Lava"     volcanic lava pools: Config.LavaDamage per second (FireImmune perk = safe)
 -- Carrying a cloud makes every hazard worse.
 
 local Debris = game:GetService("Debris")
@@ -191,6 +192,15 @@ local function damageLoop()
 		end
 
 		for _, p in list do
+			-- Lava (Volcanic Caldera): heavy burn unless a Fire perk protects you
+			if not p.Player:GetAttribute("FireImmune") then
+				for _, h in hazards do
+					if h:GetAttribute("HazardType") == "Lava" and HazardService.Inside(h, p.Root.Position) then
+						p.Hum:TakeDamage(Config.LavaDamage * Config.ElectricInterval * (1 - (p.Player:GetAttribute("DamageResist") or 0)))
+						break
+					end
+				end
+			end
 			if p.Player:GetAttribute("ElectricImmune") then
 				continue
 			end

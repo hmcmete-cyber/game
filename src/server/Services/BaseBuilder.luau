@@ -70,6 +70,7 @@ local NO_COLLIDE = { CanCollide = false, CanQuery = false, CanTouch = false, Cas
 local function ring(parent: Instance, name: string, center: CFrame, radius: number, segments: number, color: Color3, speed: number)
 	local model = Instance.new("Model")
 	model.Name = name
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- spins as one piece
 	local pivot = part(model, "Center", Vector3.one, center, color, {
 		Transparency = 1,
 		CanCollide = false,
@@ -141,6 +142,7 @@ function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent:
 	local R = BaseBuilder.Radius
 	local base = Instance.new("Model")
 	base.Name = name
+	base.ModelStreamingMode = Enum.ModelStreamingMode.Persistent -- your base is always loaded
 
 	local topCF = facing and CFrame.lookAt(top, Vector3.new(facing.X, top.Y, facing.Z)) or CFrame.new(top)
 

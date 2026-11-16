@@ -115,6 +115,9 @@ function NpcService.Spawn(spot: BasePart, who: string, openShop: RemoteEvent)
 	local ok, model = pcall(function()
 		return Players:CreateHumanoidModelFromDescription(d, Enum.HumanoidRigType.R15)
 	end)
+	if ok and model then
+		model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+	end
 	if not ok or not model then
 		warn(`[NPC] Could not build {who}: {model}`)
 		return nil

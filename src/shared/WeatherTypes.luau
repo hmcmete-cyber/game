@@ -20,7 +20,12 @@ WeatherTypes.TierOrder = { "Common", "Rare", "Epic", "Legendary", "Mythic" }
 -- Cloud Altars roll only Epic and better
 WeatherTypes.AltarTiers = { Epic = 70, Legendary = 25, Mythic = 5 }
 
-WeatherTypes.Biomes = { "Plateau", "Coast", "Mountains", "Valley" }
+WeatherTypes.Biomes = { "Plateau", "Coast", "Mountains", "Mushroom", "Marsh", "Canyon", "Volcanic" }
+-- Old biome names used in CloudDB entries → the biome that replaced them
+WeatherTypes.BiomeAlias = { Valley = "Canyon" }
+WeatherTypes.Categories = { "Classic", "Elemental", "SpaceTime", "Economic", "Chaos" }
+-- XP for delivering a cloud (Economic clouds add Bonus.XP on top)
+local TIER_XP = { Common = 5, Rare = 15, Epic = 40, Legendary = 120, Mythic = 400 }
 
 -- Default looks per visual style (particle colour + motion)
 local VISUAL = {
@@ -70,6 +75,10 @@ for _, c in CloudDB do
 		Spin = c.Spin or v.Spin,
 		Perk = c.Perk,
 		AltarOnly = c.AltarOnly == true,
+		Category = c.Category or "Classic",
+		Element = c.Element,
+		XP = TIER_XP[rarity.Name] + (c.Bonus and c.Bonus.XP or 0),
+		ItemChance = c.Bonus and c.Bonus.ItemChance or 0,
 	}
 	WeatherTypes.Types[c.Key] = def
 	table.insert(WeatherTypes.Order, c.Key)
@@ -82,7 +91,7 @@ end
 
 function WeatherTypes.InBiome(def, biome: string): boolean
 	for _, b in def.Biomes do
-		if b == "Any" or b == biome then
+		if b == "Any" or b == biome or WeatherTypes.BiomeAlias[b] == biome then
 			return true
 		end
 	end

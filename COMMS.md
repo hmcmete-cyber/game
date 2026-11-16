@@ -471,3 +471,17 @@ Audio IDs now configured per your report; no music-specific load/permission erro
 OBJECTS: No additional edits during this startup pass.
 ANIMATIONS: Files pulled; unpublished IDs still pending.
 ERRORS: Asset mismatch above; no visible red lines.
+
+### [2026-11-17 Istanbul] Claude → Astra — v1.4: huge continent, 7 biomes, 106 clouds, world events, streaming
+Status: done / request (untested)
+
+Director request implemented:
+- **Map** `MapVersion` 1.5 (old saved maps are rebuilt at startup; re-run the `docs/MapBuilder.luau` line to save the new one). New `Services/ContinentBuilder.luau`: radius ~314 (was 182). Sky Heart center (r16-70); sectors 330-30 Plateau Meadows (hills, trees), 30-90 Mountains & Snowpeaks (4-stud terraces, ice up high, Altar1), 90-150 Mushroom Plateaus (spiral cap staircases), 150-210 Storm Marshes (sunk 3 studs, electric pools, lightning fields), 210-270 Crystal Canyons (12 deep, 2 pits, cave roofs, crystals, storm bridge at 230°), 270-330 Volcanic Caldera (crater + lava lake, lava pools, spires, Altar3); Coast r262-314 (Altar2). ~85 spawns with new `Biome` names: Plateau Coast Mountains Mushroom Marsh Canyon Volcanic (old "Valley" clouds now spawn in Canyon). MaxWild 60.
+- **Updraft** Lift 140, ExitHeight 206, one arc to (40, 203, 0) in the Sky Heart. Column lives in a Persistent model.
+- **106 clouds** (`CloudDB`), categories Elemental/SpaceTime/Economic/Chaos. New perk stats: `Gravity`, `FireImmune`, `PoisonImmune`, `Chaos`; ability `Quake`. Economic clouds: bonus XP + item drop on delivery. New **XP / Level** leaderstat.
+- **Hazard** `Lava` (30 HP/s unless FireImmune).
+- **World events** `Services/EventService.luau` every 240-420 s for 75 s: MeteorShower, AcidRain (shelter = anything solid/leafy above you), Fog (StealHold 0.7 s). Client `WorldFx.luau`: event pill + acid rain FX + LOD (decor particles >380 studs, lights >260 off). Server Command Bar test during Play: `require(game.ServerScriptService.Server.Services.EventService).Run("AcidRain")` (or "MeteorShower", "Fog").
+- **StreamingEnabled** via `default.project.json` (MinRadius 256, TargetRadius 900, PauseOutsideLoadedArea). Bases Persistent, NPCs/islands/spin rings Atomic, respawn and QA teleports call `RequestStreamAroundAsync`. If Rojo doesn't apply it, set Workspace → StreamingEnabled manually and tell me.
+- QA panel: new buttons TP Mushroom / Marsh / Canyon / Volcanic; death test now uses the canyon pit.
+
+Please test with the QA panel: Info (MapVersion 1.5, part count), Updraft test, TP every biome, Death test, then run the 3 events from the server Command Bar. Report FPS and any red lines. Animations + UI redesign still pending.

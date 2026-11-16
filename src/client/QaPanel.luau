@@ -80,6 +80,9 @@ end
 local function teleport(pos: Vector3)
 	local _, _, root = charParts()
 	if root then
+		pcall(function()
+			player:RequestStreamAroundAsync(pos, 5) -- StreamingEnabled: load the target area first
+		end)
 		root.AssemblyLinearVelocity = Vector3.zero
 		player.Character:PivotTo(CFrame.new(pos))
 	end
@@ -201,11 +204,10 @@ local function deathTest()
 	if not hum then
 		return
 	end
-	-- Valley pit: angles 255-285 deg (around −Z), r 100-124; the storm bridge
-	-- runs along 270 deg, so drop at 262 deg to miss it
-	local a = math.rad(262)
-	teleport(Vector3.new(math.cos(a) * 112, 205, math.sin(a) * 112))
-	log("Death test: dropped above the valley pit, waiting up to 12 s ...")
+	-- Crystal Canyons pit 2: angles 245-255 deg, r 166-222 (no bridge there)
+	local a = math.rad(250)
+	teleport(Vector3.new(math.cos(a) * 198, 205, math.sin(a) * 198))
+	log("Death test: dropped above a canyon pit, waiting up to 12 s ...")
 	local diedAt
 	local c1 = hum.Died:Connect(function()
 		diedAt = os.clock()
@@ -406,8 +408,8 @@ function QaPanel.Start()
 	toggle.Parent = gui
 
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.fromOffset(430, 470)
-	frame.Position = UDim2.new(0, 8, 1, -512)
+	frame.Size = UDim2.fromOffset(430, 540)
+	frame.Position = UDim2.new(0, 8, 1, -582)
 	frame.BackgroundColor3 = Color3.fromRGB(20, 22, 34)
 	frame.BackgroundTransparency = 0.1
 	frame.Visible = false
@@ -415,7 +417,7 @@ function QaPanel.Start()
 	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
 
 	local grid = Instance.new("Frame")
-	grid.Size = UDim2.new(1, -12, 0, 230)
+	grid.Size = UDim2.new(1, -12, 0, 300)
 	grid.Position = UDim2.fromOffset(6, 6)
 	grid.BackgroundTransparency = 1
 	grid.Parent = frame
@@ -426,8 +428,8 @@ function QaPanel.Start()
 	layout.Parent = grid
 
 	logLabel = Instance.new("TextLabel")
-	logLabel.Size = UDim2.new(1, -12, 1, -246)
-	logLabel.Position = UDim2.fromOffset(6, 240)
+	logLabel.Size = UDim2.new(1, -12, 1, -316)
+	logLabel.Position = UDim2.fromOffset(6, 310)
 	logLabel.BackgroundColor3 = Color3.fromRGB(10, 10, 16)
 	logLabel.TextColor3 = Color3.fromRGB(190, 255, 200)
 	logLabel.Font = Enum.Font.Code
@@ -461,7 +463,10 @@ function QaPanel.Start()
 	button("Death test (pit)", deathTest)
 	button("TP Plateau", biomeTp, "Plateau")
 	button("TP Mountains", biomeTp, "Mountains")
-	button("TP Valley", biomeTp, "Valley")
+	button("TP Mushroom", biomeTp, "Mushroom")
+	button("TP Marsh", biomeTp, "Marsh")
+	button("TP Canyon", biomeTp, "Canyon")
+	button("TP Volcanic", biomeTp, "Volcanic")
 	button("TP Coast", biomeTp, "Coast")
 	button("TP Hub", teleport, Vector3.new(0, 46, 20))
 	button("TP My base", function()

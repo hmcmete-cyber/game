@@ -91,6 +91,14 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - **Bases** moved to radius 140 with an empty **Expansion pad** beside each.
 - **Death Cloud floor** at Y −20 replaces the void: thick cloud sea; touching it kills, you respawn at your own base.
 
+## Update 10 — Huge continent, 7 biomes, 106 clouds, world events (director request)
+
+- **Continent** radius ~314 (was ~182), built by `Services/ContinentBuilder.luau`: Sky Heart center, six 60° sectors (Plateau Meadows, Mountains & Snowpeaks, Mushroom Plateaus, Storm Marshes, Crystal Canyons with pits + caves, Volcanic Caldera with lava), Coast ring. 3 altars. ~85 spawn points.
+- **106 clouds** (`CloudDB`), new categories: Elemental (Fire/Ice/Electric/Poison/Water/Earth), SpaceTime, Economic (bonus XP, item drops), Chaos. New perks: low gravity, lava/acid immunity, Chaos (random buff/debuff every 20 s), Quake ability. XP + Level leaderstat.
+- **World events** (`EventService`, every 4-7 min, 75 s): Meteor Shower (Epic+ clouds crash into a biome), Acid Rain (damage outside shelter in one biome), Fog Bank (dense fog, faster stealing).
+- **Performance**: StreamingEnabled (set in `default.project.json`), persistent updraft/base models, client LOD for decor particles and lights.
+- **Updraft**: Lift 140, one arc into the Sky Heart.
+
 ## CURRENT RULES (authoritative — overrides anything above)
 
 The "Update" sections above are history. If they conflict with this section, this section wins.
@@ -104,8 +112,8 @@ The "Update" sections above are history. If they conflict with this section, thi
 6. Spend coins at the two hub shops: **Tayron** (7 consumable items) and **Aurelius** (permanent upgrades).
 
 **Rules**
-- Clouds come from `Shared/CloudDB.luau` (56, five rarity tiers). Rarer = bigger reward and stronger perk. Shiny variants are worth more but never stronger.
-- Spawns depend on biome (Plateau, Coast, Mountains, Valley) and day/night. Altars roll Epic or better.
+- Clouds come from `Shared/CloudDB.luau` (106, five rarity tiers, categories Classic/Elemental/SpaceTime/Economic/Chaos). Rarer = bigger reward and stronger perk. Shiny variants are worth more but never stronger.
+- Spawns depend on biome (Plateau, Coast, Mountains, Mushroom, Marsh, Canyon, Volcanic) and day/night. Altars roll Epic or better. World events add meteor clouds, acid rain and fog.
 - Falling into the Death Cloud floor kills you; you respawn at your own base. Dying drops your carried cloud and wipes items.
 - No tutorial guaranteed cloud, no crystal crates, no "safe permanent collection": vault clouds CAN be stolen.
 - UI: English only, no emoji (colour text chips).

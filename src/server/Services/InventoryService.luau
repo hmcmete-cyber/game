@@ -72,6 +72,10 @@ local function perkTotals(perks)
 		DamageResist = 0,
 		StormAura = false,
 		BlastResist = false,
+		Gravity = 0, -- fraction of gravity removed (client applies it)
+		FireImmune = false,
+		PoisonImmune = false,
+		Chaos = false,
 	}
 	for _, entry in perks do
 		local def = Weather.Types[entry.Type]
@@ -90,6 +94,10 @@ local function perkTotals(perks)
 			t.DamageResist = math.min(0.75, t.DamageResist + (perk.DamageResist or 0))
 			t.StormAura = t.StormAura or perk.StormAura == true
 			t.BlastResist = t.BlastResist or perk.BlastResist == true
+			t.Gravity = math.min(0.6, math.max(t.Gravity, perk.Gravity or 0))
+			t.FireImmune = t.FireImmune or perk.FireImmune == true
+			t.PoisonImmune = t.PoisonImmune or perk.PoisonImmune == true
+			t.Chaos = t.Chaos or perk.Chaos == true
 		end
 	end
 	return t
@@ -190,7 +198,25 @@ local function dazzle(player: Player, root: BasePart)
 	Remotes.Dazzle:FireClient(player, 0.25) -- small flash for yourself
 end
 
+-- Quake: everyone near you gets knocked up and away (blast-resist halves it)
+local function quake(player: Player, root: BasePart)
+	for _, other in Players:GetPlayers() do
+		local r = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if r then
+			local offset = r.Position - root.Position
+			if offset.Magnitude <= Config.QuakeRadius and not ((other:GetAttribute("ShieldUntil") or 0) > workspace:GetServerTimeNow()) then
+				local flat = Vector3.new(offset.X, 0, offset.Z)
+				local dir = flat.Magnitude > 0.1 and flat.Unit or Vector3.new(1, 0, 0)
+				local resist = other:GetAttribute("BlastResist") and 0.5 or 1
+				Remotes.Knock:FireClient(other, (dir * Config.QuakeKnock + Vector3.new(0, 35, 0)) * resist)
+			end
+		end
+	end
+	Remotes.Dazzle:FireClient(player, 0.15)
+end
+
 local ABILITIES = {
+	Quake = { Run = quake, Cooldown = Config.QuakeCooldown },
 	Blink = { Run = blink, Cooldown = Config.BlinkCooldown },
 	Dazzle = { Run = dazzle, Cooldown = Config.DazzleCooldown },
 }
@@ -458,6 +484,67 @@ function InventoryService.Wipe(player: Player): (number, number)
 	return lostItems, lostPerks
 end
 
+-- Give a random shop item (used by Economic clouds on delivery). Returns its name or nil.
+function InventoryService.GiveRandomItem(player: Player): string?
+	local d = data(player)
+	if not d then
+		return nil
+	end
+	local ids = {}
+	for id, item in ShopItems.Types do
+		if not item.ComingSoon then
+			table.insert(ids, id)
+		end
+	end
+	table.sort(ids)
+	for _ = 1, 4 do
+		local id = ids[math.random(1, #ids)]
+		if addItem(d, id) then
+			sync(player)
+			return ShopItems.Types[id].DisplayName or id
+		end
+	end
+	return nil
+end
+
+-- Chaos perk: every ChaosInterval s a random buff or debuff for ChaosDuration s
+local CHAOS = {
+	{ "Speed Burst", "SpeedUntil", "SpeedMult", 1.4, true },
+	{ "Moon Jump", "JumpUntil", "JumpMult", 1.6, true },
+	{ "Heavy Feet", "SpeedUntil", "SpeedMult", 0.75, false },
+	{ "Wobbly Legs", "JumpUntil", "JumpMult", 0.7, false },
+}
+local function chaosLoop()
+	while true do
+		task.wait(Config.ChaosInterval)
+		local now = workspace:GetServerTimeNow()
+		for _, player in Players:GetPlayers() do
+			local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if player:GetAttribute("Chaos") and hum and hum.Health > 0 then
+				local roll = math.random()
+				if roll < 0.15 then
+					local hp = math.random(0, 1) == 1 and 30 or -15
+					hum.Health = math.clamp(hum.Health + hp, 1, hum.MaxHealth)
+					Remotes.Hint:FireClient(player, hp > 0 and "CHAOS: +30 HP!" or "CHAOS: ouch, -15 HP", 2)
+				else
+					-- 2 of 4 effects are good; weight toward good ones (65%)
+					local good = math.random() < 0.65
+					local pool = {}
+					for _, e in CHAOS do
+						if e[5] == good then
+							table.insert(pool, e)
+						end
+					end
+					local e = pool[math.random(1, #pool)]
+					player:SetAttribute(e[3], e[4])
+					player:SetAttribute(e[2], now + Config.ChaosDuration)
+					Remotes.Hint:FireClient(player, `CHAOS: {e[1]}!`, 2)
+				end
+			end
+		end
+	end
+end
+
 local function regenLoop()
 	while true do
 		task.wait(1)
@@ -498,6 +585,7 @@ function InventoryService.Start(dataService, remotes)
 	Remotes.PerkAction.OnServerEvent:Connect(perkAction)
 	Remotes.PerkAbility.OnServerEvent:Connect(perkAbility)
 	task.spawn(regenLoop)
+	task.spawn(chaosLoop)
 end
 
 return InventoryService

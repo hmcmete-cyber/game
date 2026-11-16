@@ -188,6 +188,31 @@ end
 ------------------------------------------------------------------------
 
 local airLift: LinearVelocity? = nil
+-- Low-gravity perks (Gravity = fraction of gravity removed): an upward force
+local gravityForce: VectorForce? = nil
+local function updateGravity(root: BasePart)
+	local frac = player:GetAttribute("Gravity") or 0
+	if frac <= 0 then
+		if gravityForce then
+			gravityForce.Enabled = false
+		end
+		return
+	end
+	if not gravityForce or gravityForce.Parent ~= root then
+		local att = root:FindFirstChild("RootAttachment") or Instance.new("Attachment", root)
+		local vf = Instance.new("VectorForce")
+		vf.Name = "LowGravity"
+		vf.Attachment0 = att :: Attachment
+		vf.RelativeTo = Enum.ActuatorRelativeTo.World
+		vf.ApplyAtCenterOfMass = true
+		vf.Parent = root
+		gravityForce = vf
+	end
+	local vf = gravityForce :: VectorForce
+	vf.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity * frac, 0)
+	vf.Enabled = true
+end
+
 local updateAir -- defined below
 local launchedFrom: Instance? = nil
 local airParams: OverlapParams
@@ -396,6 +421,7 @@ function Movement.Start()
 		applySpeed()
 
 		updateAir(root, hum)
+		updateGravity(root)
 	end)
 end
 

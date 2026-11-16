@@ -1,4 +1,4 @@
--- CLOUD DATABASE — every cloud in the game (56). Add a line to add a cloud.
+-- CLOUD DATABASE — every cloud in the game (106). Add a line to add a cloud.
 --
 -- C(key, displayName, rarity, options)
 --   key        saved in player data: NEVER rename a key once players have it
@@ -164,5 +164,126 @@ C("AbyssalMaw", "Abyssal Maw", "Mythic", { Biomes = { "Valley" }, Time = "Night"
 	Perk = { Name = "Devour", Desc = "Slow rivals near you, 50% less damage, +40% speed", StormAura = true, DamageResist = 0.5, Speed = 1.4 } })
 C("RainbowDragon", "Rainbow Dragon", "Mythic", { Biomes = { "Coast" }, Time = "Day", Visual = "Cosmic", Tint = rgb(255, 200, 230),
 	Perk = { Name = "Dragon's Hoard", Desc = "+60% speed, x2 coins", Speed = 1.6, CoinMult = 2 } })
+
+------------------------------------------------------------------------
+-- v1.4 EXPANSION (50) — four categories, new biomes
+--   Category: "Elemental" (Fire Ice Electric Poison Water Earth) · "SpaceTime"
+--             · "Economic" (Bonus = { XP, ItemChance }) · "Chaos"
+--   New perk stats: Gravity (0-0.6 = less gravity) · FireImmune (lava)
+--             · PoisonImmune (acid rain) · Chaos (random buff/debuff every 20 s)
+--             · Ability "Quake" (shakes everyone near you)
+-- Biomes: Plateau Coast Mountains Mushroom Marsh Canyon Volcanic
+--   ("Valley" in older entries = Canyon)
+------------------------------------------------------------------------
+
+-- COMMON (14)
+C("Cinder", "Cinder Puff", "Common", { Category = "Elemental", Element = "Fire", Biomes = { "Volcanic" }, Time = "Any", Visual = "Phoenix", Tint = rgb(255, 150, 90),
+	Perk = { Name = "Warm Soles", Desc = "+6% speed", Speed = 1.06 } })
+C("Frostbite", "Frostbite", "Common", { Category = "Elemental", Element = "Ice", Biomes = { "Mountains" }, Time = "Any", Visual = "Snow", Tint = rgb(220, 240, 255),
+	Perk = { Name = "Cold Grip", Desc = "Grip on ice", IceGrip = true } })
+C("Static", "Static Fluff", "Common", { Category = "Elemental", Element = "Electric", Biomes = { "Marsh", "Plateau" }, Time = "Any", Visual = "Storm", Tint = rgb(190, 190, 120),
+	Perk = { Name = "Charged", Desc = "+5% speed, +5% jump", Speed = 1.05, Jump = 1.05 } })
+C("Spore", "Spore Cloud", "Common", { Category = "Elemental", Element = "Poison", Biomes = { "Mushroom" }, Time = "Any", Weight = 14, Visual = "Cumulus", Tint = rgb(190, 230, 140), Glow = rgb(200, 255, 120),
+	Perk = { Name = "Spore Lungs", Desc = "+1 HP/s", Regen = 1 } })
+C("Puddle", "Puddle Cloud", "Common", { Category = "Elemental", Element = "Water", Biomes = { "Marsh", "Coast" }, Time = "Any", Visual = "Rain", Tint = rgb(130, 180, 220),
+	Perk = { Name = "Splash", Desc = "Can't slip on puddles", NoSlip = true } })
+C("Dust", "Dust Devil", "Common", { Category = "Elemental", Element = "Earth", Biomes = { "Canyon" }, Time = "Day", Visual = "Tornado", Tint = rgb(200, 170, 130),
+	Perk = { Name = "Sandy", Desc = "8% less damage", DamageResist = 0.08 } })
+C("Feather", "Feather Cloud", "Common", { Category = "SpaceTime", Biomes = { "Plateau", "Mushroom" }, Time = "Day", Visual = "Cumulus", Tint = rgb(255, 255, 255),
+	Perk = { Name = "Featherweight", Desc = "15% less gravity", Gravity = 0.15 } })
+C("Tick", "Tick Cloud", "Common", { Category = "SpaceTime", Biomes = { "Plateau" }, Time = "Any", Visual = "Chrono", Tint = rgb(245, 235, 200),
+	Perk = { Name = "Quick Tick", Desc = "Items last 15% longer", ItemTime = 1.15 } })
+C("Copper", "Copper Coin Cloud", "Common", { Category = "Economic", Biomes = ALL, Time = "Day", Weight = 8, Visual = "Solar", Tint = rgb(215, 150, 90), Reward = 25,
+	Bonus = { XP = 10 }, Perk = { Name = "Penny Saver", Desc = "+8% coins", CoinMult = 1.08 } })
+C("Satchel", "Satchel Cloud", "Common", { Category = "Economic", Biomes = { "Coast", "Plateau" }, Time = "Any", Visual = "Cumulus", Tint = rgb(225, 200, 160),
+	Bonus = { ItemChance = 0.15 }, Perk = { Name = "Deep Pockets", Desc = "+5% coins", CoinMult = 1.05 } })
+C("Hiccup", "Hiccup Cloud", "Common", { Category = "Chaos", Biomes = ALL, Time = "Any", Weight = 6, Visual = "Cosmic", Tint = rgb(255, 190, 220),
+	Perk = { Name = "Hic!", Desc = "Random buff or debuff every 20 s", Chaos = true } })
+C("Mushcap", "Mushcap Cloud", "Common", { Category = "Elemental", Element = "Earth", Biomes = { "Mushroom" }, Time = "Any", Visual = "Cumulus", Tint = rgb(230, 120, 120),
+	Perk = { Name = "Bouncy Cap", Desc = "+12% jump", Jump = 1.12 } })
+C("BogMist", "Bog Mist", "Common", { Category = "Elemental", Element = "Poison", Biomes = { "Marsh" }, Time = "Night", Visual = "Cumulus", Tint = rgb(150, 170, 130),
+	Perk = { Name = "Bog Born", Desc = "Acid rain can't hurt you", PoisonImmune = true } })
+C("Pumice", "Pumice Puff", "Common", { Category = "Elemental", Element = "Earth", Biomes = { "Volcanic" }, Time = "Day", Visual = "Cumulus", Tint = rgb(180, 170, 165),
+	Perk = { Name = "Light Stone", Desc = "10% less gravity", Gravity = 0.1 } })
+
+-- RARE (14)
+C("Wildfire", "Wildfire Cloud", "Rare", { Category = "Elemental", Element = "Fire", Biomes = { "Volcanic" }, Time = "Any", Visual = "Phoenix", Tint = rgb(255, 110, 50),
+	Perk = { Name = "Firewalker", Desc = "Lava can't hurt you, +10% speed", FireImmune = true, Speed = 1.1 } })
+C("Icicle", "Icicle Cloud", "Rare", { Category = "Elemental", Element = "Ice", Biomes = { "Mountains" }, Time = "Night", Visual = "Snow", Tint = rgb(190, 225, 255),
+	Perk = { Name = "Ice Skates", Desc = "Grip on ice, +12% speed", IceGrip = true, Speed = 1.12 } })
+C("Sparkbolt", "Sparkbolt", "Rare", { Category = "Elemental", Element = "Electric", Biomes = { "Marsh" }, Time = "Any", Visual = "Storm", Tint = rgb(80, 80, 120), Glow = rgb(255, 255, 140),
+	Perk = { Name = "Grounded", Desc = "Immune to electric water", ElectricImmune = true } })
+C("Toxic", "Toxic Cloud", "Rare", { Category = "Elemental", Element = "Poison", Biomes = { "Marsh", "Mushroom" }, Time = "Night", Visual = "Rain", Tint = rgb(130, 200, 60), Glow = rgb(180, 255, 80),
+	Perk = { Name = "Acid Proof", Desc = "Acid rain can't hurt you, +2 HP/s", PoisonImmune = true, Regen = 2 } })
+C("Geyser", "Geyser Cloud", "Rare", { Category = "Elemental", Element = "Water", Biomes = { "Volcanic", "Coast" }, Time = "Day", Visual = "Rain", Tint = rgb(170, 220, 255),
+	Perk = { Name = "Steam Jump", Desc = "+25% jump", Jump = 1.25 } })
+C("Boulder", "Boulder Cloud", "Rare", { Category = "Elemental", Element = "Earth", Biomes = { "Canyon", "Mountains" }, Time = "Any", Visual = "Storm", Tint = rgb(140, 120, 100), Glow = rgb(220, 190, 150),
+	Perk = { Name = "Rock Solid", Desc = "18% less damage, half lightning knockback", DamageResist = 0.18, BlastResist = true } })
+C("Drift", "Drift Cloud", "Rare", { Category = "SpaceTime", Biomes = { "Plateau", "Coast" }, Time = "Any", Visual = "Cosmic", Tint = rgb(170, 160, 255),
+	Perk = { Name = "Moonwalk", Desc = "30% less gravity", Gravity = 0.3 } })
+C("Rewind", "Rewind Cloud", "Rare", { Category = "SpaceTime", Biomes = { "Canyon" }, Time = "Night", Visual = "Chrono", Tint = rgb(150, 220, 255),
+	Perk = { Name = "Long Effects", Desc = "Items last 30% longer, +8% speed", ItemTime = 1.3, Speed = 1.08 } })
+C("Silver", "Silver Lining", "Rare", { Category = "Economic", Biomes = ALL, Time = "Day", Weight = 7, Visual = "Solar", Tint = rgb(220, 225, 235), Reward = 90,
+	Bonus = { XP = 30 }, Perk = { Name = "Silver Tongue", Desc = "+15% coins", CoinMult = 1.15 } })
+C("Merchant", "Merchant Cloud", "Rare", { Category = "Economic", Biomes = { "Coast", "Mushroom" }, Time = "Any", Visual = "Cumulus", Tint = rgb(255, 220, 150),
+	Bonus = { ItemChance = 0.35 }, Perk = { Name = "Bargain", Desc = "+10% coins, items last 15% longer", CoinMult = 1.1, ItemTime = 1.15 } })
+C("Jester", "Jester Cloud", "Rare", { Category = "Chaos", Biomes = ALL, Time = "Any", Weight = 6, Visual = "Cosmic", Tint = rgb(255, 120, 200),
+	Perk = { Name = "Wild Card", Desc = "Random buff/debuff every 20 s, +10% coins", Chaos = true, CoinMult = 1.1 } })
+C("Rumble", "Rumble Cloud", "Rare", { Category = "Chaos", Biomes = { "Canyon", "Volcanic" }, Time = "Any", Visual = "Storm", Tint = rgb(120, 90, 80), Glow = rgb(255, 170, 90),
+	Perk = { Name = "Rumble", Desc = "Quake (G/H/J): shake everyone near you", Ability = "Quake" } })
+C("Glowcap", "Glowcap Cloud", "Rare", { Category = "Elemental", Element = "Poison", Biomes = { "Mushroom" }, Time = "Night", Visual = "Aurora", Tint = rgb(120, 230, 255), Glow = rgb(120, 255, 240),
+	Perk = { Name = "Bioluminescent", Desc = "+20% jump, +2 HP/s", Jump = 1.2, Regen = 2 } })
+C("Quartz", "Quartz Cloud", "Rare", { Category = "Elemental", Element = "Earth", Biomes = { "Canyon" }, Time = "Any", Visual = "Chrono", Tint = rgb(255, 200, 240), Glow = rgb(255, 160, 230),
+	Perk = { Name = "Crystal Skin", Desc = "15% less damage, +10% coins", DamageResist = 0.15, CoinMult = 1.1 } })
+
+-- EPIC (11)
+C("Inferno", "Inferno Cloud", "Epic", { Category = "Elemental", Element = "Fire", Biomes = { "Volcanic" }, Time = "Night", Visual = "Phoenix", Tint = rgb(255, 70, 30), Glow = rgb(255, 200, 80),
+	Perk = { Name = "Inferno", Desc = "Lava-proof, +25% speed, slows rivals near you", FireImmune = true, Speed = 1.25, StormAura = true } })
+C("Blizzard", "Blizzard", "Epic", { Category = "Elemental", Element = "Ice", Biomes = { "Mountains" }, Time = "Any", Visual = "Snow", Tint = rgb(240, 250, 255), Glow = rgb(180, 230, 255),
+	Perk = { Name = "Whiteout", Desc = "Ice grip, wind-proof, +20% speed", IceGrip = true, WindImmune = true, Speed = 1.2 } })
+C("Thunderhead2", "Volt Marsh Storm", "Epic", { Category = "Elemental", Element = "Electric", Biomes = { "Marsh" }, Time = "Night", Visual = "Storm", Tint = rgb(40, 40, 80), Glow = rgb(140, 220, 255),
+	Perk = { Name = "Voltage", Desc = "Immune to electricity & lightning, +15% speed", ElectricImmune = true, LightningImmune = true, Speed = 1.15 } })
+C("Plague", "Plague Cloud", "Epic", { Category = "Elemental", Element = "Poison", Biomes = { "Marsh" }, Time = "Night", Visual = "Void", Tint = rgb(70, 110, 40), Glow = rgb(170, 255, 60),
+	Perk = { Name = "Miasma", Desc = "Acid-proof, slows rivals near you, +3 HP/s", PoisonImmune = true, StormAura = true, Regen = 3 } })
+C("Tsunami", "Tsunami Cloud", "Epic", { Category = "Elemental", Element = "Water", Biomes = { "Coast" }, Time = "Any", Visual = "Rain", Tint = rgb(40, 110, 200),
+	Perk = { Name = "Wave Rider", Desc = "+30% speed, can't slip", Speed = 1.3, NoSlip = true } })
+C("Tectonic", "Tectonic Cloud", "Epic", { Category = "Elemental", Element = "Earth", Biomes = { "Canyon" }, Time = "Any", Visual = "Storm", Tint = rgb(110, 80, 60), Glow = rgb(255, 140, 60),
+	Perk = { Name = "Fault Line", Desc = "Quake (G/H/J), 25% less damage", Ability = "Quake", DamageResist = 0.25 } })
+C("Wormhole", "Wormhole Cloud", "Epic", { Category = "SpaceTime", Biomes = { "Canyon", "Plateau" }, Time = "Night", Visual = "Void", Tint = rgb(50, 20, 90), Glow = rgb(190, 120, 255),
+	Perk = { Name = "Fold Space", Desc = "Blink (G/H/J), 20% less gravity", Ability = "Blink", Gravity = 0.2 } })
+C("Hyperdrive", "Hyperdrive Cloud", "Epic", { Category = "SpaceTime", Biomes = { "Plateau" }, Time = "Day", Visual = "Cosmic", Tint = rgb(120, 200, 255),
+	Perk = { Name = "Overclock", Desc = "+35% speed, items last 20% longer", Speed = 1.35, ItemTime = 1.2 } })
+C("GoldRush", "Gold Rush Cloud", "Epic", { Category = "Economic", Biomes = ALL, Time = "Day", Weight = 6, Visual = "Solar", Tint = rgb(255, 210, 70), Reward = 400,
+	Bonus = { XP = 90, ItemChance = 0.25 }, Perk = { Name = "Gold Fever", Desc = "+35% coins", CoinMult = 1.35 } })
+C("Poltergeist", "Poltergeist Cloud", "Epic", { Category = "Chaos", Biomes = ALL, Time = "Night", Weight = 6, Visual = "Void", Tint = rgb(150, 140, 200), Glow = rgb(220, 220, 255),
+	Perk = { Name = "Haunted", Desc = "Random buff/debuff every 20 s, Dazzle (G/H/J)", Chaos = true, Ability = "Dazzle" } })
+C("Sporestorm", "Sporestorm", "Epic", { Category = "Elemental", Element = "Poison", Biomes = { "Mushroom" }, Time = "Any", Visual = "Tornado", Tint = rgb(210, 160, 220), Glow = rgb(230, 255, 150),
+	Perk = { Name = "Spore Cyclone", Desc = "+40% jump, acid-proof", Jump = 1.4, PoisonImmune = true } })
+
+-- LEGENDARY (7)
+C("Ragnarok", "Ragnarok Cloud", "Legendary", { Category = "Elemental", Element = "Fire", Biomes = { "Volcanic" }, Time = "Any", Visual = "Phoenix", Tint = rgb(180, 30, 20), Glow = rgb(255, 160, 40),
+	Perk = { Name = "World Fire", Desc = "Lava-proof, +45% speed, 30% less damage", FireImmune = true, Speed = 1.45, DamageResist = 0.3 } })
+C("Permafrost", "Permafrost", "Legendary", { Category = "Elemental", Element = "Ice", Biomes = { "Mountains" }, Time = "Night", Visual = "Aurora", Tint = rgb(200, 235, 255), Glow = rgb(150, 220, 255),
+	Perk = { Name = "Eternal Ice", Desc = "Ice grip, +60% jump, 30% less damage", IceGrip = true, Jump = 1.6, DamageResist = 0.3 } })
+C("Gravitas", "Gravitas Cloud", "Legendary", { Category = "SpaceTime", Biomes = { "Plateau", "Canyon" }, Time = "Any", Visual = "Void", Tint = rgb(30, 25, 60), Glow = rgb(140, 160, 255),
+	Perk = { Name = "Zero G", Desc = "45% less gravity, Blink (G/H/J)", Gravity = 0.45, Ability = "Blink" } })
+C("Treasury", "Treasury Cloud", "Legendary", { Category = "Economic", Biomes = ALL, Time = "Any", Weight = 6, Visual = "Solar", Tint = rgb(255, 225, 120), Reward = 1400,
+	Bonus = { XP = 300, ItemChance = 0.6 }, Perk = { Name = "Royal Treasury", Desc = "x1.6 coins", CoinMult = 1.6 } })
+C("Maelstrom", "Maelstrom", "Legendary", { Category = "Chaos", Biomes = { "Marsh", "Coast" }, Time = "Night", Visual = "Tornado", Tint = rgb(40, 60, 90), Glow = rgb(120, 200, 255),
+	Perk = { Name = "Whirlpool", Desc = "Chaos buffs, Quake (G/H/J), +30% speed", Chaos = true, Ability = "Quake", Speed = 1.3 } })
+C("Mycelium", "Mycelium Crown", "Legendary", { Category = "Elemental", Element = "Poison", Biomes = { "Mushroom" }, Time = "Night", Visual = "Aurora", Tint = rgb(170, 120, 255), Glow = rgb(120, 255, 200),
+	Perk = { Name = "Hive Mind", Desc = "+6 HP/s, acid-proof, x1.3 coins", Regen = 6, PoisonImmune = true, CoinMult = 1.3 } })
+C("Geode", "Geode Heart", "Legendary", { Category = "Elemental", Element = "Earth", Biomes = { "Canyon" }, Time = "Any", Visual = "Chrono", Tint = rgb(150, 80, 220), Glow = rgb(255, 150, 255),
+	Perk = { Name = "Diamond Core", Desc = "45% less damage, x1.3 coins", DamageResist = 0.45, CoinMult = 1.3 } })
+
+-- MYTHIC (4)
+C("Primordial", "Primordial Storm", "Mythic", { Category = "Elemental", Element = "Electric", Biomes = { "Marsh", "Volcanic" }, Time = "Night", Visual = "Storm", Tint = rgb(20, 10, 30), Glow = rgb(255, 120, 255),
+	Perk = { Name = "Elder Storm", Desc = "Immune to lava, lightning, electricity & acid; +40% speed", FireImmune = true, LightningImmune = true, ElectricImmune = true, PoisonImmune = true, Speed = 1.4 } })
+C("Singularity", "Singularity", "Mythic", { Category = "SpaceTime", Biomes = ALL, Time = "Night", Visual = "Void", Tint = rgb(5, 5, 10), Glow = rgb(255, 255, 255),
+	Perk = { Name = "Event Horizon", Desc = "60% less gravity, Blink, x1.5 coins", Gravity = 0.6, Ability = "Blink", CoinMult = 1.5 } })
+C("Midas", "Midas Cloud", "Mythic", { Category = "Economic", Biomes = ALL, Time = "Day", Visual = "Solar", Tint = rgb(255, 200, 40), Glow = rgb(255, 240, 150), Reward = 8000,
+	Bonus = { XP = 1000, ItemChance = 1 }, Perk = { Name = "Golden Touch", Desc = "x2.5 coins", CoinMult = 2.5 } })
+C("Pandemonium", "Pandemonium", "Mythic", { Category = "Chaos", Biomes = ALL, Time = "Any", Visual = "Cosmic", Tint = rgb(255, 60, 180), Glow = rgb(120, 255, 255),
+	Perk = { Name = "Total Chaos", Desc = "Chaos buffs (mostly good), Quake, +50% speed & jump", Chaos = true, Ability = "Quake", Speed = 1.5, Jump = 1.5 } })
 
 return list

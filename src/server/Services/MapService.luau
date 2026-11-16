@@ -8,7 +8,7 @@
 --   SpawnLocation
 --   Rooftops/RooftopN (Model) -> Nest (Part), Vaults/VaultN (Part, glass sphere) — see BaseBuilder.luau
 --     (if Vaults is missing, spheres are created above Display/SlotN or around the Nest)
---   HuntZone/WeatherSpawns/SpawnN (Part, attribute Biome = Plateau|Coast|Mountains|Valley)
+--   HuntZone/WeatherSpawns/SpawnN (Part, attribute Biome = Plateau|Coast|Mountains|Mushroom|Marsh|Canyon|Volcanic)
 --   HuntZone/Altars/AltarN (Part)         -- Cloud Altars: rare clouds + 0.01% Mythic
 --   Hazards/* (Part, attribute HazardType = "Ice" | "River" | "Storm" | "Electric", CanCollide off, CanQuery on)
 --   Zones/* (Part volumes, attributes ZoneName, ZoneColor, Warning?) — for the HUD
@@ -28,6 +28,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local BaseBuilder = require(script.Parent:WaitForChild("BaseBuilder"))
+local ContinentBuilder = require(script.Parent:WaitForChild("ContinentBuilder"))
 
 local MapService = {}
 
@@ -246,29 +247,9 @@ local function shopStall(parent: Instance, name: string, floor: Vector3, facing:
 	return stall
 end
 
--- One wedge-like slice of a ring (used to build the round floating continent)
-local SEGMENTS = 48
-local function ringSegment(parent: Instance, name: string, thetaDeg: number, r0: number, r1: number, top: number, thick: number,
-	color: Color3, material: Enum.Material, zone: { [string]: any }?)
-	local theta = math.rad(thetaDeg)
-	local dir = Vector3.new(math.cos(theta), 0, math.sin(theta))
-	local mid = dir * ((r0 + r1) / 2) + Vector3.new(0, top - thick / 2, 0)
-	local width = 2 * r1 * math.sin(math.pi / SEGMENTS) * 1.08
-	local p = newPart(parent, name, Vector3.new(width, thick, r1 - r0), CFrame.lookAt(mid, mid + dir), color, {
-		Material = material,
-		CastShadow = false, -- the continent must not darken the hub below
-	})
-	if zone then
-		for k, v in zone do
-			p:SetAttribute(k, v)
-		end
-	end
-	return p
-end
-
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "1.4"
+local MAP_VERSION = "1.5"
 local DEATH_Y = -20 -- top of the death cloud floor
 
 local function buildPlaceholder(): Instance
@@ -394,157 +375,30 @@ local function buildPlaceholder(): Instance
 	------------------------------------------------------------------
 	-- UPDRAFT through the hole in the continent's center
 	------------------------------------------------------------------
-	local updraft = airColumn(air, "Updraft", Vector3.new(14, UP + 18 - Y, 14), Vector3.new(0, (Y + UP + 18) / 2, 0), 130,
+	-- in a Persistent model so StreamingEnabled never unloads it
+	local updraftModel = Instance.new("Model")
+	updraftModel.Name = "UpdraftModel"
+	updraftModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+	updraftModel.Parent = air
+	local updraft = airColumn(updraftModel, "Updraft", Vector3.new(14, UP + 18 - Y, 14), Vector3.new(0, (Y + UP + 18) / 2, 0), 140,
 		Color3.fromRGB(190, 235, 255))
 	updraft:SetAttribute("ExitHeight", UP + 6)
-	updraft:SetAttribute("LaunchTarget", Vector3.new(0, UP + 3, -28))
-	updraft:SetAttribute("LaunchTime", 0.8)
+	-- one smooth arc into the Sky Heart plaza at the continent's center
+	updraft:SetAttribute("LaunchTarget", Vector3.new(40, UP + 3, 0))
+	updraft:SetAttribute("LaunchTime", 0.85)
 	newPart(decor, "UpdraftPad", Vector3.new(0.6, 16, 16), CFrame.new(0, Y + 0.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(150, 220, 255), {
 		Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, CanCollide = false,
 	})
 	zoneSign(signs, "UpdraftSign", Vector3.new(0, Y + 12, 0), "UPDRAFT - to the Floating Continent", Color3.fromRGB(190, 235, 255))
 
 	------------------------------------------------------------------
-	-- FLOATING CONTINENT (Y 200, radius ~182), built from 48 slices.
-	--   r 14-80   Plateau (center, flat)
-	--   r 80-140  north: Mountains · south: Valley (stepped down, pits) · east/west: Plateau
-	--   r 140-182 Coast (sand + shallows)
+	-- FLOATING CONTINENT (Y 200, radius ~314, 7 biomes) — see ContinentBuilder
 	------------------------------------------------------------------
-	local Z_PLATEAU = { ZoneName = "Plateau", ZoneColor = Color3.fromRGB(150, 230, 150), Biome = "Plateau" }
-	local Z_COAST = { ZoneName = "Coast", ZoneColor = Color3.fromRGB(255, 225, 160), Biome = "Coast" }
-	local Z_MOUNT = { ZoneName = "Mountains", ZoneColor = Color3.fromRGB(210, 220, 235), Biome = "Mountains",
-		Warning = "Icy ledges up high - Frost Cloud perk helps" }
-	local Z_VALLEY = { ZoneName = "Valley", ZoneColor = Color3.fromRGB(190, 140, 255), Biome = "Valley",
-		Warning = "Pits, an electric river and a storm bridge - watch your step!" }
-
-	local grass = Color3.fromRGB(125, 195, 120)
-	local rock = Color3.fromRGB(150, 145, 140)
-	local valleyGround = Color3.fromRGB(105, 90, 110)
-	local sand = Color3.fromRGB(240, 220, 170)
-
-	local function inRange(deg: number, a: number, b: number)
-		return deg >= a and deg < b
-	end
-
-	for k = 0, SEGMENTS - 1 do
-		local deg = (k + 0.5) * 360 / SEGMENTS
-		ringSegment(continent, "Plateau" .. k, deg, 14, 80, UP, 4, grass, Enum.Material.Grass, Z_PLATEAU)
-
-		if inRange(deg, 45, 135) then
-			ringSegment(continent, "MountainBase" .. k, deg, 80, 140, UP, 4, rock, Enum.Material.Rock, Z_MOUNT)
-		elseif inRange(deg, 225, 315) then
-			-- stepped valley: 4-stud steps you can jump even while carrying
-			local pit = inRange(deg, 255, 285)
-			ringSegment(continent, "ValleyStepA" .. k, deg, 80, 88, UP - 4, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
-			ringSegment(continent, "ValleyStepB" .. k, deg, 88, 96, UP - 8, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
-			if pit then
-				-- a gap from r 100 to 124 = a pit straight down to the death clouds
-				ringSegment(continent, "ValleyFloorIn" .. k, deg, 96, 100, UP - 12, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
-				ringSegment(continent, "ValleyFloorOut" .. k, deg, 124, 128, UP - 12, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
-			else
-				ringSegment(continent, "ValleyFloor" .. k, deg, 96, 128, UP - 12, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
-			end
-			ringSegment(continent, "ValleyStepC" .. k, deg, 128, 134, UP - 8, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
-			ringSegment(continent, "ValleyStepD" .. k, deg, 134, 140, UP - 4, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
-		else
-			ringSegment(continent, "PlateauOuter" .. k, deg, 80, 140, UP, 4, grass, Enum.Material.Grass, Z_PLATEAU)
-		end
-
-		ringSegment(continent, "Coast" .. k, deg, 140, 172, UP - 0.5, 4, sand, Enum.Material.Sand, Z_COAST)
-		ringSegment(continent, "Shallows" .. k, deg, 172, 182, UP - 1.5, 4, Color3.fromRGB(120, 200, 230), Enum.Material.Glass, Z_COAST)
-	end
-
-	-- Rocky underside (a ring of boulders, leaving the center free for the updraft)
-	for i = 1, 24 do
-		local deg = i * 15 + rng:NextNumber(-5, 5)
-		local r = rng:NextNumber(60, 150)
-		local size = rng:NextNumber(40, 70)
-		local p = newPart(continent, "Underside" .. i, Vector3.new(size, size * 0.6, size), CFrame.new(polar(r, deg, UP - 10 - size * 0.3)),
-			Color3.fromRGB(120, 100, 90), { Material = Enum.Material.Slate, CastShadow = false })
-		local mesh = Instance.new("SpecialMesh")
-		mesh.MeshType = Enum.MeshType.Sphere
-		mesh.Parent = p
-	end
-
-	-- MOUNTAINS: terraced peaks (5-stud steps), icy upper ledges, Altar1 on top
-	local function peak(name: string, center: Vector3, radius: number, tiers: number, icyFrom: number)
-		for t = 1, tiers do
-			local r = radius - (t - 1) * (radius - 5) / tiers
-			local top = center.Y + t * 5
-			local tier = newPart(continent, name .. "Tier" .. t, Vector3.new(5, r * 2, r * 2), CFrame.new(center.X, top - 2.5, center.Z) * CFrame.Angles(0, 0, math.pi / 2),
-				t >= icyFrom and Color3.fromRGB(235, 245, 255) or rock, {
-					Shape = Enum.PartType.Cylinder,
-					Material = t >= icyFrom and Enum.Material.Snow or Enum.Material.Rock,
-					CastShadow = false,
-				})
-			for key, v in Z_MOUNT do
-				tier:SetAttribute(key, v)
-			end
-			if t >= icyFrom then
-				local ice = newPart(continent, name .. "Ice" .. t, Vector3.new(0.2, r * 2, r * 2), CFrame.new(center.X, top + 0.1, center.Z) * CFrame.Angles(0, 0, math.pi / 2),
-					Color3.fromRGB(215, 240, 255), { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Glacier, Transparency = 0.25 })
-				hazardFlag(ice, "Ice")
-			end
-		end
-		return center + Vector3.new(0, tiers * 5, 0)
-	end
-	local summit = peak("PeakMain", polar(110, 90, UP), 28, 8, 4)
-	peak("PeakWest", polar(105, 60, UP), 18, 5, 4)
-	peak("PeakEast", polar(112, 122, UP), 20, 5, 4)
-	altar(decor, altars, "Altar1", summit)
-	altars:FindFirstChild("Altar1"):SetAttribute("Biome", "Mountains")
-
-	-- VALLEY: electric river arcs + storm bridge over the pit, Altar2 beyond
-	for k = 0, SEGMENTS - 1 do
-		local deg = (k + 0.5) * 360 / SEGMENTS
-		if inRange(deg, 228, 252) or inRange(deg, 288, 312) then
-			local river = ringSegment(continent, "River" .. k, deg, 106, 116, UP - 11.6, 0.8, Color3.fromRGB(60, 140, 230), Enum.Material.Glass)
-			river.Transparency = 0.3
-			hazardFlag(river, "River")
-		end
-	end
-	local bridgeMid = polar(112, 270, UP - 12.5)
-	local bridge = newPart(route, "StormBridge", Vector3.new(6, 1, 34), CFrame.lookAt(bridgeMid, bridgeMid + polar(1, 270, 0)), Color3.fromRGB(80, 75, 95), {
-		Material = Enum.Material.DiamondPlate,
+	ContinentBuilder.Build({
+		newPart = newPart, MARKER = MARKER, polar = polar, UP = UP, rng = rng,
+		continent = continent, decor = decor, hazards = hazards, altars = altars, route = route, signs = signs,
+		spawnPoint = spawnPoint, hazardFlag = hazardFlag, altar = altar, zoneSign = zoneSign,
 	})
-	for key, v in Z_VALLEY do
-		bridge:SetAttribute(key, v)
-	end
-	local storm = newPart(hazards, "StormBridge1", Vector3.new(6, 0.2, 34), bridge.CFrame * CFrame.new(0, 0.6, 0), Color3.new(0, 0, 0), { Transparency = 1 })
-	hazardFlag(storm, "Storm")
-	local altar2 = altar(decor, altars, "Altar2", polar(160, 270, UP))
-	altar2:SetAttribute("Biome", "Coast")
-
-	-- Biome spawn points
-	for _ = 1, 12 do
-		spawnPoint(polar(rng:NextNumber(24, 74), rng:NextNumber(0, 360), UP + 3), "Plateau")
-	end
-	for _ = 1, 6 do
-		local deg = rng:NextNumber(0, 1) < 0.5 and rng:NextNumber(140, 220) or rng:NextNumber(320, 400) % 360
-		spawnPoint(polar(rng:NextNumber(88, 134), deg, UP + 3), "Plateau")
-	end
-	for _ = 1, 14 do
-		spawnPoint(polar(rng:NextNumber(146, 168), rng:NextNumber(0, 360), UP + 2.5), "Coast")
-	end
-	-- on the ledges of the terraced peaks (between one tier's edge and the next)
-	local function ledge(center: Vector3, radius: number, tiers: number, t: number, aroundDeg: number): Vector3
-		local rT = radius - (t - 1) * (radius - 5) / tiers
-		local rN = radius - t * (radius - 5) / tiers
-		return center + polar((rT + rN) / 2, aroundDeg, 5 * t + 3)
-	end
-	local mainC, westC, eastC = polar(110, 90, UP), polar(105, 60, UP), polar(112, 122, UP)
-	for _, pos in {
-		summit + Vector3.new(0, 3, 0),
-		ledge(mainC, 28, 8, 3, 200), ledge(mainC, 28, 8, 6, 20),
-		ledge(westC, 18, 5, 3, 250), ledge(eastC, 20, 5, 3, 300),
-		polar(88, 75, UP + 3), polar(136, 100, UP + 3), polar(132, 55, UP + 3),
-	} do
-		spawnPoint(pos, "Mountains")
-	end
-	for _, deg in { 232, 240, 248, 292, 300, 308, 262, 278 } do
-		local r = (deg > 255 and deg < 285) and 98 or 120
-		spawnPoint(polar(r, deg, UP - 9), "Valley")
-	end
 
 	------------------------------------------------------------------
 	-- DEATH CLOUD FLOOR: no void — a thick cloud sea below everything.
@@ -594,13 +448,14 @@ local function buildPlaceholder(): Instance
 	------------------------------------------------------------------
 	local islandSpots = {
 		{ Vector3.new(-260, Y + 30, 120), 28 }, { Vector3.new(270, Y + 60, -80), 32 },
-		{ Vector3.new(-240, UP - 20, -200), 26 }, { Vector3.new(230, UP + 20, 210), 30 },
-		{ Vector3.new(60, UP + 50, -280), 24 }, { Vector3.new(-120, Y - 5, 260), 26 },
+		{ Vector3.new(-380, UP - 20, -240), 26 }, { Vector3.new(330, UP + 30, 300), 30 },
+		{ Vector3.new(60, UP + 70, -420), 24 }, { Vector3.new(-120, Y - 5, 260), 26 },
 	}
 	for i, spot in islandSpots do
 		local pos, size = spot[1], spot[2]
 		local island = Instance.new("Model")
 		island.Name = "Island" .. i
+		island.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 		local top = newPart(island, "Grass", Vector3.new(3, size, size), CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), grass, {
 			Shape = Enum.PartType.Cylinder, Material = Enum.Material.Grass,
 		})

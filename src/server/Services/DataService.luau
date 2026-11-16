@@ -22,6 +22,7 @@ local function defaults()
 	return {
 		Coins = Config.StartingCoins,
 		Delivered = 0,
+		XP = 0,
 		Collection = {}, -- [typeName or typeName_Shiny] = count
 		Recent = {}, -- newest first: { Type = string, Shiny = boolean }
 	}
@@ -85,6 +86,10 @@ function DataService.SetupLeaderstats(player: Player)
 	coins.Name = "Coins"
 	coins.Parent = leaderstats
 
+	local level = Instance.new("IntValue")
+	level.Name = "Level"
+	level.Parent = leaderstats
+
 	leaderstats.Parent = player
 	DataService.Sync(player)
 end
@@ -95,7 +100,30 @@ function DataService.Sync(player: Player)
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if data and leaderstats then
 		leaderstats.Coins.Value = data.Coins
+		local level = leaderstats:FindFirstChild("Level")
+		if level then
+			level.Value = DataService.LevelOf(data.XP or 0)
+		end
+		player:SetAttribute("XP", data.XP or 0)
 	end
+end
+
+-- Level curve: level n needs 50 * (n-1)^2 XP  (1:0, 2:50, 3:200, 5:800, 10:4050)
+function DataService.LevelOf(xp: number): number
+	return math.floor(math.sqrt(xp / 50)) + 1
+end
+
+-- Adds XP; returns the new level if the player levelled up
+function DataService.AddXP(player: Player, amount: number): number?
+	local data = profiles[player]
+	if not data or amount <= 0 then
+		return nil
+	end
+	local before = DataService.LevelOf(data.XP or 0)
+	data.XP = (data.XP or 0) + amount
+	DataService.Sync(player)
+	local after = DataService.LevelOf(data.XP)
+	return after > before and after or nil
 end
 
 function DataService.Start()

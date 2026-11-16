@@ -2,6 +2,15 @@
   "name": "game",
   "tree": {
     "$className": "DataModel",
+    "Workspace": {
+      "$properties": {
+        "StreamingEnabled": true,
+        "StreamingMinRadius": 256,
+        "StreamingTargetRadius": 900,
+        "StreamingIntegrityMode": "PauseOutsideLoadedArea",
+        "StreamOutBehavior": "Opportunistic"
+      }
+    },
     "ReplicatedStorage": {
       "Shared": {
         "$path": "src/shared"

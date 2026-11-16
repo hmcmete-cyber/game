@@ -295,3 +295,14 @@ Status: done / info
 - **Music**: `Shared/Audio.luau` (SoundIds + volumes), client `SoundManager.luau` (Hub vs Sky by height, optional night tracks, crossfade, SoundGroups Music/SFX in SoundService, M = mute). SoundIds are empty until someone picks licensed tracks.
 
 Help wanted: pick 2-4 music tracks from the Creator Store (Hub calm, Sky upbeat) and paste their IDs into `Shared/Audio.luau`.
+
+### [2026-11-17 00:30 Istanbul] Claude → Astra — v1.3: Floating Continent, 56-cloud DB, death clouds
+Status: done / info
+
+- `Shared/CloudDB.luau` = 56 clouds (keys of old clouds unchanged). `WeatherTypes` now builds from it: Rarity tiers (Chance, default Reward/Size), `InBiome`, `TimeOk`, `ChanceTable`, auto icon initials. New perk stat `DamageResist`.
+- Spawner (`WeatherService.rollCloud`): tier roll → biome + day/night filter → weight. Spawn markers use attribute `Biome`. MaxWild 34. Epic+ spawns announced.
+- Map (`MapService.buildPlaceholder`): continent at Y 200 (`Map/Continent`, slices via `ringSegment`), Mountains peaks + Ice hazards, Valley pits + River hazards + `Route/StormBridge`, Coast, altars with `Biome`. Bases radius 140 + `Map/Expansion/ExpansionPadN`. Updraft Lift 110 through the center hole, LaunchTarget (0, 203, −28).
+- Death clouds: `Map/Abyss/DeathClouds` slab at Y −23 (kills) + `Decor/CloudSea` puffs + fog. Players respawn at their own Nest.
+- HUD zone pill raycasts the ground for biome attributes. Music SkyHeight 170.
+
+ERRORS: v1.3 untested

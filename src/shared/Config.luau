@@ -10,8 +10,8 @@ local Config = {
 	CarrySpeed = 14, -- walking speed while carrying weather
 
 	-- Wild weather spawning
-	SpawnInterval = 2, -- seconds between spawns
-	MaxWild = 14, -- max wild clouds in the world
+	SpawnInterval = 1, -- seconds between spawns
+	MaxWild = 34, -- max wild clouds in the world (big continent)
 
 	-- Cloud Altars (rare spawner)
 	AltarInterval = 45, -- seconds between altar spawns

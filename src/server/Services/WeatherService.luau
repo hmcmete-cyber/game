@@ -155,53 +155,56 @@ end
 
 -- Day clouds spawn by day, night clouds only at night ("Any" = always)
 local function timeOk(typeName: string): boolean
-	local t = Weather.Types[typeName].Time or "Any"
-	if t == "Any" then
-		return true
-	end
-	local night = workspace:GetAttribute("IsNight") == true
-	return (t == "Night") == night
+	return Weather.TimeOk(Weather.Types[typeName], workspace:GetAttribute("IsNight") == true)
 end
 
--- Pick a cloud type that lives in the given zone and fits the time of day
-local function rollType(zone: number): string?
+local function weightedPick(weights: { [string]: number }): string?
 	local total = 0
-	for _, name in Weather.Order do
-		local def = Weather.Types[name]
-		if def.Zone == zone and timeOk(name) then
-			total += def.Weight
-		end
+	for _, w in weights do
+		total += w
 	end
 	if total <= 0 then
 		return nil
 	end
 	local roll = math.random() * total
-	for _, name in Weather.Order do
-		local def = Weather.Types[name]
-		if def.Zone == zone and timeOk(name) then
-			roll -= def.Weight
-			if roll <= 0 then
-				return name
-			end
+	for key, w in weights do
+		roll -= w
+		if roll <= 0 then
+			return key
 		end
 	end
 	return nil
 end
 
--- Pick a zone using the overall split (70 / 25 / 5)
-local function rollZone(): number
-	local total = 0
-	for _, z in Weather.Zones do
-		total += z.Chance
-	end
-	local roll = math.random() * total
-	for i = 1, 3 do
-		roll -= Weather.Zones[i].Chance
-		if roll <= 0 then
-			return i
+-- 1) roll a rarity tier, 2) pick a cloud of that tier that lives in this
+-- biome at this time of day (by Weight). Falls back to lower tiers.
+local function rollCloud(biome: string, tierChances: { [string]: number }?, allowAltarOnly: boolean?): string?
+	local chances = {}
+	if tierChances then
+		chances = tierChances
+	else
+		for name, r in Weather.Rarity do
+			chances[name] = r.Chance
 		end
 	end
-	return 1
+	local tier = weightedPick(chances) or "Common"
+	local tierIndex = Weather.Rarity[tier].Tier
+	for t = tierIndex, 1, -1 do
+		local tierName = Weather.TierOrder[t]
+		local pool = {}
+		for _, key in Weather.Order do
+			local def = Weather.Types[key]
+			if def.Rarity == tierName and (allowAltarOnly or not def.AltarOnly)
+				and Weather.InBiome(def, biome) and timeOk(key) then
+				pool[key] = def.Weight
+			end
+		end
+		local pick = weightedPick(pool)
+		if pick then
+			return pick
+		end
+	end
+	return nil
 end
 
 -- Solar Flare perk etc.
@@ -653,7 +656,7 @@ local function catch(player: Player, sphere: BasePart)
 	hint(player, `You caught a {def.DisplayName}! Bring it to your base — follow the beam`, 5)
 	if info.Type == "Mythic" then
 		hintAll(`{player.DisplayName} CAUGHT THE MYTHIC STORM CLOUD!`, 8)
-	elseif def.Zone >= 2 then
+	elseif def.Tier >= 3 then
 		hintAll(`{player.DisplayName} has a {string.upper(def.DisplayName)}!`, 4)
 	end
 	if info.Shiny then
@@ -746,10 +749,10 @@ local function setupStorm()
 	end
 
 	-- No storm in the map: place a visual one above the spawn points
-	-- Hover over Thunder Canyon (zone 2) if the map has zones
+	-- Hover over the Mountains biome if the map has one
 	local spawns = {}
 	for _, sp in MapService.GetSpawns() do
-		if sp:GetAttribute("Zone") == 2 then
+		if sp:GetAttribute("Biome") == "Mountains" then
 			table.insert(spawns, sp)
 		end
 	end
@@ -863,7 +866,7 @@ local function countWild()
 	return n
 end
 
-local function freeSpawns(zone: number)
+local function freeSpawns()
 	local list = {}
 	for _, spawnPart in MapService.GetSpawns() do
 		local current = occupied[spawnPart]
@@ -871,7 +874,7 @@ local function freeSpawns(zone: number)
 			occupied[spawnPart] = nil
 			current = nil
 		end
-		if not current and (spawnPart:GetAttribute("Zone") or 1) == zone then
+		if not current then
 			table.insert(list, spawnPart)
 		end
 	end
@@ -899,15 +902,21 @@ local function spawnLoop()
 		if night ~= wasNight then
 			wasNight = night
 			despawnOutOfTime()
-			hintAll(night and "Night falls... Void, Thunder and Frost clouds are out!" or "The sun rises - Speed and Solar clouds are back!", 5)
+			hintAll(night and "Night falls... night clouds are out!" or "The sun rises - day clouds are back!", 5)
 		end
 
 		if countWild() < Config.MaxWild then
-			local zone = rollZone()
-			local spots = freeSpawns(zone)
-			local typeName = rollType(zone)
-			if #spots > 0 and typeName then
-				spawnWild(spots[math.random(1, #spots)], typeName, math.random() < Weather.ShinyChance)
+			local spots = freeSpawns()
+			if #spots > 0 then
+				local spot = spots[math.random(1, #spots)]
+				local typeName = rollCloud(spot:GetAttribute("Biome") or "Plateau")
+				if typeName then
+					spawnWild(spot, typeName, math.random() < Weather.ShinyChance)
+					local def = Weather.Types[typeName]
+					if def.Tier >= 4 then
+						hintAll(`A {string.upper(def.Rarity)} {def.DisplayName} appeared in the {spot:GetAttribute("Biome") or "sky"}!`, 5)
+					end
+				end
 			end
 		end
 		task.wait(Config.SpawnInterval)
@@ -924,7 +933,9 @@ local function altarLoop()
 				continue
 			end
 			local mythic = math.random() < Config.MythicChance
-			local typeName = mythic and "Mythic" or rollType(3) or "Chrono"
+			local typeName = mythic and "Mythic"
+				or rollCloud(altar:GetAttribute("Biome") or "Plateau", Weather.AltarTiers)
+				or "Chrono"
 			spawnWild(altar, typeName, not mythic and math.random() < Weather.ShinyChance * 5)
 			burstAt(altar.Position, Weather.Types[typeName].ParticleColor, 60)
 			if mythic then
@@ -1211,6 +1222,13 @@ function WeatherService.OnPlayerAdded(player: Player)
 
 	local function onCharacter(char: Model)
 		local hum = char:WaitForChild("Humanoid") :: Humanoid
+		-- (re)spawn at your own base, not on the hub
+		task.defer(function()
+			local nest = getNest(player)
+			if nest and char.Parent then
+				char:PivotTo(CFrame.new(nest.Position + Vector3.new(0, 4, 0)))
+			end
+		end)
 		hum.WalkSpeed = Config.WalkSpeed
 		player:SetAttribute("BaseSpeed", Config.WalkSpeed)
 		hum.Died:Connect(function()

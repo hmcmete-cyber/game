@@ -154,7 +154,7 @@ local function strike(bridge: BasePart)
 				and (p.Player:GetAttribute("ShieldUntil") or 0) <= workspace:GetServerTimeNow() then
 				local carrying = p.Player:GetAttribute("Carrying") ~= nil
 				local resist = p.Player:GetAttribute("BlastResist") and 0.5 or 1 -- Phoenix perk
-				p.Hum:TakeDamage((carrying and Config.LightningDamage * 1.3 or Config.LightningDamage) * resist)
+				p.Hum:TakeDamage((carrying and Config.LightningDamage * 1.3 or Config.LightningDamage) * resist * (1 - (p.Player:GetAttribute("DamageResist") or 0)))
 				local dir = flat.Magnitude > 0.1 and flat.Unit or Vector3.xAxis
 				Remotes.Knock:FireClient(p.Player, (dir * Config.LightningKnock + Vector3.new(0, 30, 0)) * resist)
 			end
@@ -200,7 +200,7 @@ local function damageLoop()
 				if shocking and HazardService.Inside(h, p.Root.Position) then
 					local carrying = p.Player:GetAttribute("Carrying") ~= nil
 					local dmg = kind == "River" and Config.RiverDamage or Config.ElectricDamage
-					p.Hum:TakeDamage(carrying and dmg * 1.6 or dmg)
+					p.Hum:TakeDamage((carrying and dmg * 1.6 or dmg) * (1 - (p.Player:GetAttribute("DamageResist") or 0)))
 					break
 				end
 			end

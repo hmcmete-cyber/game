@@ -69,6 +69,7 @@ local function perkTotals(perks)
 		Regen = 0,
 		ItemTime = 1,
 		CoinMult = 1,
+		DamageResist = 0,
 		StormAura = false,
 		BlastResist = false,
 	}
@@ -86,6 +87,7 @@ local function perkTotals(perks)
 			t.Regen += perk.Regen or 0
 			t.ItemTime = math.max(t.ItemTime, perk.ItemTime or 1)
 			t.CoinMult = math.max(t.CoinMult, perk.CoinMult or 1)
+			t.DamageResist = math.min(0.75, t.DamageResist + (perk.DamageResist or 0))
 			t.StormAura = t.StormAura or perk.StormAura == true
 			t.BlastResist = t.BlastResist or perk.BlastResist == true
 		end
@@ -350,7 +352,7 @@ local function fireLaser(player: Player, root: BasePart, aim: unknown): boolean
 	target:SetAttribute("LaserSlowUntil", now + Config.LaserSlowTime)
 	local hum = model:FindFirstChildOfClass("Humanoid")
 	if hum then
-		hum:TakeDamage(Config.LaserDamage)
+		hum:TakeDamage(Config.LaserDamage * (1 - (target:GetAttribute("DamageResist") or 0)))
 	end
 	return true
 end

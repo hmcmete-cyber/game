@@ -102,7 +102,9 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 	local visual = def.Visual or "Cumulus"
 	local style = STYLE[visual] or STYLE.Cumulus
 	local d = def.Size * 0.9 * scale -- cloud width
-	local tint = shiny and Weather.ShinyColor or style.Tint
+	-- CloudDB can recolour any style (Tint); smoke follows the tint
+	local tint = shiny and Weather.ShinyColor or (def.Tint or style.Tint)
+	local smoke = def.Tint and def.Tint:Lerp(Color3.new(1, 1, 1), 0.15) or style.Smoke
 
 	-- Asymmetric puffy body. A random mirror + jitter makes every cloud unique.
 	local rng = Random.new()
@@ -145,7 +147,7 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 	emitter(center, {
 		Name = "Smoke",
 		Texture = SMOKE,
-		Color = ColorSequence.new(shiny and Weather.ShinyColor or style.Smoke),
+		Color = ColorSequence.new(shiny and Weather.ShinyColor or smoke),
 		Size = NumberSequence.new({
 			NumberSequenceKeypoint.new(0, d * 0.35),
 			NumberSequenceKeypoint.new(1, d * 0.75),
@@ -171,7 +173,7 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 	--   Fill   dense, slow smoke packed in the middle (makes the cloud look solid)
 	--   Wisps  big, faint smoke drifting outwards (soft edges that move)
 	--   Glow   bright haze in the very center (inner light)
-	local smokeColor = shiny and Weather.ShinyColor or style.Smoke
+	local smokeColor = shiny and Weather.ShinyColor or smoke
 	emitter(center, {
 		Name = "Fill",
 		Texture = SMOKE,

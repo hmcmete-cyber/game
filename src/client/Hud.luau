@@ -447,24 +447,40 @@ local function onAlarm(thiefName: string)
 end
 
 -- Which zone am I in? (Map/Zones volumes)
-local currentZone: Instance? = nil
+-- Where am I? 1) zone volumes (Map/Zones), 2) otherwise the ground under
+-- your feet: continent floor parts carry ZoneName/ZoneColor/Warning (biomes).
+local currentZoneName: string? = nil
 local function zoneLoop()
 	local zones = workspace:WaitForChild("Map"):WaitForChild("Zones")
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = { zones }
+	local down = RaycastParams.new()
+	down.FilterType = Enum.RaycastFilterType.Exclude
 	while true do
 		task.wait(0.25)
 		local char = player.Character
 		local root = char and char:FindFirstChild("HumanoidRootPart")
-		local zone = nil
+		local zone: Instance? = nil
 		if root then
 			zone = workspace:GetPartBoundsInBox(root.CFrame, Vector3.one, params)[1]
+			if not zone then
+				down.FilterDescendantsInstances = { char, workspace:FindFirstChild("Weather") }
+				local hit = workspace:Raycast(root.Position, Vector3.new(0, -40, 0), down)
+				if hit and hit.Instance:GetAttribute("ZoneName") then
+					zone = hit.Instance
+				end
+			end
 		end
-		if zone ~= currentZone then
-			currentZone = zone
+		local name = zone and zone:GetAttribute("ZoneName") or nil
+		if name ~= currentZoneName then
+			-- keep showing the last biome while you're in the air
+			if not zone and root and root.AssemblyLinearVelocity.Y < -5 then
+				continue
+			end
+			currentZoneName = name
 			if zone then
-				zoneText.Text = zone:GetAttribute("ZoneName") or zone.Name
+				zoneText.Text = name
 				zoneText.TextColor3 = zone:GetAttribute("ZoneColor") or Color3.new(1, 1, 1)
 				zonePill.Visible = true
 			else

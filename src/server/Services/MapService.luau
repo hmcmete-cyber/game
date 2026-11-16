@@ -8,7 +8,7 @@
 --   SpawnLocation
 --   Rooftops/RooftopN (Model) -> Nest (Part), Vaults/VaultN (Part, glass sphere) — see BaseBuilder.luau
 --     (if Vaults is missing, spheres are created above Display/SlotN or around the Nest)
---   HuntZone/WeatherSpawns/SpawnN (Part, attribute Zone = 1|2|3) -- Spawn1 = tutorial spot, always a Cumulus
+--   HuntZone/WeatherSpawns/SpawnN (Part, attribute Biome = Plateau|Coast|Mountains|Valley)
 --   HuntZone/Altars/AltarN (Part)         -- Cloud Altars: rare clouds + 0.01% Mythic
 --   Hazards/* (Part, attribute HazardType = "Ice" | "River" | "Storm" | "Electric", CanCollide off, CanQuery on)
 --   Zones/* (Part volumes, attributes ZoneName, ZoneColor, Warning?) — for the HUD
@@ -18,7 +18,9 @@
 --   Route/LiftPlatforms/* (Part, placed in LOWERED position)
 --   Route/WaterGaps/* (Part, CanCollide off; Snow freezes them solid)
 --   CrateArena/CrateSpawns/CrateN (Part)
---   Abyss/* (optional Parts: touching them kills, for falling off the map)
+--   Abyss/* (Parts: touching them kills — the Death Cloud floor)
+--   Continent/* floor parts carry ZoneName/ZoneColor/Biome/Warning attributes (HUD)
+--   Expansion/ExpansionPadN — empty pads next to each base for future buildings
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -244,14 +246,36 @@ local function shopStall(parent: Instance, name: string, floor: Vector3, facing:
 	return stall
 end
 
+-- One wedge-like slice of a ring (used to build the round floating continent)
+local SEGMENTS = 48
+local function ringSegment(parent: Instance, name: string, thetaDeg: number, r0: number, r1: number, top: number, thick: number,
+	color: Color3, material: Enum.Material, zone: { [string]: any }?)
+	local theta = math.rad(thetaDeg)
+	local dir = Vector3.new(math.cos(theta), 0, math.sin(theta))
+	local mid = dir * ((r0 + r1) / 2) + Vector3.new(0, top - thick / 2, 0)
+	local width = 2 * r1 * math.sin(math.pi / SEGMENTS) * 1.08
+	local p = newPart(parent, name, Vector3.new(width, thick, r1 - r0), CFrame.lookAt(mid, mid + dir), color, {
+		Material = material,
+		CastShadow = false, -- the continent must not darken the hub below
+	})
+	if zone then
+		for k, v in zone do
+			p:SetAttribute(k, v)
+		end
+	end
+	return p
+end
+
 local function buildPlaceholder(): Instance
 	local m = Instance.new("Folder")
 	m.Name = "Map"
 
 	local Y = 40 -- hub level
-	local UP = 130 -- sky level (cloud zones)
+	local UP = 200 -- top of the floating continent
+	local DEATH = -20 -- death cloud floor
 	local hubR = 60
 	local hubColor = Color3.fromRGB(235, 238, 248)
+	local rng = Random.new(2026)
 
 	local hunt = getFolder(m, "HuntZone")
 	local spawns = getFolder(hunt, "WeatherSpawns")
@@ -264,48 +288,34 @@ local function buildPlaceholder(): Instance
 	local hazards = getFolder(m, "Hazards")
 	local zones = getFolder(m, "Zones")
 	local air = getFolder(m, "AirColumns")
+	local continent = getFolder(m, "Continent")
 
 	local spawnCount = 0
-	local function spawnPoint(pos: Vector3, zone: number)
+	local function spawnPoint(pos: Vector3, biome: string)
 		spawnCount += 1
 		local p = newPart(spawns, "Spawn" .. spawnCount, Vector3.new(2, 2, 2), CFrame.new(pos), Color3.new(1, 1, 1), MARKER)
-		p:SetAttribute("Zone", zone)
+		p:SetAttribute("Biome", biome)
 	end
-	local function zoneVolume(name: string, center: Vector3, size: Vector3, label: string, color: Color3, warning: string?)
-		local v = newPart(zones, name, size, CFrame.new(center), color, {
-			Transparency = 1,
-			CanCollide = false,
-			CanQuery = true,
-			CanTouch = false,
-			CastShadow = false,
-		})
-		v:SetAttribute("ZoneName", label)
-		v:SetAttribute("ZoneColor", color)
-		if warning then
-			v:SetAttribute("Warning", warning)
-		end
+	local function polar(r: number, deg: number, y: number): Vector3
+		local t = math.rad(deg)
+		return Vector3.new(math.cos(t) * r, y, math.sin(t) * r)
 	end
-	local function hazard(name: string, size: Vector3, cf: CFrame, kind: string, color: Color3, props)
-		local h = newPart(hazards, name, size, cf, color, props)
-		h.CanCollide = false
-		h.CanQuery = true
-		h.CanTouch = false
-		h.CastShadow = false
-		h:SetAttribute("HazardType", kind)
-		return h
+	local function hazardFlag(part: BasePart, kind: string)
+		part.CanCollide = false
+		part.CanQuery = true
+		part.CanTouch = false
+		part.CastShadow = false
+		part:SetAttribute("HazardType", kind)
+		part.Parent = hazards
 	end
 
 	------------------------------------------------------------------
-	-- HEXAGON HUB (Y = 40, radius 60): marble deck, glass inlay, neon rim,
-	-- pillars at the 6 corners, spawn ring, updraft in the middle
+	-- HEXAGON HUB (Y 40, R 60) + 2 shops + spawn ring
 	------------------------------------------------------------------
 	local hubCF = CFrame.new(0, Y, 0)
 	hexagon(route, "HubDeck", hubCF * CFrame.new(0, -1, 0), hubR, 2, hubColor, { Material = Enum.Material.Marble })
 	hexagon(decor, "HubGlass", hubCF * CFrame.new(0, 0.06, 0), hubR * 0.55, 0.12, Color3.fromRGB(170, 210, 255), {
-		Material = Enum.Material.Glass,
-		Transparency = 0.3,
-		CanCollide = false,
-		CanQuery = false,
+		Material = Enum.Material.Glass, Transparency = 0.3, CanCollide = false, CanQuery = false,
 	})
 	hexagon(decor, "HubRock", hubCF * CFrame.new(0, -6, 0), hubR * 0.85, 8, Color3.fromRGB(125, 105, 90), { Material = Enum.Material.Ground })
 	hexagon(decor, "HubRockLow", hubCF * CFrame.new(0, -13, 0), hubR * 0.5, 8, Color3.fromRGB(95, 80, 72), { Material = Enum.Material.Slate })
@@ -316,20 +326,18 @@ local function buildPlaceholder(): Instance
 			Color3.fromRGB(150, 220, 255), { Material = Enum.Material.Neon, CanCollide = false, CanQuery = false, CastShadow = false })
 		local corner = math.rad(60 * i)
 		local cpos = Vector3.new(math.cos(corner) * (hubR - 4), Y, math.sin(corner) * (hubR - 4))
-		newPart(decor, "Pillar" .. i, Vector3.new(2.5, 16, 2.5), CFrame.new(cpos + Vector3.new(0, 8, 0)), Color3.fromRGB(245, 240, 230), { Material = Enum.Material.Marble })
-		local orb = newPart(decor, "PillarOrb" .. i, Vector3.one * 3, CFrame.new(cpos + Vector3.new(0, 17.5, 0)), Color3.fromRGB(170, 220, 255), {
-			Shape = Enum.PartType.Ball,
-			Material = Enum.Material.Neon,
-			CanCollide = false,
-		})
-		local light = Instance.new("PointLight")
-		light.Range = 22
-		light.Brightness = 1.5
-		light.Color = orb.Color
-		light.Parent = orb
+		if i ~= 0 and i ~= 3 then -- corners 0 and 3 hold the shops
+			newPart(decor, "Pillar" .. i, Vector3.new(2.5, 16, 2.5), CFrame.new(cpos + Vector3.new(0, 8, 0)), Color3.fromRGB(245, 240, 230), { Material = Enum.Material.Marble })
+			local orb = newPart(decor, "PillarOrb" .. i, Vector3.one * 3, CFrame.new(cpos + Vector3.new(0, 17.5, 0)), Color3.fromRGB(170, 220, 255), {
+				Shape = Enum.PartType.Ball, Material = Enum.Material.Neon, CanCollide = false,
+			})
+			local light = Instance.new("PointLight")
+			light.Range = 22
+			light.Brightness = 1.2
+			light.Color = orb.Color
+			light.Parent = orb
+		end
 	end
-
-	-- Spawn ring around the updraft
 	for i = 1, 6 do
 		local a = math.rad(i * 60 + 30)
 		local sp = Instance.new("SpawnLocation")
@@ -344,153 +352,255 @@ local function buildPlaceholder(): Instance
 		sp.Transparency = 0.3
 		sp.Parent = m
 	end
-	zoneVolume("Hub", Vector3.new(0, Y + 10, 0), Vector3.new(130, 40, 130), "Hexagon Hub", Color3.fromRGB(200, 230, 255))
+	local hubZone = newPart(zones, "Hub", Vector3.new(130, 40, 130), CFrame.new(0, Y + 10, 0), hubColor, {
+		Transparency = 1, CanCollide = false, CanQuery = true, CanTouch = false,
+	})
+	hubZone:SetAttribute("ZoneName", "Hexagon Hub")
+	hubZone:SetAttribute("ZoneColor", Color3.fromRGB(200, 230, 255))
 	zoneSign(signs, "HubSign", Vector3.new(0, Y + 30, 0), "STEAL A CLOUD", Color3.fromRGB(255, 255, 255))
 
-	-- The only two shops in the game, on opposite corners of the hub
-	shopStall(decor, "ItemShop", Vector3.new(-44, Y, 0), Vector3.new(0, Y, 0), "Tayron", "ITEM SHOP",
-		Color3.fromRGB(120, 200, 255))
-	shopStall(decor, "UpgradeShop", Vector3.new(44, Y, 0), Vector3.new(0, Y, 0), "Aurelius", "UPGRADES",
-		Color3.fromRGB(255, 205, 90))
+	shopStall(decor, "ItemShop", Vector3.new(-44, Y, 0), Vector3.new(0, Y, 0), "Tayron", "ITEM SHOP", Color3.fromRGB(120, 200, 255))
+	shopStall(decor, "UpgradeShop", Vector3.new(44, Y, 0), Vector3.new(0, Y, 0), "Aurelius", "UPGRADES", Color3.fromRGB(255, 205, 90))
 
 	------------------------------------------------------------------
-	-- 12 BASES around the hub (radius 95), each facing the center,
-	-- joined to the hub by a bridge
+	-- 12 BASES, farther out (radius 140), each with an empty Expansion pad
+	-- beside it for future buildings
 	------------------------------------------------------------------
 	local roofs = getFolder(m, "Rooftops")
+	local expansion = getFolder(m, "Expansion")
 	for i = 1, 12 do
 		local a = math.rad((i - 1) * 30 + 15)
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-		local hue = (i - 1) / 12
-		BaseBuilder.Build(roofs, "Rooftop" .. i, dir * 95 + Vector3.new(0, Y, 0), Color3.fromHSV(hue, 0.45, 1), Vector3.new(0, Y, 0))
-		local mid = dir * 67 + Vector3.new(0, Y - 0.5, 0)
-		newPart(route, "BaseBridge" .. i, Vector3.new(6, 1, 36), CFrame.lookAt(mid, mid + dir), hubColor, { Material = Enum.Material.Marble })
+		local side = Vector3.new(-dir.Z, 0, dir.X)
+		local center = dir * 140 + Vector3.new(0, Y, 0)
+		BaseBuilder.Build(roofs, "Rooftop" .. i, center, Color3.fromHSV((i - 1) / 12, 0.45, 1), Vector3.new(0, Y, 0))
+		local mid = dir * 92 + Vector3.new(0, Y - 0.5, 0)
+		newPart(route, "BaseBridge" .. i, Vector3.new(6, 1, 78), CFrame.lookAt(mid, mid + dir), hubColor, { Material = Enum.Material.Marble })
+		-- expansion pad (empty) + short connector
+		local padPos = center + side * 30 + Vector3.new(0, -0.5, 0)
+		local pad = newPart(expansion, "ExpansionPad" .. i, Vector3.new(20, 1, 20), CFrame.lookAt(padPos, padPos + dir), Color3.fromRGB(220, 225, 235), {
+			Material = Enum.Material.Concrete,
+		})
+		pad:SetAttribute("ExpansionSlot", i)
+		local linkPos = center + side * 16 + Vector3.new(0, -0.5, 0)
+		newPart(expansion, "ExpansionLink" .. i, Vector3.new(8, 1, 6), CFrame.lookAt(linkPos, linkPos + dir), hubColor, { Material = Enum.Material.Marble })
 	end
 
 	------------------------------------------------------------------
-	-- UPDRAFT in the hub center -> sky landing (pushes you toward -Z at the top)
-	-- DESCENT chute from the landing edge back down to the hub
+	-- UPDRAFT through the hole in the continent's center
 	------------------------------------------------------------------
-	-- Lift 95 studs/s; at ExitHeight you're launched on an arc that lands at
-	-- LaunchTarget on the Sky Landing (client Movement.updateAir does the math)
-	local updraft = airColumn(air, "Updraft", Vector3.new(14, UP + 22 - Y, 14), Vector3.new(0, (Y + UP + 22) / 2, 0), 95,
+	local updraft = airColumn(air, "Updraft", Vector3.new(14, UP + 18 - Y, 14), Vector3.new(0, (Y + UP + 18) / 2, 0), 110,
 		Color3.fromRGB(190, 235, 255))
 	updraft:SetAttribute("ExitHeight", UP + 6)
-	updraft:SetAttribute("LaunchTarget", Vector3.new(0, UP + 3, -45))
-	updraft:SetAttribute("LaunchTime", 0.9)
+	updraft:SetAttribute("LaunchTarget", Vector3.new(0, UP + 3, -28))
+	updraft:SetAttribute("LaunchTime", 0.8)
 	newPart(decor, "UpdraftPad", Vector3.new(0.6, 16, 16), CFrame.new(0, Y + 0.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(150, 220, 255), {
-		Shape = Enum.PartType.Cylinder,
-		Material = Enum.Material.Neon,
+		Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, CanCollide = false,
+	})
+	zoneSign(signs, "UpdraftSign", Vector3.new(0, Y + 12, 0), "UPDRAFT - to the Floating Continent", Color3.fromRGB(190, 235, 255))
+
+	------------------------------------------------------------------
+	-- FLOATING CONTINENT (Y 200, radius ~182), built from 48 slices.
+	--   r 14-80   Plateau (center, flat)
+	--   r 80-140  north: Mountains · south: Valley (stepped down, pits) · east/west: Plateau
+	--   r 140-182 Coast (sand + shallows)
+	------------------------------------------------------------------
+	local Z_PLATEAU = { ZoneName = "Plateau", ZoneColor = Color3.fromRGB(150, 230, 150), Biome = "Plateau" }
+	local Z_COAST = { ZoneName = "Coast", ZoneColor = Color3.fromRGB(255, 225, 160), Biome = "Coast" }
+	local Z_MOUNT = { ZoneName = "Mountains", ZoneColor = Color3.fromRGB(210, 220, 235), Biome = "Mountains",
+		Warning = "Icy ledges up high - Frost Cloud perk helps" }
+	local Z_VALLEY = { ZoneName = "Valley", ZoneColor = Color3.fromRGB(190, 140, 255), Biome = "Valley",
+		Warning = "Pits, an electric river and a storm bridge - watch your step!" }
+
+	local grass = Color3.fromRGB(125, 195, 120)
+	local rock = Color3.fromRGB(150, 145, 140)
+	local valleyGround = Color3.fromRGB(105, 90, 110)
+	local sand = Color3.fromRGB(240, 220, 170)
+
+	local function inRange(deg: number, a: number, b: number)
+		return deg >= a and deg < b
+	end
+
+	for k = 0, SEGMENTS - 1 do
+		local deg = (k + 0.5) * 360 / SEGMENTS
+		ringSegment(continent, "Plateau" .. k, deg, 14, 80, UP, 4, grass, Enum.Material.Grass, Z_PLATEAU)
+
+		if inRange(deg, 45, 135) then
+			ringSegment(continent, "MountainBase" .. k, deg, 80, 140, UP, 4, rock, Enum.Material.Rock, Z_MOUNT)
+		elseif inRange(deg, 225, 315) then
+			-- stepped valley: 4-stud steps you can jump even while carrying
+			local pit = inRange(deg, 255, 285)
+			ringSegment(continent, "ValleyStepA" .. k, deg, 80, 88, UP - 4, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
+			ringSegment(continent, "ValleyStepB" .. k, deg, 88, 96, UP - 8, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
+			if pit then
+				-- a gap from r 100 to 124 = a pit straight down to the death clouds
+				ringSegment(continent, "ValleyFloorIn" .. k, deg, 96, 100, UP - 12, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
+				ringSegment(continent, "ValleyFloorOut" .. k, deg, 124, 128, UP - 12, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
+			else
+				ringSegment(continent, "ValleyFloor" .. k, deg, 96, 128, UP - 12, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
+			end
+			ringSegment(continent, "ValleyStepC" .. k, deg, 128, 134, UP - 8, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
+			ringSegment(continent, "ValleyStepD" .. k, deg, 134, 140, UP - 4, 4, valleyGround, Enum.Material.Ground, Z_VALLEY)
+		else
+			ringSegment(continent, "PlateauOuter" .. k, deg, 80, 140, UP, 4, grass, Enum.Material.Grass, Z_PLATEAU)
+		end
+
+		ringSegment(continent, "Coast" .. k, deg, 140, 172, UP - 0.5, 4, sand, Enum.Material.Sand, Z_COAST)
+		ringSegment(continent, "Shallows" .. k, deg, 172, 182, UP - 1.5, 4, Color3.fromRGB(120, 200, 230), Enum.Material.Glass, Z_COAST)
+	end
+
+	-- Rocky underside (a ring of boulders, leaving the center free for the updraft)
+	for i = 1, 24 do
+		local deg = i * 15 + rng:NextNumber(-5, 5)
+		local r = rng:NextNumber(60, 150)
+		local size = rng:NextNumber(40, 70)
+		local p = newPart(continent, "Underside" .. i, Vector3.new(size, size * 0.6, size), CFrame.new(polar(r, deg, UP - 10 - size * 0.3)),
+			Color3.fromRGB(120, 100, 90), { Material = Enum.Material.Slate, CastShadow = false })
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = p
+	end
+
+	-- MOUNTAINS: terraced peaks (5-stud steps), icy upper ledges, Altar1 on top
+	local function peak(name: string, center: Vector3, radius: number, tiers: number, icyFrom: number)
+		for t = 1, tiers do
+			local r = radius - (t - 1) * (radius - 5) / tiers
+			local top = center.Y + t * 5
+			local tier = newPart(continent, name .. "Tier" .. t, Vector3.new(5, r * 2, r * 2), CFrame.new(center.X, top - 2.5, center.Z) * CFrame.Angles(0, 0, math.pi / 2),
+				t >= icyFrom and Color3.fromRGB(235, 245, 255) or rock, {
+					Shape = Enum.PartType.Cylinder,
+					Material = t >= icyFrom and Enum.Material.Snow or Enum.Material.Rock,
+					CastShadow = false,
+				})
+			for key, v in Z_MOUNT do
+				tier:SetAttribute(key, v)
+			end
+			if t >= icyFrom then
+				local ice = newPart(continent, name .. "Ice" .. t, Vector3.new(0.2, r * 2, r * 2), CFrame.new(center.X, top + 0.1, center.Z) * CFrame.Angles(0, 0, math.pi / 2),
+					Color3.fromRGB(215, 240, 255), { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Glacier, Transparency = 0.25 })
+				hazardFlag(ice, "Ice")
+			end
+		end
+		return center + Vector3.new(0, tiers * 5, 0)
+	end
+	local summit = peak("PeakMain", polar(110, 90, UP), 28, 8, 4)
+	peak("PeakWest", polar(105, 60, UP), 18, 5, 4)
+	peak("PeakEast", polar(112, 122, UP), 20, 5, 4)
+	altar(decor, altars, "Altar1", summit)
+	altars:FindFirstChild("Altar1"):SetAttribute("Biome", "Mountains")
+
+	-- VALLEY: electric river arcs + storm bridge over the pit, Altar2 beyond
+	for k = 0, SEGMENTS - 1 do
+		local deg = (k + 0.5) * 360 / SEGMENTS
+		if inRange(deg, 228, 252) or inRange(deg, 288, 312) then
+			local river = ringSegment(continent, "River" .. k, deg, 106, 116, UP - 11.6, 0.8, Color3.fromRGB(60, 140, 230), Enum.Material.Glass)
+			river.Transparency = 0.3
+			hazardFlag(river, "River")
+		end
+	end
+	local bridgeMid = polar(112, 270, UP - 12.5)
+	local bridge = newPart(route, "StormBridge", Vector3.new(6, 1, 34), CFrame.lookAt(bridgeMid, bridgeMid + polar(1, 270, 0)), Color3.fromRGB(80, 75, 95), {
+		Material = Enum.Material.DiamondPlate,
+	})
+	for key, v in Z_VALLEY do
+		bridge:SetAttribute(key, v)
+	end
+	local storm = newPart(hazards, "StormBridge1", Vector3.new(6, 0.2, 34), bridge.CFrame * CFrame.new(0, 0.6, 0), Color3.new(0, 0, 0), { Transparency = 1 })
+	hazardFlag(storm, "Storm")
+	local altar2 = altar(decor, altars, "Altar2", polar(160, 270, UP))
+	altar2:SetAttribute("Biome", "Coast")
+
+	-- Biome spawn points
+	for _ = 1, 12 do
+		spawnPoint(polar(rng:NextNumber(24, 74), rng:NextNumber(0, 360), UP + 3), "Plateau")
+	end
+	for _ = 1, 6 do
+		local deg = rng:NextNumber(0, 1) < 0.5 and rng:NextNumber(140, 220) or rng:NextNumber(320, 400) % 360
+		spawnPoint(polar(rng:NextNumber(88, 134), deg, UP + 3), "Plateau")
+	end
+	for _ = 1, 14 do
+		spawnPoint(polar(rng:NextNumber(146, 168), rng:NextNumber(0, 360), UP + 2.5), "Coast")
+	end
+	-- on the ledges of the terraced peaks (between one tier's edge and the next)
+	local function ledge(center: Vector3, radius: number, tiers: number, t: number, aroundDeg: number): Vector3
+		local rT = radius - (t - 1) * (radius - 5) / tiers
+		local rN = radius - t * (radius - 5) / tiers
+		return center + polar((rT + rN) / 2, aroundDeg, 5 * t + 3)
+	end
+	local mainC, westC, eastC = polar(110, 90, UP), polar(105, 60, UP), polar(112, 122, UP)
+	for _, pos in {
+		summit + Vector3.new(0, 3, 0),
+		ledge(mainC, 28, 8, 3, 200), ledge(mainC, 28, 8, 6, 20),
+		ledge(westC, 18, 5, 3, 250), ledge(eastC, 20, 5, 3, 300),
+		polar(88, 75, UP + 3), polar(136, 100, UP + 3), polar(132, 55, UP + 3),
+	} do
+		spawnPoint(pos, "Mountains")
+	end
+	for _, deg in { 232, 240, 248, 292, 300, 308, 262, 278 } do
+		local r = (deg > 255 and deg < 285) and 98 or 120
+		spawnPoint(polar(r, deg, UP - 9), "Valley")
+	end
+
+	------------------------------------------------------------------
+	-- DEATH CLOUD FLOOR: no void — a thick cloud sea below everything.
+	-- Touching it kills you; you respawn at your base.
+	------------------------------------------------------------------
+	local abyss = getFolder(m, "Abyss")
+	local slab = newPart(abyss, "DeathClouds", Vector3.new(2048, 6, 2048), CFrame.new(0, DEATH - 3, 0), Color3.fromRGB(235, 238, 245), {
+		Material = Enum.Material.SmoothPlastic,
 		CanCollide = false,
+		CanQuery = false,
+		CastShadow = false,
 	})
-	zoneSign(signs, "UpdraftSign", Vector3.new(0, Y + 12, 0), "UPDRAFT - to the clouds", Color3.fromRGB(190, 235, 255))
-
-	-- Sky landing (UP level), right next to the top of the updraft
-	-- (z -20 … -100: the updraft throws you ~30-40 studs toward -Z).
-	newPart(route, "SkyLanding", Vector3.new(40, 2, 80), CFrame.new(0, UP - 1, -60), Color3.fromRGB(245, 248, 255), { Material = Enum.Material.Marble })
-	zoneVolume("Landing", Vector3.new(0, UP + 10, -60), Vector3.new(50, 40, 80), "Sky Landing", Color3.fromRGB(220, 240, 255))
-	-- No way down but down: jump off the edge and fall back to the hub.
-
-	------------------------------------------------------------------
-	-- SKY PATH (one way, no shortcuts):
-	-- Landing -> Gate 1 Ice -> Zone 1 Breeze -> Gate 2 River ->
-	-- Zone 2 Canyon (+Altar1) -> Gate 3 Storm Bridge -> Zone 3 Cosmic -> Altar2
-	------------------------------------------------------------------
-	local cloudWhite = Color3.fromRGB(240, 246, 255)
-
-	-- GATE 1: Ice Path (z -100 … -130)
-	local iceColor = Color3.fromRGB(200, 235, 255)
-	newPart(route, "IceBridge", Vector3.new(10, 2, 30), CFrame.new(0, UP - 1, -115), Color3.fromRGB(190, 225, 255), { Material = Enum.Material.Ice })
-	hazard("IcePath1", Vector3.new(10, 0.2, 30), CFrame.new(0, UP + 0.1, -115), "Ice", Color3.fromRGB(215, 240, 255), {
-		Material = Enum.Material.Glacier,
-		Transparency = 0.2,
+	local fog = Instance.new("ParticleEmitter")
+	fog.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	fog.Color = ColorSequence.new(Color3.fromRGB(240, 242, 250))
+	fog.Size = NumberSequence.new(60, 120)
+	fog.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.55), NumberSequenceKeypoint.new(1, 1),
 	})
-	zoneVolume("Gate1", Vector3.new(0, UP + 10, -115), Vector3.new(40, 40, 30), "Gate 1 - Ice Path", iceColor,
-		"Slippery! You lose control - Frost Cloud perk helps")
-	zoneSign(signs, "Gate1Sign", Vector3.new(0, UP + 10, -102), "GATE 1 - ICE PATH", iceColor)
-
-	-- ZONE 1: Breeze (z -130 … -210)
-	local breeze = Color3.fromRGB(190, 230, 255)
-	newPart(route, "BreezeField", Vector3.new(60, 2, 80), CFrame.new(0, UP - 1, -170), cloudWhite)
-	edgeLights(decor, Vector3.new(0, UP - 1, -170), 60, 80, breeze)
-	zoneVolume("Zone1", Vector3.new(0, UP + 10, -170), Vector3.new(70, 40, 80), "Breeze Zone", breeze)
-	for _, pos in {
-		Vector3.new(-20, UP + 3, -145), Vector3.new(20, UP + 3, -150), Vector3.new(-15, UP + 3, -172),
-		Vector3.new(15, UP + 3, -177), Vector3.new(-22, UP + 3, -197), Vector3.new(22, UP + 3, -200),
-	} do
-		spawnPoint(pos, 1)
+	fog.Lifetime = NumberRange.new(10, 16)
+	fog.Rate = 40
+	fog.Speed = NumberRange.new(1, 3)
+	fog.EmissionDirection = Enum.NormalId.Top
+	fog.SpreadAngle = Vector2.new(30, 30)
+	fog.LightInfluence = 1
+	fog.Parent = slab
+	-- big puffy cloud lumps on top of the sea (decor only)
+	local sea = getFolder(decor, "CloudSea")
+	for i = 1, 140 do
+		local pos = Vector3.new(rng:NextNumber(-700, 700), DEATH + rng:NextNumber(-2, 10), rng:NextNumber(-700, 700))
+		local w = rng:NextNumber(30, 90)
+		local puff = newPart(sea, "Puff" .. i, Vector3.new(w, w * rng:NextNumber(0.3, 0.5), w * rng:NextNumber(0.7, 1.1)), CFrame.new(pos),
+			Color3.fromRGB(245, 247, 252):Lerp(Color3.fromRGB(200, 205, 225), rng:NextNumber()), {
+				Material = Enum.Material.SmoothPlastic,
+				CanCollide = false,
+				CanQuery = false,
+				CanTouch = false,
+				CastShadow = false,
+			})
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = puff
 	end
 
-	-- GATE 2: Electric River (z -210 … -250)
-	local riverColor = Color3.fromRGB(170, 120, 255)
-	newPart(route, "RiverBankA", Vector3.new(16, 2, 8), CFrame.new(0, UP - 1, -214), Color3.fromRGB(120, 110, 100), { Material = Enum.Material.Ground })
-	newPart(route, "RiverBed", Vector3.new(16, 2, 24), CFrame.new(0, UP - 1.6, -230), Color3.fromRGB(70, 80, 90), { Material = Enum.Material.Pebble })
-	newPart(route, "RiverBankB", Vector3.new(16, 2, 8), CFrame.new(0, UP - 1, -246), Color3.fromRGB(120, 110, 100), { Material = Enum.Material.Ground })
-	hazard("ElectricRiver1", Vector3.new(16, 0.8, 24), CFrame.new(0, UP - 0.4, -230), "River", Color3.fromRGB(60, 140, 230), {
-		Material = Enum.Material.Glass,
-		Transparency = 0.3,
-	})
-	zoneVolume("Gate2", Vector3.new(0, UP + 10, -230), Vector3.new(40, 40, 40), "Gate 2 - Electric River", riverColor,
-		"Cross while the water is BLUE - yellow = shock incoming!")
-	zoneSign(signs, "Gate2Sign", Vector3.new(0, UP + 10, -212), "GATE 2 - ELECTRIC RIVER", riverColor)
-
-	-- ZONE 2: Thunder Canyon (z -250 … -310) + Altar1
-	local canyon = Color3.fromRGB(95, 90, 115)
-	local thunder = Color3.fromRGB(255, 230, 90)
-	newPart(route, "CanyonField", Vector3.new(60, 2, 60), CFrame.new(0, UP - 1, -280), canyon, { Material = Enum.Material.Slate })
-	edgeLights(decor, Vector3.new(0, UP - 1, -280), 60, 60, thunder)
-	altar(decor, altars, "Altar1", Vector3.new(0, UP, -280))
-	zoneVolume("Zone2", Vector3.new(0, UP + 10, -280), Vector3.new(70, 40, 60), "Thunder Canyon", thunder)
-	for _, pos in {
-		Vector3.new(-22, UP + 3, -260), Vector3.new(22, UP + 3, -262), Vector3.new(-22, UP + 3, -298),
-		Vector3.new(22, UP + 3, -300), Vector3.new(-12, UP + 3, -305),
-	} do
-		spawnPoint(pos, 2)
-	end
-
-	-- GATE 3: Storm Bridge (z -310 … -370), 6 wide
-	local stormColor = Color3.fromRGB(255, 90, 90)
-	newPart(route, "StormBridge", Vector3.new(6, 2, 60), CFrame.new(0, UP - 1, -340), Color3.fromRGB(80, 75, 95), { Material = Enum.Material.DiamondPlate })
-	hazard("StormBridge1", Vector3.new(6, 0.2, 60), CFrame.new(0, UP + 0.05, -340), "Storm", Color3.fromRGB(80, 75, 95), { Transparency = 1 })
-	zoneVolume("Gate3", Vector3.new(0, UP + 10, -340), Vector3.new(40, 40, 60), "Gate 3 - Storm Bridge", stormColor,
-		"Lightning hits the RED circles - and the wind pushes you sideways!")
-	zoneSign(signs, "Gate3Sign", Vector3.new(0, UP + 10, -312), "GATE 3 - STORM BRIDGE", stormColor)
-
-	-- ZONE 3: Cosmic Stratosphere (z -370 … -430) + Altar2 (z -430 … -454)
-	local cosmic = Color3.fromRGB(35, 28, 70)
-	local neon = Color3.fromRGB(255, 90, 230)
-	newPart(route, "CosmicField", Vector3.new(60, 2, 60), CFrame.new(0, UP - 1, -400), cosmic, { Material = Enum.Material.Glass, Reflectance = 0.2 })
-	edgeLights(decor, Vector3.new(0, UP - 1, -400), 60, 60, neon)
-	zoneVolume("Zone3", Vector3.new(0, UP + 10, -412), Vector3.new(70, 40, 84), "Cosmic Stratosphere", neon)
-	for _, pos in {
-		Vector3.new(-20, UP + 3, -385), Vector3.new(20, UP + 3, -390),
-		Vector3.new(-18, UP + 3, -415), Vector3.new(18, UP + 3, -418),
-	} do
-		spawnPoint(pos, 3)
-	end
-	newPart(route, "AltarPad2", Vector3.new(24, 2, 24), CFrame.new(0, UP - 1, -442), Color3.fromRGB(70, 55, 110), { Material = Enum.Material.Marble })
-	altar(decor, altars, "Altar2", Vector3.new(0, UP, -442))
-
 	------------------------------------------------------------------
-	-- Decorative floating islands
+	-- Decorative floating islands (outside everything)
 	------------------------------------------------------------------
-	local grass = Color3.fromRGB(120, 195, 125)
 	local islandSpots = {
-		{ Vector3.new(-160, Y + 20, 60), 26 }, { Vector3.new(170, Y + 40, -40), 30 },
-		{ Vector3.new(-140, UP - 10, -200), 24 }, { Vector3.new(120, UP + 15, -300), 26 },
-		{ Vector3.new(-110, UP + 30, -420), 22 }, { Vector3.new(150, Y - 10, 150), 28 },
+		{ Vector3.new(-260, Y + 30, 120), 28 }, { Vector3.new(270, Y + 60, -80), 32 },
+		{ Vector3.new(-240, UP - 20, -200), 26 }, { Vector3.new(230, UP + 20, 210), 30 },
+		{ Vector3.new(60, UP + 50, -280), 24 }, { Vector3.new(-120, Y - 5, 260), 26 },
 	}
 	for i, spot in islandSpots do
 		local pos, size = spot[1], spot[2]
 		local island = Instance.new("Model")
 		island.Name = "Island" .. i
 		local top = newPart(island, "Grass", Vector3.new(3, size, size), CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), grass, {
-			Shape = Enum.PartType.Cylinder,
-			Material = Enum.Material.Grass,
+			Shape = Enum.PartType.Cylinder, Material = Enum.Material.Grass,
 		})
 		newPart(island, "Rock", Vector3.one * size * 0.7, CFrame.new(pos - Vector3.new(0, size * 0.3, 0)), Color3.fromRGB(150, 120, 95), {
-			Shape = Enum.PartType.Ball,
-			Material = Enum.Material.Slate,
+			Shape = Enum.PartType.Ball, Material = Enum.Material.Slate,
 		})
 		island.PrimaryPart = top
 		island:SetAttribute("FloatAmplitude", 1 + (i % 3) * 0.5)
@@ -499,14 +609,6 @@ local function buildPlaceholder(): Instance
 	end
 
 	getFolder(getFolder(m, "CrateArena"), "CrateSpawns")
-
-	-- Falling off = respawn (below the hub)
-	local abyss = getFolder(m, "Abyss")
-	newPart(abyss, "AbyssFloor", Vector3.new(1200, 10, 1200), CFrame.new(0, Y - 30, -150), Color3.new(0, 0, 0), {
-		Transparency = 1,
-		CanCollide = false,
-		CanQuery = false,
-	})
 
 	m.Parent = workspace
 	return m

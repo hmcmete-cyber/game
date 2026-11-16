@@ -83,6 +83,14 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - **Only 2 shops**, on opposite corners of the hub: Item Shop (Tayron, west) and Upgrades (Aurelius, east). Per-base vendors removed.
 - **7 items**: Laser Gun (shoot a thief carrying YOUR cloud → it flies home; others slowed + 10 dmg), Speed Potion, Jump Potion, Nitro, Signal Flare, Shield Generator (on your base: instant 30 s base shield; elsewhere: 10 s personal ForceField, can't be tagged/shot), Grappling Hook (zip up to 90 studs). Keys 1-7; aimed items use the mouse.
 
+## Update 9 — Floating Continent, 56 clouds, death-cloud floor (director request)
+
+- **Updraft**: Lift 110, rises through a hole in the continent's center and launches you onto the continent (ballistic arc to r ≈ 28).
+- **Floating Continent** (Y 200, radius ~182, 48 slices): Plateau (center + east/west), Mountains (north, three terraced peaks with icy ledges, Altar 1 on the summit), Valley (south, stepped down 12 studs, pits to the death clouds, electric river arcs, storm bridge over the pit), Coast (sand ring + shallows, Altar 2). Floor parts carry biome attributes; the HUD reads the ground under you.
+- **56 clouds** in `Shared/CloudDB.luau`: 16 Common, 14 Rare, 12 Epic, 8 Legendary, 6 Mythic. Tier roll 60/25/10.5/4/0.5 %, then weighted pick among clouds allowed in that biome at that time. Rarer = bigger perks and rewards. Altars roll Epic+. `WeatherTypes.ChanceTable(biome, isNight)` shows real %.
+- **Bases** moved to radius 140 with an empty **Expansion pad** beside each.
+- **Death Cloud floor** at Y −20 replaces the void: thick cloud sea; touching it kills, you respawn at your own base.
+
 ## Core loop
 
 1. **Hunt** weather creatures in the shared zone.

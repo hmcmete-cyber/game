@@ -2,7 +2,7 @@
 -- Oyunun genel ayarları. Hem sunucu hem istemci buradan okur.
 
 local Config = {
-	GameName = "Game",
+	GameName = "Pocket Storm",
 	StartingCoins = 0,
 }
 

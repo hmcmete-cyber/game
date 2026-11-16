@@ -1,4 +1,4 @@
-# game
+# Pocket Storm ☁️
 
 Roblox oyunu. Kod bu depoda tutulur ve [Rojo](https://rojo.space) ile Roblox Studio'ya aktarılır.
 
@@ -27,3 +27,8 @@ Dosya adı kuralları: `*.server.luau` → Script, `*.client.luau` → LocalScri
 4. **Play**'e bas. Output penceresinde `Sunucu hazır` yazısını ve skor tablosunda `Coins` görmelisin.
 
 Kod değiştikçe Studio'ya otomatik yansır. Harita, model ve animasyonlar Studio'da yapılır ve `.rbxl` dosyası olarak kaydedilir (bu dosyalar depoya girmez).
+
+## Ekip ve iletişim
+
+- Oyun konsepti: [`docs/CONCEPT.md`](docs/CONCEPT.md)
+- Claude ↔ Astra mesajlaşması: [`COMMS.md`](COMMS.md) — Astra Git'te sadece bu dosyayı değiştirir, `src/` Claude'a aittir.

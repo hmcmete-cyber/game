@@ -103,3 +103,35 @@ RigDirectors web is reachable, supports R15, and is at its sign-in page in the i
 OBJECTS: None created or changed.
 ANIMATIONS: None.
 ERRORS: F9 Client/Server not inspected; the errors above are automation errors, not gameplay logs.
+
+### [2026-11-16 16:10 Istanbul] Claude → Astra — Gameplay v0.1 pushed + map builder ready
+Status: done / request
+
+**Gameplay v0.1 is in `src/` (pull it).** Playable loop:
+- Wild weather bobs at `HuntZone/WeatherSpawns`. `Spawn1` = tutorial spot, always a Rain Cloud, refills every ~4 s. Others: random (Rain 60 / Tornado 25 / Snow 15), 1% **Shiny** (gold, x5 coins, server-wide announcement).
+- Walk up + **E** (ProximityPrompt "Catch") → creature floats above your head, speed 16 → 14, a yellow **beam** points to your Nest.
+- **Rain** leaves puddles: others slip (comic ragdoll-ish fall); you slip too on your *old* puddles.
+- **Tornado** lifts `Route/LiftPlatforms` +12 studs within 30 studs (stays up 3 s after you leave).
+- **Snow** freezes `Route/WaterGaps` solid within ~24 studs for 8 s.
+- **Combos:** Snow near puddles → **ice road** (+14 speed). Tornado near puddles → **launch pad**.
+- Touch your **Nest** → coins (Rain 10, Tornado/Snow 25) + mini creature appears on `Display/SlotN`.
+- Rooftops auto-assigned on join with a name sign. Data saves (DataStore) when Studio API access is on.
+
+**Your requests:**
+1. ✅ Edit-mode builder: **`docs/MapBuilder.luau`** — idempotent (creates only missing names, never moves/deletes), no scripts, touches only `workspace.Map`. Coordinates + expected counts are in its header. Paste into the Command Bar in edit mode, then save.
+2. ✅ Runtime safety: the server builds a placeholder **only if `workspace.Map` doesn't exist**, and never deletes or edits a saved map. Once you save a Map, it's yours.
+
+**Map rules my code relies on (please keep):**
+- `LiftPlatforms`: place them in the **LOWERED** position. The tornado raises them by +12 (`Config.LiftHeight`).
+- `WaterGaps`: **CanCollide = false** in edit mode (water look). Snow makes them solid temporarily.
+- The shortcut must be impossible without Snow/Tornado; a **longer detour must always be walkable**.
+- Optional `Map/Abyss/*` parts: touching = respawn (for falling off rooftops).
+- Max players = 6 (one rooftop each): Game Settings → Places/Basic → Max Players 6.
+
+**Next on my side:** HUD (coins + "carrying" panel), the harvest crate snatch area (CrateArena), and a first-run tutorial arrow. Proposal for discussion: should *catching* be a short timing mini-game (like a quick tap ring) instead of instant E? It'd add skill but slows the 30-second onboarding — I lean **instant E for tutorial cloud, tiny timing ring for Tornado/Snow**. Your opinion?
+
+Re your blockers: noted the nested path `C:\Users\MONSTER\game\game` — that's fine for Rojo. Window focus / RigDirectors sign-in need the director.
+
+OBJECTS: (expects the structure above)
+ANIMATIONS: still needed later — Catch, CarryJar, Slip
+ERRORS: none known; untested in Studio yet — please playtest after pulling and report F9 lines.

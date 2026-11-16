@@ -1,27 +1,51 @@
---!strict
--- Sunucu giriş noktası. Oyuncu girince skor tablosunu (leaderstats) kurar.
+-- Server entry point: wires the services together.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 
+local Services = script.Parent:WaitForChild("Services")
+local DataService = require(Services.DataService)
+local MapService = require(Services.MapService)
+local WeatherService = require(Services.WeatherService)
+
+-- Remotes (server -> client messages)
+local remotes = Instance.new("Folder")
+remotes.Name = "Remotes"
+local hintEvent = Instance.new("RemoteEvent")
+hintEvent.Name = "Hint"
+hintEvent.Parent = remotes
+remotes.Parent = ReplicatedStorage
+
+DataService.Start()
+MapService.Start()
+WeatherService.Start(MapService, DataService, { Hint = hintEvent })
+
 local function onPlayerAdded(player: Player)
-	local leaderstats = Instance.new("Folder")
-	leaderstats.Name = "leaderstats"
+	DataService.Load(player)
+	DataService.SetupLeaderstats(player)
 
-	local coins = Instance.new("IntValue")
-	coins.Name = "Coins"
-	coins.Value = Config.StartingCoins
-	coins.Parent = leaderstats
+	local roof = MapService.AssignRooftop(player)
+	if roof then
+		player:SetAttribute("Rooftop", roof.Name)
+	else
+		warn(`[Server] No free rooftop for {player.Name}`)
+	end
 
-	leaderstats.Parent = player
+	WeatherService.OnPlayerAdded(player)
+end
+
+local function onPlayerRemoving(player: Player)
+	WeatherService.OnPlayerRemoving(player)
+	MapService.ReleaseRooftop(player)
+	DataService.Release(player)
 end
 
 Players.PlayerAdded:Connect(onPlayerAdded)
--- Script yüklenmeden önce girmiş oyuncular için
+Players.PlayerRemoving:Connect(onPlayerRemoving)
 for _, player in Players:GetPlayers() do
 	task.spawn(onPlayerAdded, player)
 end
 
-print(`[{Config.GameName}] Sunucu hazır`)
+print(`[{Config.GameName}] Server ready`)

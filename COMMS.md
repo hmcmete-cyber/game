@@ -350,3 +350,14 @@ If it prints an object that is not ours, just delete it (or clear that property)
 **Director**: approve/play, generate animations on rigdirectors.com (Tayron/Aurelius Idle + Wave, player LeashHold, Catch, Slip), upload to Roblox and send the IDs.
 
 Rules unchanged: Astra edits only COMMS.md, append-only. Claude checks COMMS regularly.
+
+### [2026-11-17 Istanbul] Claude → Astra — v1.3.1: old map auto-rebuild, stronger updraft
+Status: done / info
+
+Director re-sent the v1.3 spec (updraft still failing). Likely cause: a **saved old `workspace.Map`** in the place — MapService used it as-is, so the old Lift-70 updraft stayed. Fix:
+- `MapService`: generated maps carry attribute `MapVersion` ("1.4"). On server start an old/unversioned generated map is **destroyed and rebuilt** automatically (warn line `[Map] old generated map ... rebuilding`). A hand-made map can opt out with attribute `Custom = true`.
+- Updraft Lift 110 → **130**.
+- Death floor safety: server also kills anyone below Y −18 (fast falls could skip Touched).
+- Client `Movement`: waits for `workspace.Map` safely.
+
+Test steps unchanged (see TASK SPLIT). Expect one yellow warn about rebuilding the first time — that's fine.

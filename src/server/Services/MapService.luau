@@ -266,6 +266,11 @@ local function ringSegment(parent: Instance, name: string, thetaDeg: number, r0:
 	return p
 end
 
+-- Bump when the generated layout changes: older generated maps are rebuilt
+-- automatically. A hand-made map keeps itself by setting attribute Custom = true.
+local MAP_VERSION = "1.4"
+local DEATH_Y = -20 -- top of the death cloud floor
+
 local function buildPlaceholder(): Instance
 	local m = Instance.new("Folder")
 	m.Name = "Map"
@@ -389,7 +394,7 @@ local function buildPlaceholder(): Instance
 	------------------------------------------------------------------
 	-- UPDRAFT through the hole in the continent's center
 	------------------------------------------------------------------
-	local updraft = airColumn(air, "Updraft", Vector3.new(14, UP + 18 - Y, 14), Vector3.new(0, (Y + UP + 18) / 2, 0), 110,
+	local updraft = airColumn(air, "Updraft", Vector3.new(14, UP + 18 - Y, 14), Vector3.new(0, (Y + UP + 18) / 2, 0), 130,
 		Color3.fromRGB(190, 235, 255))
 	updraft:SetAttribute("ExitHeight", UP + 6)
 	updraft:SetAttribute("LaunchTarget", Vector3.new(0, UP + 3, -28))
@@ -611,6 +616,7 @@ local function buildPlaceholder(): Instance
 	getFolder(getFolder(m, "CrateArena"), "CrateSpawns")
 
 	m.Parent = workspace
+	m:SetAttribute("MapVersion", MAP_VERSION)
 	return m
 end
 
@@ -618,14 +624,24 @@ end
 -- placeholder into the place. Does nothing if workspace.Map already exists.
 function MapService.BuildPlaceholder(): Instance
 	local existing = workspace:FindFirstChild("Map")
-	if existing then
+	if existing and (existing:GetAttribute("Custom") or existing:GetAttribute("MapVersion") == MAP_VERSION) then
 		return existing
 	end
-	return buildPlaceholder()
+	if existing then
+		existing:Destroy()
+	end
+	local m = buildPlaceholder()
+	m.Parent = workspace
+	return m
 end
 
 function MapService.Start()
 	map = workspace:FindFirstChild("Map")
+	if map and not map:GetAttribute("Custom") and map:GetAttribute("MapVersion") ~= MAP_VERSION then
+		warn("[Map] old generated map (version " .. tostring(map:GetAttribute("MapVersion")) .. ") — rebuilding v" .. MAP_VERSION)
+		map:Destroy()
+		map = nil
+	end
 	if not map then
 		map = buildPlaceholder()
 		print("[Map] workspace.Map not found — built placeholder map")
@@ -657,6 +673,21 @@ function MapService.Start()
 			end
 		end
 	end
+
+	-- Safety net: very fast falls can skip a Touched event, so also kill by height
+	task.spawn(function()
+		while true do
+			task.wait(0.2)
+			for _, plr in Players:GetPlayers() do
+				local char = plr.Character
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+				local hum = char and char:FindFirstChildOfClass("Humanoid")
+				if root and hum and hum.Health > 0 and root.Position.Y < DEATH_Y + 2 then
+					hum.Health = 0
+				end
+			end
+		end
+	end)
 end
 
 function MapService.GetSpawns(): { BasePart }

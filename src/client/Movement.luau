@@ -321,7 +321,7 @@ function Movement.Start()
 	puddleParams.FilterDescendantsInstances = { puddles }
 
 	-- Air columns (hub updraft / descent chute)
-	local airFolder = workspace.Map:WaitForChild("AirColumns")
+	local airFolder = workspace:WaitForChild("Map"):WaitForChild("AirColumns")
 	airParams = OverlapParams.new()
 	airParams.FilterType = Enum.RaycastFilterType.Include
 	airParams.FilterDescendantsInstances = { airFolder }

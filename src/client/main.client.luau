@@ -10,6 +10,7 @@ local ShopUi = require(script.Parent:WaitForChild("ShopUi"))
 local NpcAnimator = require(script.Parent:WaitForChild("NpcAnimator"))
 local SoundManager = require(script.Parent:WaitForChild("SoundManager"))
 local PlayerAnimator = require(script.Parent:WaitForChild("PlayerAnimator"))
+local QaPanel = require(script.Parent:WaitForChild("QaPanel"))
 
 Hud.Start()
 Movement.Start()
@@ -21,3 +22,4 @@ ShopUi.Start()
 NpcAnimator.Start()
 SoundManager.Start()
 PlayerAnimator.Start()
+QaPanel.Start() -- Studio only

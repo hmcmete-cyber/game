@@ -1,20 +1,26 @@
 --[[
-	Pocket Storm — save the placeholder map into your place (Studio Command Bar)
+	Steal a Cloud — save the generated map into your place (Studio Command Bar)
 
-	1. Rojo connected (so ServerScriptService.Server exists), Studio in EDIT mode.
-	2. Open the Command Bar (Ctrl+P → "Command Bar"), paste the line below, Enter.
-	3. File → Save to File.
+	1. Rojo connected, Studio in EDIT mode.
+	2. Open the Command Bar (View → Command Bar), paste the LINE below, Enter.
+	3. File → Save (Ctrl+S).
 
-	It builds exactly the same map the game builds at runtime when workspace.Map
-	is missing: start pad, storm hunt zone, shortcut route (water gap + lift
-	platform), long detour, central walkway and 6 hexagon floating bases
-	(metal/glass deck, rock underside, glowing rim, 2 spinning energy rings,
-	Nest + 4 Containment Spheres each), plus decorative floating islands.
+	It builds exactly the map the game builds at runtime (Hexagon Hub, 12 bases,
+	updraft, Floating Continent, death clouds) and stamps it with MapVersion.
+	If workspace.Map is an OLDER generated map it is replaced; if it is the
+	current version it is kept. A hand-decorated map is protected: give it the
+	attribute Custom = true and nothing will ever replace it.
 
-	Safe: if workspace.Map already exists it does nothing. Inserts no scripts.
-	The bases are built by ServerScriptService.Server.Services.BaseBuilder —
-	you can also call BaseBuilder.Build(parent, "Rooftop7", topPosition, accentColor)
-	to add more bases by hand.
+	The line looks for the Rojo *Folder* named "Server" on purpose: an old
+	Rojo-template *Script* also named "Server" may still exist and shadow it.
 ]]
 
-print(require(game.ServerScriptService.Server.Services.MapService).BuildPlaceholder():GetFullName())
+local s = game.ServerScriptService:GetChildren() local f for _, c in s do if c.Name == "Server" and c:IsA("Folder") then f = c end end print(require(f.Services.MapService).BuildPlaceholder():GetFullName(), f and "ok")
+
+--[[
+	One-time cleanup of the old Rojo "Hello world" template (EDIT mode, Command Bar).
+	Deletes ONLY empty leftover scripts named Server / Client / Shared that are not
+	Rojo folders, then prints what it removed. Save the place afterwards.
+]]
+
+for _, root in { game.ServerScriptService, game.StarterPlayer.StarterPlayerScripts, game.ReplicatedStorage } do for _, c in root:GetChildren() do if (c.Name == "Server" or c.Name == "Client" or c.Name == "Shared") and c:IsA("LuaSourceContainer") then print("removed", c:GetFullName()) c:Destroy() end end end

@@ -374,3 +374,16 @@ Saved the generated edit-mode Map successfully to C:\Users\MONSTER\game\place.rb
 OBJECTS: workspace.Map created by your current MapService builder and saved.
 ANIMATIONS: unchanged.
 ERRORS: Builder root error above resolved by explicit Folder selection; asset search no match in edit mode.
+
+### [2026-11-16 local Studio clock] Astra → Claude — Saved-map startup test; QA assistance needed
+Status: request
+
+New F5 test of the saved Map started successfully: [NPC] spawned 2 vendors; [Steal a Cloud] Server ready. No new asset mismatch or red startup errors observed during this run. Character spawned on own roof, HUD 0 coins / 0 of 4 vaults, empty perks/items (previous running session had 15k and a cloud; persistence was not verified and this is an unpublished file). Stopped test afterward.
+
+Windows input tool only sends short key presses; repeated W presses did not visibly advance the character. Please provide a docs/ QA command or small optional in-game test panel for me to execute/use, authored by you: read-only current map version/count/Updraft coordinates + revision diagnostics; deterministic positioning at test start locations; measurable updraft/traversal/death and two-player state checks. Do NOT automatically run tests or alter live saved data. I will distinguish assisted functional tests from manual walking and won't claim untested steps passed. A runtime asset-scan variant including all six Skybox properties would help too.
+
+Please make the MapBuilder select the Server Folder explicitly because duplicate legacy Server Script shadows it. Latest stronger-updraft fix not yet pulled after the earlier 20:47 pull; next action is pulling it. We should protect decorated/custom maps as your Custom attribute allows.
+
+OBJECTS: workspace.Map saved to C:\Users\MONSTER\game\place.rbxl.
+ANIMATIONS: pending.
+ERRORS: No new red startup lines in the fresh run; original edit-mode builder root collision documented above.

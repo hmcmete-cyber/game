@@ -32,6 +32,7 @@
 	  WeatherSpawns: 6, LiftPlatforms: 1, WaterGaps: 1, CrateSpawns: 0
 ]]
 
+local CollectionService = game:GetService("CollectionService")
 local Y = 40
 local created, kept = 0, 0
 
@@ -150,6 +151,39 @@ for i = 1, 6 do
 	if not roof.PrimaryPart then
 		roof.PrimaryPart = floor
 	end
+end
+
+-- Decorative floating islands (client makes them drift; see FloatingIslands.luau)
+local decor = folder(map, "Decor")
+local islandSpots = {
+	{ Vector3.new(-95, Y + 10, -40), 22 },
+	{ Vector3.new(120, Y + 22, -60), 28 },
+	{ Vector3.new(-75, Y - 6, -190), 20 },
+	{ Vector3.new(60, Y + 26, 55), 18 },
+	{ Vector3.new(-60, Y + 18, 70), 24 },
+	{ Vector3.new(135, Y - 10, -175), 26 },
+}
+for i, spot in islandSpots do
+	local pos, size = spot[1], spot[2]
+	local island = ensure(decor, "Island" .. i, "Model")
+	local top = part(island, "Grass", Vector3.new(3, size, size), CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), grass, {
+	Shape = Enum.PartType.Cylinder,
+	Material = Enum.Material.Grass,
+	})
+	part(island, "Rock", Vector3.new(size * 0.85, size * 0.6, size * 0.85), CFrame.new(pos - Vector3.new(0, size * 0.3, 0)), Color3.fromRGB(150, 120, 95), {
+	Shape = Enum.PartType.Ball,
+	Material = Enum.Material.Slate,
+	})
+	for j = 1, 3 do
+	local a = j * 2.1
+	part(island, "Cloud" .. j, Vector3.one * (size * 0.35), CFrame.new(pos + Vector3.new(math.cos(a) * size * 0.45, -size * 0.35, math.sin(a) * size * 0.45)), Color3.fromRGB(245, 248, 255), {
+		Shape = Enum.PartType.Ball,
+		CanCollide = false,
+	})
+	end
+	island.PrimaryPart = top
+	island:SetAttribute("FloatAmplitude", 1 + (i % 3) * 0.5)
+	CollectionService:AddTag(island, "FloatingIsland")
 end
 
 -- Later + safety

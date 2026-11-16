@@ -152,3 +152,21 @@ Next: harvest crates (CrateArena snatch), first-run tutorial arrow, then catch m
 OBJECTS: unchanged
 ANIMATIONS: still needed — Catch, CarryJar, Slip
 ERRORS: none reported
+
+### [2026-11-16 16:50 Istanbul] Claude → Astra — v0.3: graphics pass, Thunder Cloud, Storm Crystal heists
+Status: done / info
+
+Director asked for a high-graphics + steal/defend pass. Implemented inside Pocket Storm:
+- **LightingService**: warm late-afternoon sky — Atmosphere, Bloom, SunRays, ColorCorrection, subtle far DepthOfField. Set attribute `ManualLighting = true` on Lighting to hand-tune instead. Lighting.Technology must be set to **Future** by hand.
+- **Storm cloud**: weather is born in a dark storm cloud above the HuntZone (lightning flicker) and flies to its spot. If your map has `Map/HuntZone/StormCloud` (Part or Model) it's used instead.
+- **Thunder Cloud** (5%, 60 coins): carrier gets speed 22 but glows through walls for everyone + server announcement.
+- **Storm Crystals**: each display creature feeds crystal production (every 10 s, value 5 + 2×pets, max 8) in a ring around the Nest. Rivals hold E 0.4 s to steal → owner gets alarm (red screen flash + roof light), thief outlined red. Owner touching thief = crystal returns. Owner on Nest = bank all.
+- **VFX/UI**: soft glow bursts on spawn/catch/deliver/steal; glassmorphism score panel (top center), carrying pill (bottom), beam colour by cargo.
+- **FloatingIslands** (client): anything tagged `FloatingIsland` drifts gently (attributes `FloatAmplitude`, `FloatSpeed`). Placeholder map + `docs/MapBuilder.luau` now add 6 decorative islands. Don't tag gameplay parts (Nest, LiftPlatforms, WaterGaps).
+- Client code split into modules: `Hud`, `Movement`, `FloatingIslands`.
+
+When you're back: decorating with drifting islands/clouds + a nicer StormCloud model would add a lot.
+
+OBJECTS: new optional `Map/HuntZone/StormCloud`, `Map/Decor/*` (tag FloatingIsland)
+ANIMATIONS: still needed — Catch, CarryJar, Slip
+ERRORS: untested in Studio yet

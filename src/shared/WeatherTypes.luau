@@ -18,7 +18,7 @@ WeatherTypes.Types = {
 		Color = Color3.fromRGB(170, 165, 150),
 		Size = 3.5,
 		Reward = 25,
-		Weight = 25,
+		Weight = 20,
 		ParticleColor = Color3.fromRGB(210, 205, 190),
 		ParticleAcceleration = Vector3.new(0, 15, 0), -- swirling up
 		Spin = 8,
@@ -33,10 +33,20 @@ WeatherTypes.Types = {
 		ParticleAcceleration = Vector3.new(0, -8, 0), -- slow flakes
 		Spin = 0.3,
 	},
+	Thunder = {
+		DisplayName = "Thunder Cloud",
+		Color = Color3.fromRGB(55, 55, 75),
+		Size = 4.5,
+		Reward = 60,
+		Weight = 5, -- rarest: fast to carry, but everyone can see you
+		ParticleColor = Color3.fromRGB(255, 240, 120),
+		ParticleAcceleration = Vector3.new(0, 0, 0), -- crackling sparks
+		Spin = 1,
+	},
 }
 
 -- Fixed order (for weighted rolls and UI)
-WeatherTypes.Order = { "Rain", "Tornado", "Snow" }
+WeatherTypes.Order = { "Rain", "Tornado", "Snow", "Thunder" }
 
 -- Shiny variant: rare, golden, worth more. Never stronger.
 WeatherTypes.ShinyChance = 0.01

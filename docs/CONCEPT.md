@@ -21,6 +21,13 @@ Catch living clouds, pocket tornadoes and bottled rainbows; grow and display the
 
 Weather combines between friends (e.g. rain trail + snow = ice road). Interactions are predefined and learnable, not random physics chaos.
 
+## Update 2026-11-16 (director request)
+
+- **Thunder Cloud** added as the 4th, rarest weather (5%): worth the most, you run faster carrying it, but you glow through walls for everyone.
+- **Storm Crystals** = the harvest. Creatures on your display produce crystals in a ring around your Nest. Rivals can grab them (short hold), an **alarm** goes off for the owner, and the thief is outlined red. If the owner touches the thief, the crystal flies back. Standing on your Nest banks crystals. The display collection itself is never stealable.
+- Weather is born in a central **storm cloud** and flies to its spawn spot.
+- High-graphics pass: lighting/atmosphere preset, glass UI, burst VFX, drifting decorative islands (tag `FloatingIsland`).
+
 ## Core loop
 
 1. **Hunt** weather creatures in the shared zone.

@@ -9,6 +9,7 @@ local Services = script.Parent:WaitForChild("Services")
 local DataService = require(Services.DataService)
 local MapService = require(Services.MapService)
 local WeatherService = require(Services.WeatherService)
+local LightingService = require(Services.LightingService)
 
 -- Remotes (server -> client messages)
 local remotes = Instance.new("Folder")
@@ -19,11 +20,15 @@ hintEvent.Parent = remotes
 local deliveredEvent = Instance.new("RemoteEvent")
 deliveredEvent.Name = "Delivered"
 deliveredEvent.Parent = remotes
+local alarmEvent = Instance.new("RemoteEvent")
+alarmEvent.Name = "Alarm"
+alarmEvent.Parent = remotes
 remotes.Parent = ReplicatedStorage
 
+LightingService.Apply()
 DataService.Start()
 MapService.Start()
-WeatherService.Start(MapService, DataService, { Hint = hintEvent, Delivered = deliveredEvent })
+WeatherService.Start(MapService, DataService, { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent })
 
 local function onPlayerAdded(player: Player)
 	DataService.Load(player)

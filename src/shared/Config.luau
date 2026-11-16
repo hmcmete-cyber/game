@@ -45,6 +45,23 @@ local Config = {
 	FreezeRange = 24,
 	FreezeDuration = 8,
 
+	-- Thunder cloud (rarest): fast but highlighted for everyone
+	ThunderCarrySpeed = 22,
+	ThunderFlashInterval = 2.5,
+
+	-- Storm Crystals: your displayed creatures produce them around your Nest.
+	-- Rivals can steal them; walking onto your own Nest banks them.
+	CrystalInterval = 10,
+	CrystalBaseValue = 5,
+	CrystalValuePerPet = 2, -- +2 per creature on your display
+	MaxCrystals = 8,
+	AlarmCooldown = 4,
+	IntruderRadius = 12, -- rival this close to your Nest (with crystals) = alarm
+	TagRadius = 5, -- owner touching the thief returns the crystal
+
+	-- Central storm cloud that spawns weather
+	StormHeight = 28,
+
 	-- Saving
 	DataStoreName = "PocketStorm_v1",
 	AutosaveInterval = 60,

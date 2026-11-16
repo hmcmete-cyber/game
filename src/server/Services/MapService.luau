@@ -371,8 +371,13 @@ local function buildPlaceholder(): Instance
 	-- UPDRAFT in the hub center -> sky landing (pushes you toward -Z at the top)
 	-- DESCENT chute from the landing edge back down to the hub
 	------------------------------------------------------------------
-	airColumn(air, "Updraft", Vector3.new(14, UP + 22 - Y, 14), Vector3.new(0, (Y + UP + 22) / 2, 0), 70,
-		Color3.fromRGB(190, 235, 255), Vector3.new(0, 0, -45), UP - 2)
+	-- Lift 95 studs/s; at ExitHeight you're launched on an arc that lands at
+	-- LaunchTarget on the Sky Landing (client Movement.updateAir does the math)
+	local updraft = airColumn(air, "Updraft", Vector3.new(14, UP + 22 - Y, 14), Vector3.new(0, (Y + UP + 22) / 2, 0), 95,
+		Color3.fromRGB(190, 235, 255))
+	updraft:SetAttribute("ExitHeight", UP + 6)
+	updraft:SetAttribute("LaunchTarget", Vector3.new(0, UP + 3, -45))
+	updraft:SetAttribute("LaunchTime", 0.9)
 	newPart(decor, "UpdraftPad", Vector3.new(0.6, 16, 16), CFrame.new(0, Y + 0.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(150, 220, 255), {
 		Shape = Enum.PartType.Cylinder,
 		Material = Enum.Material.Neon,

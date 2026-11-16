@@ -101,17 +101,32 @@ local function clearGrid()
 	cards = {}
 end
 
+-- Every card uses the same layout, all in scale + padding, so it looks
+-- the same on phones and PCs:
+--   [chip] Name            (top row, 30%)
+--          Level x / y
+--   Description           (middle, wraps)
+--   [  Buy button  ]      (bottom, 26%)
 local function buyButton(card: Instance, text: string, enabled: boolean, color: Color3, onClick: () -> ())
 	local buy = glass("TextButton", card, "Buy", 12, enabled and 0.15 or 0.75) :: TextButton
 	buy.BackgroundColor3 = enabled and color or Color3.fromRGB(150, 150, 170)
-	buy.Position = UDim2.new(0, 10, 1, -44)
-	buy.Size = UDim2.new(1, -20, 0, 34)
-	label(buy, { Text = text, Size = UDim2.new(1, -12, 1, -10), Position = UDim2.fromOffset(6, 5) })
+	buy.AnchorPoint = Vector2.new(0.5, 1)
+	buy.Position = UDim2.fromScale(0.5, 1)
+	buy.Size = UDim2.fromScale(1, 0.24)
+	local t = label(buy, {
+		Text = text,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.9, 0.62),
+	})
+	local cap = Instance.new("UITextSizeConstraint")
+	cap.MaxTextSize = 18
+	cap.Parent = t
 	if enabled then
 		buy.Activated:Connect(function()
 			onClick()
 			local s = Instance.new("UIScale", buy)
-			s.Scale = 0.9
+			s.Scale = 0.92
 			TweenService:Create(s, TweenInfo.new(0.2, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 			task.delay(0.25, function()
 				s:Destroy()
@@ -120,28 +135,61 @@ local function buyButton(card: Instance, text: string, enabled: boolean, color: 
 	end
 end
 
-local function card(i: number, id: string, iconText: string, iconColor: Color3, name: string, desc: string)
+local function capText(t: TextLabel, max: number)
+	local c = Instance.new("UITextSizeConstraint")
+	c.MaxTextSize = max
+	c.MinTextSize = 8
+	c.Parent = t
+	return t
+end
+
+local function card(i: number, id: string, iconText: string, iconColor: Color3, name: string, desc: string, levelText: string?)
 	local c = glass("Frame", grid, "Card" .. id, 16, 0.72)
 	c.LayoutOrder = i
-	chip(c, iconText, iconColor, 44, UDim2.fromOffset(10, 8))
-	label(c, {
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 8)
+	pad.PaddingBottom = UDim.new(0, 8)
+	pad.PaddingLeft = UDim.new(0, 8)
+	pad.PaddingRight = UDim.new(0, 8)
+	pad.Parent = c
+
+	-- icon chip: always round, whatever the card size
+	local icon = chip(c, iconText, iconColor, 44, UDim2.fromScale(0, 0))
+	icon.Size = UDim2.fromScale(0.26, 0.3)
+	local ratio = Instance.new("UIAspectRatioConstraint")
+	ratio.AspectRatio = 1
+	ratio.DominantAxis = Enum.DominantAxis.Height
+	ratio.Parent = icon
+
+	capText(label(c, {
 		Name = "ItemName",
 		Text = name,
-		Position = UDim2.fromOffset(62, 10),
-		Size = UDim2.new(1, -70, 0, 20),
+		Position = UDim2.fromScale(0.3, 0),
+		Size = UDim2.fromScale(0.7, levelText and 0.17 or 0.3),
 		TextXAlignment = Enum.TextXAlignment.Left,
-	})
-	label(c, {
+	}), 20)
+	if levelText then
+		capText(label(c, {
+			Name = "Level",
+			Text = levelText,
+			Font = Enum.Font.GothamMedium,
+			Position = UDim2.fromScale(0.3, 0.18),
+			Size = UDim2.fromScale(0.7, 0.12),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = Color3.fromRGB(255, 225, 140),
+		}), 14)
+	end
+	capText(label(c, {
 		Name = "Desc",
 		Text = desc,
 		Font = Enum.Font.GothamMedium,
 		TextWrapped = true,
-		Position = UDim2.fromOffset(10, 58),
-		Size = UDim2.new(1, -20, 0, 58),
+		Position = UDim2.fromScale(0, 0.34),
+		Size = UDim2.fromScale(1, 0.38),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Top,
 		TextColor3 = Color3.fromRGB(235, 235, 250),
-	})
+	}), 15)
 	table.insert(cards, c)
 	return c
 end
@@ -169,16 +217,7 @@ local function render()
 			local def = Upgrades.Types[id]
 			local level = player:GetAttribute("Up_" .. id) or 0
 			local maxed = level >= def.MaxLevel
-			local c = card(i, id, def.IconText, def.IconColor, def.DisplayName, def.Desc)
-			label(c, {
-				Name = "Level",
-				Text = `Level {level} / {def.MaxLevel}`,
-				Font = Enum.Font.GothamMedium,
-				Position = UDim2.fromOffset(62, 32),
-				Size = UDim2.new(1, -70, 0, 16),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				TextColor3 = maxed and Color3.fromRGB(255, 220, 90) or Color3.fromRGB(220, 225, 245),
-			})
+			local c = card(i, id, def.IconText, def.IconColor, def.DisplayName, def.Desc, `Level {level} / {def.MaxLevel}`)
 			buyButton(c, maxed and "MAX" or `Upgrade - {Upgrades.Cost(id, level)} coins`, not maxed,
 				Color3.fromRGB(255, 200, 90), function()
 					remotes.BuyUpgrade:FireServer(id)
@@ -213,58 +252,103 @@ local function build()
 	gui.DisplayOrder = 10
 	gui.Parent = player:WaitForChild("PlayerGui")
 
+	-- Window: 92% of the screen on phones, capped at 760x540 on PCs,
+	-- always the same shape (aspect 1.45)
 	window = glass("Frame", gui, "Window", 22, 0.7)
 	window.AnchorPoint = Vector2.new(0.5, 0.5)
 	window.Position = UDim2.fromScale(0.5, 0.52)
-	window.Size = UDim2.fromOffset(620, 440)
+	window.Size = UDim2.fromScale(0.92, 0.86)
 	window.Visible = false
+	local aspect = Instance.new("UIAspectRatioConstraint")
+	aspect.AspectRatio = 1.45
+	aspect.Parent = window
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(760, 540)
+	limit.MinSize = Vector2.new(300, 220)
+	limit.Parent = window
 	scale = Instance.new("UIScale")
 	scale.Parent = window
 
-	local avatar = chip(window, "T", Color3.fromRGB(150, 140, 230), 60, UDim2.fromOffset(18, 16))
+	-- Header (top 18%): avatar chip | title + subtitle | coins | close
+	local header = Instance.new("Frame")
+	header.Name = "Header"
+	header.BackgroundTransparency = 1
+	header.Position = UDim2.fromScale(0.03, 0.03)
+	header.Size = UDim2.fromScale(0.94, 0.16)
+	header.Parent = window
+
+	local avatar = chip(header, "T", Color3.fromRGB(150, 140, 230), 60, UDim2.fromScale(0, 0))
+	avatar.Size = UDim2.fromScale(1, 1)
+	local ar = Instance.new("UIAspectRatioConstraint")
+	ar.AspectRatio = 1
+	ar.DominantAxis = Enum.DominantAxis.Height
+	ar.Parent = avatar
 	avatarText = avatar:FindFirstChildOfClass("TextLabel")
-	titleLabel = label(window, {
+
+	titleLabel = capText(label(header, {
 		Name = "Title",
 		Font = Enum.Font.FredokaOne,
-		Position = UDim2.fromOffset(90, 16),
-		Size = UDim2.new(1, -250, 0, 34),
+		Position = UDim2.fromScale(0.15, 0),
+		Size = UDim2.fromScale(0.55, 0.58),
 		TextXAlignment = Enum.TextXAlignment.Left,
-	})
-	subtitleLabel = label(window, {
+	}), 32)
+	subtitleLabel = capText(label(header, {
 		Name = "Subtitle",
 		Font = Enum.Font.GothamMedium,
-		Position = UDim2.fromOffset(90, 52),
-		Size = UDim2.new(1, -250, 0, 18),
+		TextWrapped = true,
+		Position = UDim2.fromScale(0.15, 0.6),
+		Size = UDim2.fromScale(0.55, 0.4),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(235, 230, 255),
-	})
-	local coinBox = glass("Frame", window, "Coins", 12, 0.6)
-	coinBox.AnchorPoint = Vector2.new(1, 0)
-	coinBox.Position = UDim2.new(1, -66, 0, 22)
-	coinBox.Size = UDim2.fromOffset(130, 40)
-	coinsLabel = label(coinBox, { Size = UDim2.new(1, -16, 1, -12), Position = UDim2.fromOffset(8, 6), TextColor3 = Color3.fromRGB(255, 220, 90) })
-	local x = glass("TextButton", window, "Close", 12, 0.55) :: TextButton
-	x.AnchorPoint = Vector2.new(1, 0)
-	x.Position = UDim2.new(1, -16, 0, 22)
-	x.Size = UDim2.fromOffset(40, 40)
-	label(x, { Text = "X", Size = UDim2.new(1, -14, 1, -14), Position = UDim2.fromOffset(7, 7) })
+	}), 15)
+
+	local coinBox = glass("Frame", header, "Coins", 12, 0.6)
+	coinBox.AnchorPoint = Vector2.new(1, 0.5)
+	coinBox.Position = UDim2.fromScale(0.86, 0.5)
+	coinBox.Size = UDim2.fromScale(0.16, 0.62)
+	coinsLabel = capText(label(coinBox, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.88, 0.7),
+		TextColor3 = Color3.fromRGB(255, 220, 90),
+	}), 20)
+
+	local x = glass("TextButton", header, "Close", 12, 0.55) :: TextButton
+	x.AnchorPoint = Vector2.new(1, 0.5)
+	x.Position = UDim2.fromScale(1, 0.5)
+	x.Size = UDim2.fromScale(0.62, 0.62)
+	local xr = Instance.new("UIAspectRatioConstraint")
+	xr.AspectRatio = 1
+	xr.DominantAxis = Enum.DominantAxis.Height
+	xr.Parent = x
+	capText(label(x, { Text = "X", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.6, 0.6) }), 22)
 	x.Activated:Connect(close)
 
+	-- Grid (rest of the window): 3 columns on wide screens, 2 on narrow
 	grid = Instance.new("ScrollingFrame")
 	grid.Name = "Grid"
-	grid.Position = UDim2.fromOffset(18, 90)
-	grid.Size = UDim2.new(1, -36, 1, -108)
+	grid.Position = UDim2.fromScale(0.03, 0.22)
+	grid.Size = UDim2.fromScale(0.94, 0.75)
 	grid.BackgroundTransparency = 1
 	grid.BorderSizePixel = 0
-	grid.ScrollBarThickness = 4
+	grid.ScrollBarThickness = 5
+	grid.ScrollingDirection = Enum.ScrollingDirection.Y
 	grid.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	grid.CanvasSize = UDim2.new()
 	grid.Parent = window
 	local layout = Instance.new("UIGridLayout")
-	layout.CellSize = UDim2.fromOffset(186, 172)
-	layout.CellPadding = UDim2.fromOffset(12, 12)
+	layout.CellPadding = UDim2.fromOffset(10, 10)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.Parent = grid
+	local function relayout()
+		local w = grid.AbsoluteSize.X - grid.ScrollBarThickness - 4
+		local cols = w < 420 and 2 or 3
+		local cellW = math.floor((w - (cols - 1) * 10) / cols)
+		layout.CellSize = UDim2.fromOffset(cellW, math.floor(cellW * 0.95))
+	end
+	grid:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
+	relayout()
 end
 
 function ShopUi.Start()

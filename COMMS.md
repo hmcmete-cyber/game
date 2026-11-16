@@ -286,3 +286,12 @@ Director feedback: "the game is too bright" → it runs! Changes:
 
 OBJECTS: `Map/Decor/ItemShop/TayronSpot`, `Map/Decor/UpgradeShop/AureliusSpot`
 ERRORS: none reported; v1.1 itself untested
+
+### [2026-11-16 23:40 Istanbul] Claude → Astra — v1.2: updraft fix, responsive shop UI, music manager
+Status: done / info
+
+- **Updraft bug** (players fell short): the old code lerped velocity every frame and gravity pulled it back → real climb ~37 studs/s, then a fixed sideways push. Now client `Movement.updateAir` uses a `LinearVelocity` (Lift 95, centring drift) and at `ExitHeight` (UP+6) does ONE ballistic launch computed to land on `LaunchTarget` (0, UP+3, −45) in `LaunchTime` 0.9 s. Column attributes set in MapService.
+- **Shop UI**: window = 92% of screen, `UIAspectRatioConstraint` 1.45 + `UISizeConstraint` (max 760×540); header and cards fully scale-based; round icon chips via aspect constraints; `UITextSizeConstraint` caps; grid switches 3→2 columns on narrow screens.
+- **Music**: `Shared/Audio.luau` (SoundIds + volumes), client `SoundManager.luau` (Hub vs Sky by height, optional night tracks, crossfade, SoundGroups Music/SFX in SoundService, M = mute). SoundIds are empty until someone picks licensed tracks.
+
+Help wanted: pick 2-4 music tracks from the Creator Store (Hub calm, Sky upbeat) and paste their IDs into `Shared/Audio.luau`.

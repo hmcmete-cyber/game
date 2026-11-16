@@ -175,6 +175,92 @@ local function updateIce(hum: Humanoid, root: BasePart, dt: number)
 	end
 end
 
+------------------------------------------------------------------------
+-- Air columns (hub updraft)
+--
+-- Inside a column a LinearVelocity constraint carries you up at a steady
+-- speed (it can't be cancelled by gravity or the Humanoid like plain
+-- velocity edits could) and gently centres you in the column.
+-- At ExitHeight you get ONE launch whose velocity is computed so the arc
+-- lands exactly on LaunchTarget (the sky landing) — no more falling short.
+-- Column attributes: Lift (studs/s), ExitHeight, LaunchTarget (Vector3),
+-- LaunchTime (s). Old columns with only Lift/PushX/PushZ still work.
+------------------------------------------------------------------------
+
+local airLift: LinearVelocity? = nil
+local updateAir -- defined below
+local launchedFrom: Instance? = nil
+local airParams: OverlapParams
+
+local function getAirLift(root: BasePart): LinearVelocity
+	if airLift and airLift.Parent == root then
+		return airLift
+	end
+	local att = root:FindFirstChild("RootAttachment") or Instance.new("Attachment", root)
+	local lv = Instance.new("LinearVelocity")
+	lv.Name = "AirLift"
+	lv.Attachment0 = att :: Attachment
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+	lv.MaxForce = 200000
+	lv.Enabled = false
+	lv.Parent = root
+	airLift = lv
+	return lv
+end
+
+updateAir = function(root: BasePart, hum: Humanoid)
+	local column = workspace:GetPartBoundsInBox(root.CFrame, Vector3.new(2, 2, 2), airParams)[1]
+	local lv = getAirLift(root)
+	if not column or slipping then
+		lv.Enabled = false
+		if not column then
+			launchedFrom = nil
+		end
+		return
+	end
+	if launchedFrom == column then
+		lv.Enabled = false -- already launched out of this column
+		return
+	end
+
+	local lift = column:GetAttribute("Lift") or 0
+	local exitHeight = column:GetAttribute("ExitHeight")
+	local target = column:GetAttribute("LaunchTarget")
+
+	if exitHeight and typeof(target) == "Vector3" and root.Position.Y >= exitHeight then
+		-- Ballistic launch: reach `target` in exactly T seconds under gravity
+		local T = column:GetAttribute("LaunchTime") or 0.9
+		local g = workspace.Gravity
+		local d = target - root.Position
+		local v = Vector3.new(d.X / T, (d.Y + 0.5 * g * T * T) / T, d.Z / T)
+		lv.Enabled = false
+		launchedFrom = column
+		root.AssemblyLinearVelocity = v
+		hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		return
+	end
+
+	-- Ride up, drifting toward the column's axis so you can't fall out
+	local axis = column.Position
+	local toAxis = Vector3.new(axis.X - root.Position.X, 0, axis.Z - root.Position.Z)
+	local drift = toAxis * 2
+	if drift.Magnitude > 12 then
+		drift = drift.Unit * 12
+	end
+	local push = Vector3.zero
+	local pushAbove = column:GetAttribute("PushAbove")
+	if pushAbove and root.Position.Y >= pushAbove then -- legacy columns
+		push = Vector3.new(column:GetAttribute("PushX") or 0, 0, column:GetAttribute("PushZ") or 0)
+		drift = Vector3.zero
+	end
+	lv.VectorVelocity = Vector3.new(drift.X + push.X, lift, drift.Z + push.Z)
+	lv.Enabled = true
+	if lift > 0 and hum:GetState() ~= Enum.HumanoidStateType.Freefall then
+		hum:ChangeState(Enum.HumanoidStateType.Freefall)
+	end
+end
+
 function Movement.Start()
 	player:GetAttributeChangedSignal("BaseSpeed"):Connect(applySpeed)
 	player:GetAttributeChangedSignal("ElectricImmune"):Connect(applySpeed)
@@ -221,6 +307,8 @@ function Movement.Start()
 	end)
 	player.CharacterAdded:Connect(function()
 		slide = nil
+		airLift = nil
+		launchedFrom = nil
 		onIceRoad, onIceHazard, inSwamp, inRiver = false, false, false, false
 	end)
 
@@ -234,7 +322,7 @@ function Movement.Start()
 
 	-- Air columns (hub updraft / descent chute)
 	local airFolder = workspace.Map:WaitForChild("AirColumns")
-	local airParams = OverlapParams.new()
+	airParams = OverlapParams.new()
 	airParams.FilterType = Enum.RaycastFilterType.Include
 	airParams.FilterDescendantsInstances = { airFolder }
 
@@ -307,24 +395,7 @@ function Movement.Start()
 		updateIce(hum, root, dt)
 		applySpeed()
 
-		-- Updraft / descent: smoothly match the column's vertical speed,
-		-- plus a sideways push near the top (throws you onto the sky landing)
-		local column = workspace:GetPartBoundsInBox(root.CFrame, Vector3.new(2, 2, 2), airParams)[1]
-		if column and not slipping then
-			local lift = column:GetAttribute("Lift") or 0
-			local v = root.AssemblyLinearVelocity
-			local vy = v.Y + (lift - v.Y) * math.clamp(dt * Config.AirAccel, 0, 1)
-			local vx, vz = v.X, v.Z
-			local pushAbove = column:GetAttribute("PushAbove")
-			if pushAbove and root.Position.Y >= pushAbove then
-				vx = column:GetAttribute("PushX") or vx
-				vz = column:GetAttribute("PushZ") or vz
-			end
-			root.AssemblyLinearVelocity = Vector3.new(vx, vy, vz)
-			if hum:GetState() ~= Enum.HumanoidStateType.Freefall and lift > 0 then
-				hum:ChangeState(Enum.HumanoidStateType.Freefall)
-			end
-		end
+		updateAir(root, hum)
 	end)
 end
 

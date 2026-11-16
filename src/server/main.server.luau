@@ -44,20 +44,29 @@ local openShopEvent = remote("OpenShop") -- server -> client: open a shop ("Item
 local buyUpgradeEvent = remote("BuyUpgrade") -- client -> server: Aurelius upgrade (id)
 local perkAbilityEvent = remote("PerkAbility") -- client -> server: use perk ability (slot)
 local dazzleEvent = remote("Dazzle") -- server -> client: white-out flash (seconds)
+local grappleEvent = remote("Grapple") -- server -> client: zip to this point (Grappling Hook)
 local knockEvent = Instance.new("RemoteEvent") -- server -> client: lightning knockback
 knockEvent.Name = "Knock"
 knockEvent.Parent = remotes
 remotes.Parent = ReplicatedStorage
 
 LightingService.Apply()
+LightingService.StartCycle()
 DataService.Start()
 MapService.Start()
 local remoteTable = { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent, UseItem = useItemEvent, Knock = knockEvent,
 	BuyItem = buyItemEvent, PerkAction = perkActionEvent, OpenShop = openShopEvent,
-	BuyUpgrade = buyUpgradeEvent, PerkAbility = perkAbilityEvent, Dazzle = dazzleEvent }
+	BuyUpgrade = buyUpgradeEvent, PerkAbility = perkAbilityEvent, Dazzle = dazzleEvent, Grapple = grappleEvent }
 WeatherService.Start(MapService, DataService, remoteTable)
 BaseLockService.Start(MapService, remoteTable)
 InventoryService.Start(DataService, remoteTable)
+InventoryService.Hooks.ForceLock = BaseLockService.ForceLock
+InventoryService.Hooks.OnOwnBase = function(player: Player): boolean
+	local roof = MapService.GetRooftop(player)
+	local nest = roof and roof:FindFirstChild("Nest")
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	return nest ~= nil and root ~= nil and (root.Position - nest.Position).Magnitude <= Config.ShieldRadius
+end
 HazardService.Start(MapService, remoteTable)
 UpgradeService.Start(DataService, remoteTable)
 NpcService.Start(remoteTable)

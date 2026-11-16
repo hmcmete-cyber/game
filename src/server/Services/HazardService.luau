@@ -150,7 +150,8 @@ local function strike(bridge: BasePart)
 
 		for _, p in players() do
 			local flat = Vector3.new(p.Root.Position.X - ground.X, 0, p.Root.Position.Z - ground.Z)
-			if flat.Magnitude <= r and math.abs(p.Root.Position.Y - ground.Y) < 8 and not p.Player:GetAttribute("LightningImmune") then
+			if flat.Magnitude <= r and math.abs(p.Root.Position.Y - ground.Y) < 8 and not p.Player:GetAttribute("LightningImmune")
+				and (p.Player:GetAttribute("ShieldUntil") or 0) <= workspace:GetServerTimeNow() then
 				local carrying = p.Player:GetAttribute("Carrying") ~= nil
 				local resist = p.Player:GetAttribute("BlastResist") and 0.5 or 1 -- Phoenix perk
 				p.Hum:TakeDamage((carrying and Config.LightningDamage * 1.3 or Config.LightningDamage) * resist)

@@ -1,14 +1,22 @@
--- Pastel dream sky: soft golden-hour sun, lilac/peach haze, real volumetric
--- sky clouds (Terrain Clouds) with sun rays slipping between them.
--- Runs once at server start. To tune by hand instead, set the attribute
--- ManualLighting = true on the Lighting service.
+-- Balanced, cinematic sky lighting + a smooth day/night cycle.
 --
--- Manual Studio steps (can't be done from scripts):
---   Lighting -> Technology = Future
---   Optional custom skybox: Lighting -> Sky -> set SkyboxBk/Dn/Ft/Lf/Rt/Up to a
---   pastel skybox from the Creator Store (any 6-image skybox works).
+-- v1.1: the old preset was far too bright (exposure +0.25, strong bloom,
+-- saturated grading). Now exposure is slightly negative, bloom only catches
+-- truly bright things (neon, sun), grading is gentle.
+--
+-- The cycle runs on the server (ClockTime replicates to everyone). Every
+-- update blends between keyframes below, so sky haze, ambient light, tint and
+-- the sky clouds change colour through dawn → day → dusk → night.
+-- workspace attribute "IsNight" (true/false) tells other systems the time of day.
+--
+-- To tune by hand: set the attribute ManualLighting = true on Lighting
+-- (the cycle then stops touching it).
+-- Manual Studio step: Lighting → Technology = Future.
 
 local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 
 local LightingService = {}
 
@@ -22,65 +30,142 @@ local function getOrCreate(parent: Instance, className: string, name: string)
 	return obj
 end
 
+local rgb = Color3.fromRGB
+
+-- Keyframes by ClockTime (0-24). Blended linearly, wrapping at midnight.
+local KEYS = {
+	{ T = 0, Bright = 0.6, Exposure = -0.25, Ambient = rgb(40, 45, 75), Outdoor = rgb(60, 65, 105),
+		Haze = rgb(60, 70, 120), Decay = rgb(30, 30, 70), Tint = rgb(205, 215, 255), Clouds = rgb(90, 95, 140) },
+	{ T = 5.5, Bright = 0.9, Exposure = -0.2, Ambient = rgb(70, 60, 90), Outdoor = rgb(110, 90, 130),
+		Haze = rgb(160, 120, 170), Decay = rgb(90, 70, 130), Tint = rgb(240, 220, 245), Clouds = rgb(200, 160, 200) },
+	{ T = 7, Bright = 1.8, Exposure = -0.1, Ambient = rgb(120, 105, 115), Outdoor = rgb(170, 145, 150),
+		Haze = rgb(255, 200, 180), Decay = rgb(170, 130, 170), Tint = rgb(255, 238, 225), Clouds = rgb(255, 220, 215) },
+	{ T = 12, Bright = 2.1, Exposure = -0.1, Ambient = rgb(120, 125, 140), Outdoor = rgb(150, 160, 180),
+		Haze = rgb(200, 220, 245), Decay = rgb(130, 160, 210), Tint = rgb(250, 250, 255), Clouds = rgb(250, 252, 255) },
+	{ T = 17, Bright = 1.9, Exposure = -0.1, Ambient = rgb(125, 115, 125), Outdoor = rgb(165, 145, 155),
+		Haze = rgb(255, 210, 200), Decay = rgb(170, 140, 200), Tint = rgb(255, 242, 235), Clouds = rgb(255, 230, 230) },
+	{ T = 19, Bright = 1.1, Exposure = -0.15, Ambient = rgb(95, 75, 105), Outdoor = rgb(140, 100, 135),
+		Haze = rgb(240, 140, 150), Decay = rgb(110, 80, 150), Tint = rgb(255, 225, 225), Clouds = rgb(240, 160, 170) },
+	{ T = 20.5, Bright = 0.7, Exposure = -0.25, Ambient = rgb(50, 50, 85), Outdoor = rgb(70, 70, 115),
+		Haze = rgb(80, 80, 140), Decay = rgb(40, 40, 90), Tint = rgb(210, 215, 255), Clouds = rgb(100, 100, 150) },
+}
+
+local function lerpColor(a: Color3, b: Color3, t: number)
+	return a:Lerp(b, t)
+end
+
+local function sample(clock: number)
+	local prev, nextKey = KEYS[#KEYS], KEYS[1]
+	for i, k in KEYS do
+		if k.T <= clock then
+			prev = k
+			nextKey = KEYS[i + 1] or KEYS[1]
+		end
+	end
+	local span = (nextKey.T - prev.T) % 24
+	local t = span > 0 and ((clock - prev.T) % 24) / span or 0
+	local out = {}
+	for key, v in prev do
+		if key ~= "T" then
+			out[key] = typeof(v) == "Color3" and lerpColor(v, nextKey[key], t) or v + (nextKey[key] - v) * t
+		end
+	end
+	return out
+end
+
+local atmosphere, cc, clouds
+
 function LightingService.Apply()
 	if Lighting:GetAttribute("ManualLighting") then
 		return
 	end
-
-	-- Golden hour, warm and soft
-	Lighting.ClockTime = 17.3
-	Lighting.GeographicLatitude = 20
-	Lighting.Brightness = 2.6
-	Lighting.ExposureCompensation = 0.25
-	Lighting.Ambient = Color3.fromRGB(150, 135, 175)
-	Lighting.OutdoorAmbient = Color3.fromRGB(190, 170, 210)
-	Lighting.EnvironmentDiffuseScale = 1
-	Lighting.EnvironmentSpecularScale = 0.8
+	Lighting.GeographicLatitude = 25
+	Lighting.EnvironmentDiffuseScale = 0.8
+	Lighting.EnvironmentSpecularScale = 0.6
 	Lighting.GlobalShadows = true
-	Lighting.ShadowSoftness = 0.5
+	Lighting.ShadowSoftness = 0.4
 
-	-- Pastel haze: peach near the horizon, lilac in the distance
-	local atmosphere = getOrCreate(Lighting, "Atmosphere", "PS_Atmosphere")
-	atmosphere.Density = 0.32
-	atmosphere.Offset = 0.2
-	atmosphere.Color = Color3.fromRGB(255, 214, 226)
-	atmosphere.Decay = Color3.fromRGB(176, 150, 230)
-	atmosphere.Glare = 0.6
-	atmosphere.Haze = 1.8
+	atmosphere = getOrCreate(Lighting, "Atmosphere", "PS_Atmosphere")
+	atmosphere.Density = 0.26
+	atmosphere.Offset = 0.15
+	atmosphere.Glare = 0.2
+	atmosphere.Haze = 1.1
 
-	-- Real 3D sky clouds — sun rays shine through the gaps
-	local clouds = getOrCreate(workspace.Terrain, "Clouds", "PS_SkyClouds")
-	clouds.Cover = 0.62
-	clouds.Density = 0.55
-	clouds.Color = Color3.fromRGB(255, 236, 245)
+	clouds = getOrCreate(workspace.Terrain, "Clouds", "PS_SkyClouds")
+	clouds.Cover = 0.55
+	clouds.Density = 0.45
 
+	-- Bloom only on really bright pixels (neon, sun) — no more washed-out screen
 	local bloom = getOrCreate(Lighting, "BloomEffect", "PS_Bloom")
-	bloom.Intensity = 0.8
-	bloom.Size = 32
-	bloom.Threshold = 1.3
+	bloom.Intensity = 0.35
+	bloom.Size = 24
+	bloom.Threshold = 2
 
 	local sunRays = getOrCreate(Lighting, "SunRaysEffect", "PS_SunRays")
-	sunRays.Intensity = 0.12
-	sunRays.Spread = 0.85
+	sunRays.Intensity = 0.05
+	sunRays.Spread = 0.7
 
-	-- Candy-pastel grade: a touch brighter, softer contrast, pink-gold tint
-	local cc = getOrCreate(Lighting, "ColorCorrectionEffect", "PS_ColorCorrection")
-	cc.Brightness = 0.04
+	cc = getOrCreate(Lighting, "ColorCorrectionEffect", "PS_ColorCorrection")
+	cc.Brightness = 0
 	cc.Contrast = 0.06
-	cc.Saturation = 0.22
-	cc.TintColor = Color3.fromRGB(255, 240, 245)
+	cc.Saturation = 0.08
 
 	local dof = getOrCreate(Lighting, "DepthOfFieldEffect", "PS_DepthOfField")
-	dof.FarIntensity = 0.16
-	dof.FocusDistance = 70
-	dof.InFocusRadius = 100
+	dof.FarIntensity = 0.12
+	dof.FocusDistance = 80
+	dof.InFocusRadius = 120
 	dof.NearIntensity = 0
 
 	local sky = getOrCreate(Lighting, "Sky", "PS_Sky")
-	sky.SunAngularSize = 16
-	sky.MoonAngularSize = 9
-	sky.StarCount = 1500
+	sky.SunAngularSize = 14
+	sky.MoonAngularSize = 10
+	sky.StarCount = 3000
 	sky.CelestialBodiesShown = true
+
+	Lighting.ClockTime = 9 -- start in the morning
+	LightingService.Update(Lighting.ClockTime)
+	workspace:SetAttribute("IsNight", false)
+end
+
+-- Blend every colour for the given time of day
+function LightingService.Update(clock: number)
+	if Lighting:GetAttribute("ManualLighting") or not atmosphere then
+		return
+	end
+	local s = sample(clock)
+	Lighting.Brightness = s.Bright
+	Lighting.ExposureCompensation = s.Exposure
+	Lighting.Ambient = s.Ambient
+	Lighting.OutdoorAmbient = s.Outdoor
+	atmosphere.Color = s.Haze
+	atmosphere.Decay = s.Decay
+	cc.TintColor = s.Tint
+	clouds.Color = s.Clouds
+end
+
+function LightingService.IsNight(clock: number): boolean
+	return clock >= Config.NightStart or clock < Config.NightEnd
+end
+
+-- Day/night cycle: advance the clock smoothly; colours refresh 4×/s
+function LightingService.StartCycle()
+	local minutesPerSecond = 24 * 60 / Config.DayLength
+	task.spawn(function()
+		local last = os.clock()
+		while true do
+			task.wait(0.25)
+			local now = os.clock()
+			local dt = now - last
+			last = now
+			local clock = (Lighting.ClockTime + dt * minutesPerSecond / 60) % 24
+			Lighting.ClockTime = clock
+			LightingService.Update(clock)
+			local night = LightingService.IsNight(clock)
+			if workspace:GetAttribute("IsNight") ~= night then
+				workspace:SetAttribute("IsNight", night)
+			end
+		end
+	end)
 end
 
 return LightingService

@@ -137,7 +137,7 @@ local function card(i: number, id: string, iconText: string, iconColor: Color3, 
 		Font = Enum.Font.GothamMedium,
 		TextWrapped = true,
 		Position = UDim2.fromOffset(10, 58),
-		Size = UDim2.new(1, -20, 0, 36),
+		Size = UDim2.new(1, -20, 0, 58),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Top,
 		TextColor3 = Color3.fromRGB(235, 235, 250),
@@ -261,7 +261,7 @@ local function build()
 	grid.CanvasSize = UDim2.new()
 	grid.Parent = window
 	local layout = Instance.new("UIGridLayout")
-	layout.CellSize = UDim2.fromOffset(186, 150)
+	layout.CellSize = UDim2.fromOffset(186, 172)
 	layout.CellPadding = UDim2.fromOffset(12, 12)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = grid

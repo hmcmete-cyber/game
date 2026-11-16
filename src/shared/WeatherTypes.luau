@@ -1,5 +1,7 @@
 -- Cloud definitions. Add new clouds here.
 --
+-- Time: "Day" | "Night" | "Any" — when it can spawn (see DayNightService).
+--   Night-only clouds that are still wild at sunrise fade away (and vice versa).
 -- Zone: which map zone it spawns in (1 Breeze, 2 Thunder Canyon, 3 Cosmic
 -- Stratosphere, 0 = Cloud Altar only). Weight = chance inside its zone.
 -- Visual: look built by server CloudVisuals.luau (+ client Effects.luau).
@@ -13,6 +15,7 @@ local WeatherTypes = {}
 WeatherTypes.Types = {
 	-- Zone 1: Breeze Zone ------------------------------------------------
 	Cumulus = {
+		Time = "Day",
 		Perk = { Name = "Cloud Hop", Desc = "+40% jump height", Jump = 1.4 },
 		DisplayName = "Cumulus",
 		Zone = 1,
@@ -26,6 +29,7 @@ WeatherTypes.Types = {
 		Visual = "Cumulus",
 	},
 	Rain = {
+		Time = "Day",
 		Perk = { Name = "Slick Feet", Desc = "Rain puddles can't make you slip", NoSlip = true },
 		DisplayName = "Rain Cloud",
 		Zone = 1,
@@ -39,6 +43,7 @@ WeatherTypes.Types = {
 		Visual = "Rain",
 	},
 	Snow = {
+		Time = "Night",
 		Perk = { Name = "Frost Grip", Desc = "Slippery ice can't make you lose control", IceGrip = true },
 		DisplayName = "Frost Cloud",
 		Zone = 1,
@@ -54,6 +59,7 @@ WeatherTypes.Types = {
 
 	-- Zone 2: Thunder Canyon ---------------------------------------------
 	Thunder = {
+		Time = "Night",
 		Perk = { Name = "Static Field", Desc = "Rivals near you are slowed; you're immune to electricity", StormAura = true, ElectricImmune = true },
 		DisplayName = "Thunder Storm",
 		Zone = 2,
@@ -67,6 +73,7 @@ WeatherTypes.Types = {
 		Visual = "Storm",
 	},
 	Tornado = {
+		Time = "Day",
 		Perk = { Name = "Eye of the Storm", Desc = "Storm Bridge wind can't push you", WindImmune = true },
 		DisplayName = "Pocket Tornado",
 		Zone = 2,
@@ -82,8 +89,9 @@ WeatherTypes.Types = {
 
 	-- Zone 3: Cosmic Stratosphere ----------------------------------------
 	Cosmic = {
+		Time = "Day",
 		Perk = { Name = "Nebula Dash", Desc = "+50% walk speed", Speed = 1.5 },
-		DisplayName = "Cosmic Neon Cloud",
+		DisplayName = "Speed Cloud",
 		Zone = 3,
 		Weight = 40,
 		Reward = 150,
@@ -95,6 +103,7 @@ WeatherTypes.Types = {
 		Visual = "Cosmic",
 	},
 	Aurora = {
+		Time = "Night",
 		Perk = { Name = "Aurora Mend", Desc = "Regenerate 3 HP every second", Regen = 3 },
 		DisplayName = "Auroral Cloud",
 		Zone = 3,
@@ -108,6 +117,7 @@ WeatherTypes.Types = {
 		Visual = "Aurora",
 	},
 	Chrono = {
+		Time = "Any",
 		Perk = { Name = "Time Stretch", Desc = "Shop item effects last twice as long", ItemTime = 2 },
 		DisplayName = "Chrono Cloud",
 		Zone = 3,
@@ -122,6 +132,7 @@ WeatherTypes.Types = {
 	},
 
 	Phoenix = {
+		Time = "Day",
 		Perk = { Name = "Phoenix Blood", Desc = "+25% speed, half damage & knockback from lightning", Speed = 1.25, BlastResist = true },
 		DisplayName = "Phoenix Cloud",
 		Zone = 2,
@@ -135,6 +146,7 @@ WeatherTypes.Types = {
 		Visual = "Phoenix",
 	},
 	Void = {
+		Time = "Night",
 		Perk = { Name = "Void Step", Desc = "Press the perk key: blink forward and turn invisible for 3 s", Ability = "Blink" },
 		DisplayName = "Void Star Cloud",
 		Zone = 3,
@@ -148,6 +160,7 @@ WeatherTypes.Types = {
 		Visual = "Void",
 	},
 	Solar = {
+		Time = "Day",
 		Perk = { Name = "Solar Flare", Desc = "x1.5 coins. Perk key: blind nearby rivals with a flash", CoinMult = 1.5, Ability = "Dazzle" },
 		DisplayName = "Solar Flare Cloud",
 		Zone = 3,
@@ -163,6 +176,7 @@ WeatherTypes.Types = {
 
 	-- Cloud Altar only ----------------------------------------------------
 	Mythic = {
+		Time = "Any",
 		Perk = { Name = "Storm Lord", Desc = "+30% speed & jump, immune to lightning and electricity", Speed = 1.3, Jump = 1.3, ElectricImmune = true, LightningImmune = true, CoinMult = 1.25 },
 		DisplayName = "Mythic Storm Cloud",
 		Zone = 0,

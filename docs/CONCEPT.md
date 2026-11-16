@@ -75,6 +75,14 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - **New clouds/perks**: Frost Cloud (ice grip), Thunder Storm (static field slows rivals + electric immunity), **Phoenix** (+25% speed, half lightning damage/knockback), **Void Star** (G/H/J: blink + 3 s invisibility), **Solar Flare** (x1.5 coins, ability: blind nearby rivals).
 - **Vendors on every base** (Market ledge): **Tayron** (temporary items) and **Aurelius** (permanent upgrades: speed, jump, carry speed, vault income, +1 perk slot — kept on death).
 
+## Update 8 — Day/night, 2 hub shops, 7 items (director request)
+
+- **Lighting** toned down (exposure −0.1…−0.25, bloom only on neon, gentle grading). **Day/night cycle**: 10 min per day; sky haze, ambient, tint and sky clouds blend through dawn/day/dusk/night. `workspace.IsNight`.
+- **Clouds by time**: Day — Cumulus, Rain, Tornado, Phoenix, Speed Cloud (Cosmic), Solar. Night — Frost (Snow), Thunder Storm, Void, Aurora. Any — Chrono, Mythic. At sunrise/sunset the wild clouds of the other half fade. The tutorial Cumulus on the hub is gone.
+- **No descent chute**: jump down from the sky to return. Updraft only goes up.
+- **Only 2 shops**, on opposite corners of the hub: Item Shop (Tayron, west) and Upgrades (Aurelius, east). Per-base vendors removed.
+- **7 items**: Laser Gun (shoot a thief carrying YOUR cloud → it flies home; others slowed + 10 dmg), Speed Potion, Jump Potion, Nitro, Signal Flare, Shield Generator (on your base: instant 30 s base shield; elsewhere: 10 s personal ForceField, can't be tagged/shot), Grappling Hook (zip up to 90 studs). Keys 1-7; aimed items use the mouse.
+
 ## Core loop
 
 1. **Hunt** weather creatures in the shared zone.

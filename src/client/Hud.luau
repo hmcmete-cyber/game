@@ -153,7 +153,7 @@ local function buildUi()
 	local status = glass("Status", gui, 18)
 	status.AnchorPoint = Vector2.new(1, 0)
 	status.Position = UDim2.new(1, -16, 0.2, 0)
-	status.Size = UDim2.fromOffset(260, 196)
+	status.Size = UDim2.fromOffset(260, 220)
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft = UDim.new(0, 14)
 	pad.PaddingRight = UDim.new(0, 14)
@@ -212,6 +212,25 @@ local function buildUi()
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(150, 220, 255),
 	})
+
+	-- Time of day (night clouds only spawn at night)
+	local clock = text("Clock", status, {
+		Text = "",
+		Font = Enum.Font.GothamMedium,
+		Position = UDim2.fromOffset(0, 182),
+		Size = UDim2.new(1, 0, 0, 16),
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+	task.spawn(function()
+		local Lighting = game:GetService("Lighting")
+		while true do
+			local t = Lighting.ClockTime
+			local night = workspace:GetAttribute("IsNight") == true
+			clock.Text = string.format("%s  %02d:%02d", night and "NIGHT" or "DAY", math.floor(t), math.floor((t % 1) * 60))
+			clock.TextColor3 = night and Color3.fromRGB(170, 160, 255) or Color3.fromRGB(255, 220, 140)
+			task.wait(1)
+		end
+	end)
 
 	-- Robbery flash --------------------------------------------------------
 	alarmFlash = Instance.new("Frame")

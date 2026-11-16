@@ -30,7 +30,26 @@ local perkCards = {}
 local perksPanel
 
 local MAX_PERK_CARDS = 3
-local ITEM_KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four }
+local ITEM_KEYS = {
+	Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four,
+	Enum.KeyCode.Five, Enum.KeyCode.Six, Enum.KeyCode.Seven,
+}
+
+-- Where am I aiming? Mouse on PC, screen center (camera) on touch/console.
+local camera = workspace.CurrentCamera
+local mouse = player:GetMouse()
+local function aimPoint(): Vector3
+	if UserInputService.MouseEnabled and mouse.Hit then
+		return mouse.Hit.Position
+	end
+	local ray = camera:ViewportPointToRay(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+	return ray.Origin + ray.Direction * 150
+end
+
+local function useItem(id: string)
+	local def = ShopItems.Types[id]
+	remotes.UseItem:FireServer(id, def and def.Aim and aimPoint() or nil)
+end
 local PERK_KEYS = { Enum.KeyCode.G, Enum.KeyCode.H, Enum.KeyCode.J }
 local PERK_KEY_TEXT = { "G", "H", "J" }
 
@@ -127,21 +146,21 @@ local function build()
 	items.Name = "ItemsPanel"
 	items.AnchorPoint = Vector2.new(0, 1)
 	items.Position = UDim2.new(0, 16, 1, -16)
-	items.Size = UDim2.fromOffset(Config.ItemSlots * 78, 92)
+	items.Size = UDim2.fromOffset(Config.ItemSlots * 66, 84)
 	items.BackgroundTransparency = 1
 	items.Parent = gui
 	label(items, {
 		Name = "Title",
-		Text = "INVENTORY - shop items (1-4)",
+		Text = "INVENTORY - shop items (keys 1-7, aimed items use your mouse)",
 		Size = UDim2.new(1, 0, 0, 14),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(225, 232, 255),
 	})
 	for i = 1, Config.ItemSlots do
 		local b = glass("TextButton", items, "Slot" .. i, 14) :: TextButton
-		b.Size = UDim2.fromOffset(70, 70)
-		b.Position = UDim2.fromOffset((i - 1) * 78, 20)
-		local c, ct = chip(b, 34, UDim2.fromOffset(18, 6))
+		b.Size = UDim2.fromOffset(60, 60)
+		b.Position = UDim2.fromOffset((i - 1) * 66, 20)
+		local c, ct = chip(b, 30, UDim2.fromOffset(15, 5))
 		local name = label(b, { Name = "ItemName", Size = UDim2.new(1, -6, 0.22, 0), Position = UDim2.new(0, 3, 0.7, 0) })
 		keyBadge(b, tostring(i), UDim2.fromOffset(3, 3))
 		local count = label(b, {
@@ -154,7 +173,7 @@ local function build()
 		b.Activated:Connect(function()
 			local id = b:GetAttribute("ItemId")
 			if id then
-				remotes.UseItem:FireServer(id)
+				useItem(id)
 			end
 		end)
 		itemSlots[i] = { Button = b, Chip = c, ChipText = ct, Name = name, Count = count }
@@ -163,7 +182,7 @@ local function build()
 	-- Quirks / Perks -----------------------------------------------------
 	perksPanel = glass("Frame", gui, "PerksPanel", 16)
 	perksPanel.AnchorPoint = Vector2.new(0, 1)
-	perksPanel.Position = UDim2.new(0, 16, 1, -118)
+	perksPanel.Position = UDim2.new(0, 16, 1, -110)
 	label(perksPanel, {
 		Name = "Title",
 		Text = "QUIRKS / PERKS - lost forever if you die!",
@@ -279,7 +298,7 @@ function InventoryUi.Start()
 			if input.KeyCode == key and itemSlots[i] then
 				local id = itemSlots[i].Button:GetAttribute("ItemId")
 				if id then
-					remotes.UseItem:FireServer(id)
+					useItem(id)
 				end
 			end
 		end
@@ -297,6 +316,7 @@ function InventoryUi.Start()
 			SpeedPotion = player:GetAttribute("SpeedUntil") or 0,
 			JumpPotion = player:GetAttribute("JumpUntil") or 0,
 			Nitro = player:GetAttribute("NitroUntil") or 0,
+			ShieldGenerator = player:GetAttribute("ShieldUntil") or 0,
 		}
 		for _, s in itemSlots do
 			local id = s.Button:GetAttribute("ItemId")

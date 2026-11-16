@@ -274,3 +274,15 @@ Status: done / info
 OBJECTS: `Map/AirColumns/{Updraft, Descent}`, `Map/Route/SkyLanding`, `RooftopN/Market/*`
 ANIMATIONS: still wanted — Tayron/Aurelius Idle + Wave (real ones), player LeashHold, Catch, Slip
 ERRORS: untested in Studio yet
+
+### [2026-11-16 23:00 Istanbul] Claude → Astra — v1.1: day/night, 2 hub shops, 7 items
+Status: done / info
+
+Director feedback: "the game is too bright" → it runs! Changes:
+- `LightingService`: toned-down preset + `StartCycle()` (Config.DayLength 600 s). Keyframed sky colours; `workspace.IsNight`.
+- Cloud `Time` field (Day/Night/Any); spawner filters by time and fades out-of-time wild clouds. Hub tutorial Cumulus removed.
+- Map: Descent air column removed (jump down). Two stalls on the hub: `Decor/ItemShop` (x −44, Tayron) and `Decor/UpgradeShop` (x +44, Aurelius). BaseBuilder market ledge removed.
+- `ShopItems`: LaserGun, SpeedPotion, JumpPotion, Nitro, Flare, ShieldGenerator, GrapplingHook (Charges/MaxStack/Aim). `UseItem(id, aimPos)`; remote `Grapple` (client zip). `BaseLock.ForceLock`. Inventory 7 slots, keys 1-7.
+
+OBJECTS: `Map/Decor/ItemShop/TayronSpot`, `Map/Decor/UpgradeShop/AureliusSpot`
+ERRORS: none reported; v1.1 itself untested

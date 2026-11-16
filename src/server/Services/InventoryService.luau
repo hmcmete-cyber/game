@@ -23,6 +23,12 @@ local Weather = require(ReplicatedStorage.Shared.WeatherTypes)
 
 local InventoryService = {}
 
+-- Hooks filled in by other services (avoids require loops):
+--   LaserHit(shooter, target) -> boolean   WeatherService: thief drops shooter's cloud?
+--   OnOwnBase(player) -> boolean           near your own Nest?
+--   ForceLock(player, seconds)             BaseLockService: raise your base shield now
+InventoryService.Hooks = {} :: { [string]: any }
+
 -- Set by WeatherService: puts a perk cloud back into the player's vault
 InventoryService.ReturnToVault = nil :: ((Player, string, boolean) -> boolean)?
 
@@ -213,19 +219,22 @@ end
 ------------------------------------------------------------------------
 
 local function addItem(d, id: string): boolean
+	local item = ShopItems.Types[id]
+	local charges = item.Charges or 1
+	local max = item.MaxStack or Config.ItemStack
 	for _, it in d.Items do
 		if it.Id == id then
-			if it.Count >= Config.ItemStack then
+			if it.Count + charges > max then
 				return false
 			end
-			it.Count += 1
+			it.Count += charges
 			return true
 		end
 	end
 	if #d.Items >= Config.ItemSlots then
 		return false
 	end
-	table.insert(d.Items, { Id = id, Count = 1 })
+	table.insert(d.Items, { Id = id, Count = charges })
 	return true
 end
 
@@ -276,7 +285,106 @@ local function flare(player: Player)
 	Remotes.Hint:FireAllClients(`{player.DisplayName} sent a flare!`, 3)
 end
 
-local function useItem(player: Player, id: unknown)
+------------------------------------------------------------------------
+-- Aimed items: Laser Gun, Grappling Hook
+------------------------------------------------------------------------
+
+local function aimRay(player: Player, root: BasePart, aim: unknown, range: number)
+	if typeof(aim) ~= "Vector3" then
+		return nil, nil
+	end
+	local dir = (aim :: Vector3) - root.Position
+	if dir.Magnitude < 1 then
+		return nil, nil
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { player.Character, workspace:FindFirstChild("Weather") }
+	return workspace:Raycast(root.Position, dir.Unit * range, params), dir.Unit
+end
+
+local function beam(from: Vector3, to: Vector3, color: Color3, width: number, life: number)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Material = Enum.Material.Neon
+	p.Color = color
+	p.Size = Vector3.new(width, width, (to - from).Magnitude)
+	p.CFrame = CFrame.lookAt((from + to) / 2, to)
+	p.Parent = workspace
+	Debris:AddItem(p, life)
+end
+
+local lastShot = {} -- [Player] = os.clock()
+
+local function fireLaser(player: Player, root: BasePart, aim: unknown): boolean
+	if os.clock() - (lastShot[player] or 0) < Config.LaserCooldown then
+		return false
+	end
+	local hit, dir = aimRay(player, root, aim, Config.LaserRange)
+	if not dir then
+		return false
+	end
+	lastShot[player] = os.clock()
+	local from = root.Position + Vector3.new(0, 1.5, 0)
+	local to = hit and hit.Position or root.Position + dir * Config.LaserRange
+	beam(from, to, Color3.fromRGB(255, 60, 90), 0.35, 0.15)
+
+	local model = hit and hit.Instance:FindFirstAncestorOfClass("Model")
+	local target = model and Players:GetPlayerFromCharacter(model)
+	if not target or target == player then
+		return true
+	end
+	local now = workspace:GetServerTimeNow()
+	if (target:GetAttribute("ShieldUntil") or 0) > now then
+		Remotes.Hint:FireClient(player, `{target.DisplayName} is shielded!`, 2)
+		return true
+	end
+	-- a thief carrying YOUR stolen cloud drops it: it flies back to your vault
+	if InventoryService.Hooks.LaserHit and InventoryService.Hooks.LaserHit(player, target) then
+		return true
+	end
+	target:SetAttribute("LaserSlowUntil", now + Config.LaserSlowTime)
+	local hum = model:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum:TakeDamage(Config.LaserDamage)
+	end
+	return true
+end
+
+local function fireGrapple(player: Player, root: BasePart, aim: unknown): boolean
+	local hit = aimRay(player, root, aim, Config.GrappleRange)
+	if not hit then
+		Remotes.Hint:FireClient(player, "Nothing to hook onto there", 1.5)
+		return false
+	end
+	beam(root.Position, hit.Position, Color3.fromRGB(190, 160, 120), 0.15, 0.6)
+	Remotes.Grapple:FireClient(player, hit.Position) -- client does the zip (it owns the character)
+	return true
+end
+
+local function shield(player: Player, item, duration: number)
+	local hooks = InventoryService.Hooks
+	if hooks.OnOwnBase and hooks.OnOwnBase(player) and hooks.ForceLock then
+		hooks.ForceLock(player, item.BaseDuration * (player:GetAttribute("ItemTime") or 1))
+		return
+	end
+	local char = player.Character
+	if not char then
+		return
+	end
+	player:SetAttribute("ShieldUntil", workspace:GetServerTimeNow() + duration)
+	local ff = Instance.new("ForceField") -- built-in bubble: blocks damage too
+	ff.Name = "ShieldGenerator"
+	ff.Parent = char
+	Debris:AddItem(ff, duration)
+	Remotes.Hint:FireClient(player, `Personal shield for {math.floor(duration)} s!`, 2)
+end
+
+local function useItem(player: Player, id: unknown, aim: unknown)
 	local d = data(player)
 	local item = type(id) == "string" and ShopItems.Types[id]
 	if not d or not item or item.ComingSoon then
@@ -308,6 +416,17 @@ local function useItem(player: Player, id: unknown)
 		player:SetAttribute("NitroUntil", now + duration)
 	elseif item.Effect == "Flare" then
 		flare(player)
+	elseif item.Effect == "Shield" then
+		shield(player, item, duration)
+	elseif item.Effect == "Laser" or item.Effect == "Grapple" then
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if not root then
+			return
+		end
+		local used = item.Effect == "Laser" and fireLaser(player, root, aim) or (item.Effect == "Grapple" and fireGrapple(player, root, aim))
+		if not used then
+			return
+		end
 	end
 
 	local it = d.Items[slot]
@@ -330,7 +449,7 @@ function InventoryService.Wipe(player: Player): (number, number)
 	local lostItems, lostPerks = #d.Items, #d.Perks
 	d.Items = {}
 	d.Perks = {}
-	for _, attr in { "SpeedUntil", "JumpUntil", "NitroUntil" } do
+	for _, attr in { "SpeedUntil", "JumpUntil", "NitroUntil", "ShieldUntil" } do
 		player:SetAttribute(attr, 0)
 	end
 	sync(player)

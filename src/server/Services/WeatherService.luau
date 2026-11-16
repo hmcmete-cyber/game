@@ -153,26 +153,39 @@ local function burstAt(position: Vector3, color: Color3, count: number)
 	Debris:AddItem(anchor, 2)
 end
 
--- Pick a cloud type that lives in the given zone
-local function rollType(zone: number): string
+-- Day clouds spawn by day, night clouds only at night ("Any" = always)
+local function timeOk(typeName: string): boolean
+	local t = Weather.Types[typeName].Time or "Any"
+	if t == "Any" then
+		return true
+	end
+	local night = workspace:GetAttribute("IsNight") == true
+	return (t == "Night") == night
+end
+
+-- Pick a cloud type that lives in the given zone and fits the time of day
+local function rollType(zone: number): string?
 	local total = 0
 	for _, name in Weather.Order do
 		local def = Weather.Types[name]
-		if def.Zone == zone then
+		if def.Zone == zone and timeOk(name) then
 			total += def.Weight
 		end
+	end
+	if total <= 0 then
+		return nil
 	end
 	local roll = math.random() * total
 	for _, name in Weather.Order do
 		local def = Weather.Types[name]
-		if def.Zone == zone then
+		if def.Zone == zone and timeOk(name) then
 			roll -= def.Weight
 			if roll <= 0 then
 				return name
 			end
 		end
 	end
-	return "Cumulus"
+	return nil
 end
 
 -- Pick a zone using the overall split (70 / 25 / 5)
@@ -865,22 +878,36 @@ local function freeSpawns(zone: number)
 	return list
 end
 
+-- Wild clouds that don't belong to the current time of day fade away
+local function despawnOutOfTime()
+	for sphere, info in wild do
+		if info.Ready and not timeOk(info.Type) then
+			wild[sphere] = nil
+			if info.Spawn then
+				occupied[info.Spawn] = nil
+			end
+			burstAt(sphere.Position, Weather.Types[info.Type].ParticleColor, 20)
+			sphere:Destroy()
+		end
+	end
+end
+
 local function spawnLoop()
+	local wasNight = workspace:GetAttribute("IsNight")
 	while true do
-		-- Tutorial spot (Spawn1): always a plain Cumulus, always refilled
-		local first = MapService.GetSpawns()[1]
-		if first and not (occupied[first] and occupied[first].Parent) then
-			spawnWild(first, "Cumulus", false)
+		local night = workspace:GetAttribute("IsNight")
+		if night ~= wasNight then
+			wasNight = night
+			despawnOutOfTime()
+			hintAll(night and "Night falls... Void, Thunder and Frost clouds are out!" or "The sun rises - Speed and Solar clouds are back!", 5)
 		end
 
 		if countWild() < Config.MaxWild then
 			local zone = rollZone()
 			local spots = freeSpawns(zone)
-			if #spots > 0 then
-				local spot = spots[math.random(1, #spots)]
-				if spot ~= first then
-					spawnWild(spot, rollType(zone), math.random() < Weather.ShinyChance)
-				end
+			local typeName = rollType(zone)
+			if #spots > 0 and typeName then
+				spawnWild(spots[math.random(1, #spots)], typeName, math.random() < Weather.ShinyChance)
 			end
 		end
 		task.wait(Config.SpawnInterval)
@@ -897,7 +924,7 @@ local function altarLoop()
 				continue
 			end
 			local mythic = math.random() < Config.MythicChance
-			local typeName = mythic and "Mythic" or rollType(3)
+			local typeName = mythic and "Mythic" or rollType(3) or "Chrono"
 			spawnWild(altar, typeName, not mythic and math.random() < Weather.ShinyChance * 5)
 			burstAt(altar.Position, Weather.Types[typeName].ParticleColor, 60)
 			if mythic then
@@ -1121,7 +1148,8 @@ local function mainLoop()
 
 			if c.Victim then
 				local victimRoot = roots[c.Victim]
-				if victimRoot and (victimRoot.Position - root.Position).Magnitude <= Config.TagRadius then
+				local shielded = (player:GetAttribute("ShieldUntil") or 0) > workspace:GetServerTimeNow()
+				if victimRoot and not shielded and (victimRoot.Position - root.Position).Magnitude <= Config.TagRadius then
 					burstAt(root.Position + Vector3.new(0, 3, 0), THIEF_COLOR, 30)
 					local victim = c.Victim
 					clearCarry(player, true)
@@ -1194,7 +1222,7 @@ function WeatherService.OnPlayerAdded(player: Player)
 			end
 			local data = DataService.Get(player)
 			if data and data.Delivered == 0 then
-				hint(player, "Walk up to the cloud and press E to catch it!", 8)
+				hint(player, "Jump into the UPDRAFT in the middle of the hub to reach the clouds!", 8)
 			else
 				hint(player, "Catch storms, fill your vaults, raid other bases!", 5)
 			end
@@ -1240,6 +1268,21 @@ function WeatherService.Start(mapService, dataService, remotes)
 	weatherFolder.Parent = workspace
 
 	InventoryService.ReturnToVault = returnToVault
+	-- Laser Gun: a thief hit by the cloud's owner drops it and it flies home
+	InventoryService.Hooks.LaserHit = function(shooter: Player, target: Player): boolean
+		local c = carriers[target]
+		if not c or c.Victim ~= shooter then
+			return false
+		end
+		local pos = c.Part and c.Part.Position
+		clearCarry(target, true)
+		if pos then
+			burstAt(pos, THIEF_COLOR, 35)
+		end
+		hint(target, `{shooter.DisplayName} lasered you - the cloud flew back home!`, 4)
+		hint(shooter, "Direct hit! Your cloud is back in your vault.", 4)
+		return true
+	end
 	setupStorm()
 	task.spawn(spawnLoop)
 	task.spawn(mainLoop)

@@ -13,7 +13,8 @@
 --   Hazards/* (Part, attribute HazardType = "Ice" | "River" | "Storm" | "Electric", CanCollide off, CanQuery on)
 --   Zones/* (Part volumes, attributes ZoneName, ZoneColor, Warning?) — for the HUD
 --   AirColumns/* (cylinder Part, attributes Lift, PushX/PushZ/PushAbove) — updraft & descent
---   RooftopN/Market/*Spot (Part, attribute Npc = "Tayron" | "Aurelius") — vendor NPCs
+--   Decor/ItemShop + Decor/UpgradeShop: the only 2 shops (hub, opposite corners);
+--     *Spot parts with attribute Npc = "Tayron" | "Aurelius" mark where vendors stand
 --   Route/LiftPlatforms/* (Part, placed in LOWERED position)
 --   Route/WaterGaps/* (Part, CanCollide off; Snow freezes them solid)
 --   CrateArena/CrateSpawns/CrateN (Part)
@@ -175,6 +176,74 @@ local function airColumn(parent: Instance, name: string, size: Vector3, pos: Vec
 	return col
 end
 
+-- A vendor stall: wooden counter + striped canopy + glowing sign + lamps.
+-- floor: floor-level center, facing: point the counter toward this.
+-- The NPC stands at "<Name>Spot" (attribute Npc = vendor) behind the counter.
+local function shopStall(parent: Instance, name: string, floor: Vector3, facing: Vector3, vendor: string, title: string, accent: Color3)
+	local stall = Instance.new("Model")
+	stall.Name = name
+	local cf = CFrame.lookAt(floor, Vector3.new(facing.X, floor.Y, facing.Z))
+	local wood = Color3.fromRGB(160, 110, 72)
+	local dark = Color3.fromRGB(105, 70, 45)
+
+	newPart(stall, "Floor", Vector3.new(16, 0.4, 10), cf * CFrame.new(0, 0.2, 0), wood, { Material = Enum.Material.WoodPlanks })
+	newPart(stall, "Counter", Vector3.new(12, 3, 1.6), cf * CFrame.new(0, 1.9, -2.5), dark, { Material = Enum.Material.Wood })
+	newPart(stall, "CounterTop", Vector3.new(12.6, 0.3, 2.2), cf * CFrame.new(0, 3.55, -2.5), accent, { Material = Enum.Material.Neon })
+	newPart(stall, "ShelfBack", Vector3.new(12, 6, 0.5), cf * CFrame.new(0, 3.4, 4.5), dark, { Material = Enum.Material.Wood })
+	for row = 0, 1 do
+		newPart(stall, "Shelf" .. row, Vector3.new(11, 0.3, 1.4), cf * CFrame.new(0, 2.4 + row * 2, 3.8), wood, { Material = Enum.Material.Wood })
+		for i = 0, 5 do
+			newPart(stall, "Jar" .. row .. i, Vector3.new(1.1, 0.7, 0.7), cf * CFrame.new(-4.5 + i * 1.8, 3 + row * 2, 3.8) * CFrame.Angles(0, 0, math.pi / 2),
+				Color3.fromHSV((i * 0.15 + row * 0.4) % 1, 0.5, 1), {
+					Shape = Enum.PartType.Cylinder,
+					Material = Enum.Material.Neon,
+					Transparency = 0.2,
+					CanCollide = false,
+				})
+		end
+	end
+	for _, x in { -7.5, 7.5 } do
+		for _, z in { -4.5, 4.5 } do
+			newPart(stall, "Post", Vector3.new(0.6, 9, 0.6), cf * CFrame.new(x, 4.7, z), dark, { Material = Enum.Material.Wood })
+		end
+	end
+	for i = 0, 7 do
+		newPart(stall, "Canopy" .. i, Vector3.new(2.1, 0.25, 11), cf * CFrame.new(-7.35 + i * 2.1, 9.4, 0) * CFrame.Angles(math.rad(-8), 0, 0),
+			i % 2 == 0 and accent or Color3.fromRGB(255, 250, 245), { Material = Enum.Material.Fabric })
+	end
+	local sign = newPart(stall, "Sign", Vector3.new(10, 2.2, 0.3), cf * CFrame.new(0, 7.6, -4.7), Color3.fromRGB(255, 250, 240), {
+		Material = Enum.Material.Wood,
+	})
+	local surface = Instance.new("SurfaceGui")
+	surface.Face = Enum.NormalId.Front
+	surface.PixelsPerStud = 40
+	surface.LightInfluence = 0
+	surface.Parent = sign
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.Text = title
+	label.TextColor3 = accent:Lerp(Color3.new(0, 0, 0), 0.35)
+	label.Parent = surface
+	for _, x in { -5, 5 } do
+		local lamp = newPart(stall, "Lamp", Vector3.new(0.8, 1, 0.8), cf * CFrame.new(x, 8.4, -4.2), Color3.fromRGB(255, 225, 170), {
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+		})
+		local light = Instance.new("PointLight")
+		light.Range = 16
+		light.Brightness = 1.2
+		light.Color = Color3.fromRGB(255, 215, 165)
+		light.Parent = lamp
+	end
+	local spot = newPart(stall, vendor .. "Spot", Vector3.one, cf * CFrame.new(0, 0.4, 0), Color3.new(1, 1, 1), MARKER)
+	spot:SetAttribute("Npc", vendor)
+	stall.Parent = parent
+	return stall
+end
+
 local function buildPlaceholder(): Instance
 	local m = Instance.new("Folder")
 	m.Name = "Map"
@@ -278,8 +347,11 @@ local function buildPlaceholder(): Instance
 	zoneVolume("Hub", Vector3.new(0, Y + 10, 0), Vector3.new(130, 40, 130), "Hexagon Hub", Color3.fromRGB(200, 230, 255))
 	zoneSign(signs, "HubSign", Vector3.new(0, Y + 30, 0), "STEAL A CLOUD", Color3.fromRGB(255, 255, 255))
 
-	-- Tutorial cloud right on the hub
-	spawnPoint(Vector3.new(0, Y + 4, 18), 1)
+	-- The only two shops in the game, on opposite corners of the hub
+	shopStall(decor, "ItemShop", Vector3.new(-44, Y, 0), Vector3.new(0, Y, 0), "Tayron", "ITEM SHOP",
+		Color3.fromRGB(120, 200, 255))
+	shopStall(decor, "UpgradeShop", Vector3.new(44, Y, 0), Vector3.new(0, Y, 0), "Aurelius", "UPGRADES",
+		Color3.fromRGB(255, 205, 90))
 
 	------------------------------------------------------------------
 	-- 12 BASES around the hub (radius 95), each facing the center,
@@ -309,13 +381,10 @@ local function buildPlaceholder(): Instance
 	zoneSign(signs, "UpdraftSign", Vector3.new(0, Y + 12, 0), "UPDRAFT - to the clouds", Color3.fromRGB(190, 235, 255))
 
 	-- Sky landing (UP level), right next to the top of the updraft
-	-- (z -20 … -100: the updraft throws you ~30-40 studs toward -Z)
+	-- (z -20 … -100: the updraft throws you ~30-40 studs toward -Z).
 	newPart(route, "SkyLanding", Vector3.new(40, 2, 80), CFrame.new(0, UP - 1, -60), Color3.fromRGB(245, 248, 255), { Material = Enum.Material.Marble })
 	zoneVolume("Landing", Vector3.new(0, UP + 10, -60), Vector3.new(50, 40, 80), "Sky Landing", Color3.fromRGB(220, 240, 255))
-	-- Descent chute: step off the front edge (z -20) and glide down to the hub.
-	-- (Missing the chute is fine too: you just land on the hub.)
-	airColumn(air, "Descent", Vector3.new(12, UP - Y - 6, 12), Vector3.new(0, (Y + UP - 6) / 2, -16), -14, Color3.fromRGB(255, 220, 240))
-	zoneSign(signs, "DescentSign", Vector3.new(0, UP + 6, -22), "v  GLIDE DOWN TO THE HUB  v", Color3.fromRGB(255, 220, 240))
+	-- No way down but down: jump off the edge and fall back to the hub.
 
 	------------------------------------------------------------------
 	-- SKY PATH (one way, no shortcuts):

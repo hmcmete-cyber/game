@@ -76,6 +76,9 @@ local function applySpeed()
 	end
 	speed *= player:GetAttribute("PerkSpeed") or 1
 	speed *= player:GetAttribute("UpgradeSpeed") or 1 -- Aurelius
+	if active("LaserSlowUntil") then
+		speed *= Config.LaserSlow -- hit by a Laser Gun
+	end
 	if active("ShockedUntil") and not player:GetAttribute("ElectricImmune") then
 		speed *= Config.StormAuraSlow -- someone's Thunder Storm static field
 	end
@@ -179,6 +182,28 @@ function Movement.Start()
 		applySpeed()
 		local untilT = player:GetAttribute("NitroUntil") or 0
 		task.delay(math.max(0, untilT - workspace:GetServerTimeNow()) + 0.05, applySpeed)
+	end)
+
+	-- Grappling Hook: zip toward the hooked point (we own our character's physics)
+	ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Grapple").OnClientEvent:Connect(function(point: Vector3)
+		local char = player.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if not root or not hum then
+			return
+		end
+		hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		local started = os.clock()
+		local conn
+		conn = RunService.Heartbeat:Connect(function()
+			local toPoint = point + Vector3.new(0, 3, 0) - root.Position
+			if toPoint.Magnitude < 4 or os.clock() - started > 1.6 or not root.Parent then
+				conn:Disconnect()
+				root.AssemblyLinearVelocity = root.AssemblyLinearVelocity * 0.4 + Vector3.new(0, 20, 0)
+				return
+			end
+			root.AssemblyLinearVelocity = toPoint.Unit * Config.GrappleSpeed
+		end)
 	end)
 
 	-- Lightning knockback from the server

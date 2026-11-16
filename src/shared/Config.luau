@@ -30,6 +30,20 @@ local Config = {
 	LeashBack = 5, -- how far behind you
 	LeashResponsiveness = 12,
 
+	-- Day / night cycle (DayNightService)
+	DayLength = 600, -- seconds for a full 24 h
+	NightStart = 19, -- ClockTime when night clouds start spawning
+	NightEnd = 6.5,
+
+	-- Items with aim
+	LaserRange = 120,
+	LaserCooldown = 0.8,
+	LaserSlow = 0.5,
+	LaserSlowTime = 3,
+	LaserDamage = 10,
+	GrappleRange = 90,
+	GrappleSpeed = 95,
+
 	-- Hub air columns (Map/AirColumns, attributes Lift / PushX / PushZ / PushAbove)
 	AirAccel = 6, -- how quickly you match the column's vertical speed
 
@@ -44,8 +58,8 @@ local Config = {
 	StormAuraSlow = 0.6,
 
 	-- Inventories (both wiped on death)
-	ItemSlots = 4, -- normal Inventory: shop items, keys 1-4
-	ItemStack = 5, -- max of one item per slot
+	ItemSlots = 7, -- normal Inventory: shop items, keys 1-7
+	ItemStack = 5, -- default max of one item per slot (items can set MaxStack)
 	PerkSlots = 2, -- Quirks/Perks: clouds equipped from your own vault
 
 	-- Gate 2: Electric River (pulses: calm -> warning -> shock)

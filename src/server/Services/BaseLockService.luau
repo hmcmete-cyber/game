@@ -132,6 +132,33 @@ local function tryLock(player: Player, roof: Model, nest: BasePart)
 	Remotes.Hint:FireClient(player, `Base locked for {Config.LockDuration}s — nobody can steal!`, 4)
 end
 
+-- Shield Generator item: raise the shield right now, ignoring the recharge
+function BaseLock.ForceLock(player: Player, seconds: number)
+	local roof = MapService.GetRooftop(player)
+	local nest = roof and roof:FindFirstChild("Nest")
+	if not nest then
+		return
+	end
+	local now = os.clock()
+	local st = state[roof]
+	if st and st.Shield and now < st.LockedUntil then
+		st.LockedUntil = math.max(st.LockedUntil, now + seconds)
+	else
+		if st and st.Shield then
+			st.Shield:Destroy()
+		end
+		state[roof] = {
+			Owner = player,
+			LockedUntil = now + seconds,
+			CooldownUntil = math.max(st and st.CooldownUntil or 0, now + seconds),
+			Shield = raiseShield(roof, nest),
+			LastHint = now,
+		}
+	end
+	roof:SetAttribute("Locked", true)
+	Remotes.Hint:FireClient(player, `Shield Generator: base locked for {math.floor(seconds)} s!`, 3)
+end
+
 -- Push a rival out of the shield
 local function pushOut(root: BasePart, nest: BasePart)
 	local flat = Vector3.new(root.Position.X - nest.Position.X, 0, root.Position.Z - nest.Position.Z)

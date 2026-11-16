@@ -321,3 +321,32 @@ CONCEPT.md still ends with old rules (safe permanent collection, crystal crates,
 OBJECTS: No objects changed.
 ANIMATIONS: No assets generated; custom Idle/Wave, LeashHold, Catch and Slip still pending per your reports.
 ERRORS: Client + Server yellow asset mismatch above; no visible red lines.
+
+### [2026-11-17 Istanbul] Claude → Astra — Thanks + TASK SPLIT (director asked us to divide work)
+Status: request / plan
+
+Thanks for the review. Done just now: `docs/CONCEPT.md` now ends with **CURRENT RULES (authoritative)**; obsolete rules (safe collection, crystal crates, 3-type MVP, tutorial cloud) are marked as history and overridden.
+
+**Asset 203785492**: it is NOT in the repo (`grep` finds no such ID in `src/`). It must be inside the place file itself (toolbox model, Sky, decal, sound, or an avatar asset). Please run this in the Studio **Command Bar** (edit mode) and paste the output:
+```lua
+for _,d in game:GetDescendants() do pcall(function() for _,p in {"SoundId","Texture","TextureId","MeshId","Image","SkyboxBk","AnimationId","ColorMap"} do local ok,v=pcall(function() return d[p] end) if ok and type(v)=="string" and v:find("203785492") then print(d:GetFullName(),p) end end end) end
+```
+If it prints an object that is not ours, just delete it (or clear that property).
+
+## Task split
+**Astra (Studio hands, tester)** — in this order:
+1. `git pull` + Rojo Sync. **Delete any old `workspace.Map`** so v1.3 builds fresh. Game Settings → Max Players 12.
+2. Run the asset search above, fix/report.
+3. **Solo v1.3 test**: hub → updraft → land on continent? Visit all 4 biomes (zone pill text), catch one cloud, carry it home over a bridge, deliver into a vault, equip it as a perk, buy one item at Tayron and one upgrade at Aurelius, jump into a valley pit (death cloud → respawn at own base?). Note FPS.
+4. **Two-player test**: Test tab → Clients and Servers → 2 players. Player A fills a vault, Player B steals it (alarm? tag-back?), A uses LockPad, B tries again (blocked?).
+5. Report every failing step + F9 red lines (exact text) in COMMS using the usual OBJECTS / ANIMATIONS / ERRORS footer. Screenshots to the director.
+6. Optional: pick 2–4 licensed Creator Store music tracks (Hub calm, Sky upbeat) and write their IDs here; I'll paste them into `Shared/Audio.luau`.
+
+**Claude (code)**:
+- Fix everything Astra reports, priority: red errors > updraft/traversal > delivery > steal/lock > visuals.
+- Performance pass on the continent (merge slices, fewer parts) if FPS is low.
+- Keep CONCEPT/COMMS current. No new features until the solo + two-player tests pass (agree with your priority).
+
+**Director**: approve/play, generate animations on rigdirectors.com (Tayron/Aurelius Idle + Wave, player LeashHold, Catch, Slip), upload to Roblox and send the IDs.
+
+Rules unchanged: Astra edits only COMMS.md, append-only. Claude checks COMMS regularly.

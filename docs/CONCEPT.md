@@ -91,50 +91,25 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - **Bases** moved to radius 140 with an empty **Expansion pad** beside each.
 - **Death Cloud floor** at Y −20 replaces the void: thick cloud sea; touching it kills, you respawn at your own base.
 
-## Core loop
+## CURRENT RULES (authoritative — overrides anything above)
 
-1. **Hunt** weather creatures in the shared zone.
-2. **Choose**: deliver now for a safe reward, or push on for a better variant?
-3. **Carry** it, using its effect to pass obstacles.
-4. **Place** it on your rooftop: collection or production slot.
-5. **Harvest** weather crystals → decoration, recipes, equipment.
-6. **Risk** (optional): snatch rivals' harvest crates in the competition area, or defend yours.
-7. **Display & share** your rooftop. Trading comes in later versions.
+The "Update" sections above are history. If they conflict with this section, this section wins.
 
-**The permanent collection is always safe.** Only harvest crates placed in the competition area and not yet delivered can be stolen.
+**Core loop**
+1. Ride the **updraft** from the Hexagon Hub up to the Floating Continent.
+2. **Catch** a wild cloud (hold E). It follows you on a **leash**; your hands stay free for items.
+3. Bring it home over the bridges to your **base** (one of 12) and drop it into an empty **Vault Sphere** (4 per base).
+4. Filled vaults pay **passive income**; a cloud in a vault can be equipped as a **Perk** (up to the PerkSlots limit).
+5. **Steal**: rivals can take clouds out of your vaults (hold E) unless your base is **locked** (LockPad, 60 s, then cooldown). Owner gets an alarm; touching the thief tags the cloud back.
+6. Spend coins at the two hub shops: **Tayron** (7 consumable items) and **Aurelius** (permanent upgrades).
 
-## First 30 seconds
+**Rules**
+- Clouds come from `Shared/CloudDB.luau` (56, five rarity tiers). Rarer = bigger reward and stronger perk. Shiny variants are worth more but never stronger.
+- Spawns depend on biome (Plateau, Coast, Mountains, Valley) and day/night. Altars roll Epic or better.
+- Falling into the Death Cloud floor kills you; you respawn at your own base. Dying drops your carried cloud and wipes items.
+- No tutorial guaranteed cloud, no crystal crates, no "safe permanent collection": vault clouds CAN be stolen.
+- UI: English only, no emoji (colour text chips).
 
-| Time | Experience |
-|---|---|
-| 0–5 s | A small rain cloud bounces in front of you. One instruction: **"Catch the cloud!"** |
-| 5–12 s | One button catches it. It goes into a clear jar; small puddles form around you. |
-| 12–22 s | Following a short path, you slip comically on your own water. No penalty for failing. |
-| 22–30 s | Drop it at your rooftop nest, get the first (guaranteed) reward; another catchable type appears nearby. |
+**Monetization (later, no pay-to-win)**: cosmetics only (base themes, leash/jar looks, emotes, visual-only celebrations). Never sell luck, stealing power, immunity or stronger clouds.
 
-## Rarity
-
-Variants depend on discovery conditions (e.g. a tornado caught in rain in a certain zone looks different) and on published random odds. **Rarest variants are never stronger in competition.**
-
-## Monetization (no pay-to-win)
-
-| Product | Value | Limit |
-|---|---|---|
-| Sky Architect Pass | Rooftop facades, decoration themes, ambient music | No production/defense boost |
-| Collector Style Packs | Jar, catching tool and outfit looks | No range/speed/catch-rate change |
-| Emote Packs | Cloud dance, scared-of-lightning, victory poses | No movement advantage |
-| Celebration DevProduct | Short visual-only celebration after delivery | Doesn't block view or change rewards |
-
-Never sold: luck boosts, paid stealing, paid immunity, stronger clouds. Cosmetics must never hide which weather type a rival is carrying.
-
-## MVP (first prototype)
-
-- One rooftop neighbourhood
-- Three weather types: **Rain cloud, Pocket tornado, Snow cloud**
-- Two weather interactions
-- One delivery route
-- One simple harvest-crate snatch area
-
-Not in MVP: trading, big map, many variants.
-
-**Playtest questions:** Can a new player make the first delivery without explanation? Do they start a second run on their own? Do they try a weather combo with a friend and want to repeat it?
+**Playtest questions**: Can a new player reach the continent and make the first delivery without help? Does a steal feel fair to both players? Do players come back for rarer clouds?

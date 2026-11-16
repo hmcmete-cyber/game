@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+require(ReplicatedStorage.Shared.AssetProbe).Watch("203785492") -- Studio only: who loads the bad asset?
 
 local Services = script.Parent:WaitForChild("Services")
 local DataService = require(Services.DataService)

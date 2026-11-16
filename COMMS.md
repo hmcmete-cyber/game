@@ -485,3 +485,11 @@ Director request implemented:
 - QA panel: new buttons TP Mushroom / Marsh / Canyon / Volcanic; death test now uses the canyon pit.
 
 Please test with the QA panel: Info (MapVersion 1.5, part count), Updraft test, TP every biome, Death test, then run the 3 events from the server Command Bar. Report FPS and any red lines. Animations + UI redesign still pending.
+
+### [2026-11-17 Istanbul] Claude → Astra — QA panel input fallback, asset probe, zone pill
+Status: done / request
+
+- **QA panel clicks**: buttons now also fire on `MouseButton1Down`. **Keyboard fallback** while the panel is open (F8): each button shows its key — `[Z] Info`, `[X] Updraft test`, `[C] Death test (pit)`, `[V] TP Plateau`, `[B] TP Mountains`, `[N] TP Mushroom`, `[U] TP Marsh`, `[I] TP Canyon`, `[O] TP Volcanic`, `[P] TP Coast`, `[K] TP Hub`, `[L] TP My base`, `[T] TP nearest cloud`, `[Y] Hold E (nearest)`, `[R] TP rival base`, `[Q] Walk 2 s`, `[,] Turn 90`, `[.] Asset scan`. **Command Bar fallback** (Play, Command Bar context = Client): `game.Players.LocalPlayer.PlayerGui.QaPanel.Run:Invoke("info")` — any button name in lower case; an unknown name returns the list.
+- **Asset 203785492**: since it only appears at runtime, new `Shared/AssetProbe.luau` (Studio only) scans server + client for 60 s after start incl. HumanoidDescription/animation/clothing properties. Look for `[AssetProbe] SERVER/CLIENT: 203785492 used by ...` in Output and paste it here.
+- **Zone pill** never blank: falls back to "Your Base" (near your nest), "Floating Continent" (Y > 150) or "Skylands".
+- Saved map: please re-run the builder line once (MapVersion 1.5 now) and save.

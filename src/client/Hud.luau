@@ -449,7 +449,7 @@ end
 -- Which zone am I in? (Map/Zones volumes)
 -- Where am I? 1) zone volumes (Map/Zones), 2) otherwise the ground under
 -- your feet: continent floor parts carry ZoneName/ZoneColor/Warning (biomes).
-local currentZoneName: string? = nil
+local currentZoneName: string? = "__start" -- forces the first update
 local function zoneLoop()
 	local zones = workspace:WaitForChild("Map"):WaitForChild("Zones")
 	local params = OverlapParams.new()
@@ -482,10 +482,25 @@ local function zoneLoop()
 			if zone then
 				zoneText.Text = name
 				zoneText.TextColor3 = zone:GetAttribute("ZoneColor") or Color3.new(1, 1, 1)
-				zonePill.Visible = true
 			else
-				zonePill.Visible = false
+				-- never show a blank pill
+				local fallback = "Skylands"
+				local roofs = workspace.Map:FindFirstChild("Rooftops")
+				for _, roof in roofs and roofs:GetChildren() or {} do
+					if roof:GetAttribute("OwnerUserId") == player.UserId and root then
+						local nest = roof:FindFirstChild("Nest", true)
+						if nest and nest:IsA("BasePart") and (nest.Position - root.Position).Magnitude < 45 then
+							fallback = "Your Base"
+						end
+					end
+				end
+				if fallback == "Skylands" and root and root.Position.Y > 150 then
+					fallback = "Floating Continent"
+				end
+				zoneText.Text = fallback
+				zoneText.TextColor3 = Color3.fromRGB(220, 230, 255)
 			end
+			zonePill.Visible = zoneText.Text ~= ""
 			gateWarning = zone and zone:GetAttribute("Warning") or nil
 			if gateWarning then
 				showAlert(`{gateWarning}`, false, 4)

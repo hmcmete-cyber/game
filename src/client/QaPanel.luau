@@ -385,6 +385,7 @@ function QaPanel.Start()
 	if not RunService:IsStudio() then
 		return
 	end
+	require(game:GetService("ReplicatedStorage").Shared.AssetProbe).Watch("203785492")
 	ProximityPromptService.PromptShown:Connect(function(p)
 		shown[p] = true
 	end)
@@ -441,6 +442,16 @@ function QaPanel.Start()
 	logLabel.Parent = frame
 
 	local order = 0
+	-- While the panel is open, these keys press the buttons in order
+	-- (for testers whose mouse clicks don't reach the UI)
+	local HOTKEYS = {
+		Enum.KeyCode.Z, Enum.KeyCode.X, Enum.KeyCode.C, Enum.KeyCode.V, Enum.KeyCode.B, Enum.KeyCode.N,
+		Enum.KeyCode.U, Enum.KeyCode.I, Enum.KeyCode.O, Enum.KeyCode.P, Enum.KeyCode.K, Enum.KeyCode.L,
+		Enum.KeyCode.T, Enum.KeyCode.Y, Enum.KeyCode.R, Enum.KeyCode.Q, Enum.KeyCode.Comma, Enum.KeyCode.Period,
+		Enum.KeyCode.Semicolon,
+	}
+	local hotkeys: { [Enum.KeyCode]: () -> () } = {}
+	local actions: { [string]: () -> () } = {}
 	local function button(text: string, fn, ...)
 		order += 1
 		local args = table.pack(...)
@@ -453,9 +464,22 @@ function QaPanel.Start()
 		b.TextColor3 = Color3.new(1, 1, 1)
 		b.Parent = grid
 		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-		b.Activated:Connect(function()
+		local last = 0
+		local function fire()
+			if os.clock() - last < 0.4 then
+				return -- Activated + MouseButton1Down can both fire for one click
+			end
+			last = os.clock()
 			run(fn, table.unpack(args, 1, args.n))
-		end)
+		end
+		b.Activated:Connect(fire)
+		b.MouseButton1Down:Connect(fire)
+		actions[string.lower(text)] = fire
+		local key = HOTKEYS[order]
+		if key then
+			hotkeys[key] = fire
+			b.Text = `[{key.Name}] {text}`
+		end
 	end
 
 	button("Info", info)
@@ -490,10 +514,35 @@ function QaPanel.Start()
 	end
 	toggle.Activated:Connect(flip)
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if not processed and input.KeyCode == Enum.KeyCode.F8 then
+		if processed then
+			return
+		end
+		if input.KeyCode == Enum.KeyCode.F8 then
 			flip()
+		elseif frame.Visible and hotkeys[input.KeyCode] then
+			hotkeys[input.KeyCode]()
 		end
 	end)
+
+	-- Command Bar entry point (Studio, Command Bar set to CLIENT during Play):
+	--   game.Players.LocalPlayer.PlayerGui.QaPanel.Run:Invoke("info")
+	-- names = button texts in lower case, e.g. "updraft test", "tp canyon", "hold e (nearest)"
+	local bf = Instance.new("BindableFunction")
+	bf.Name = "Run"
+	bf.OnInvoke = function(name: string)
+		local fire = actions[string.lower(name or "")]
+		if not fire then
+			local names = {}
+			for k in actions do
+				table.insert(names, k)
+			end
+			table.sort(names)
+			return "unknown QA action; try: " .. table.concat(names, ", ")
+		end
+		fire()
+		return "started " .. name .. " (see [QA] lines in Output)"
+	end
+	bf.Parent = gui
 	gui.Parent = player:WaitForChild("PlayerGui")
 	log("QA: F8 or the QA button toggles this panel")
 end

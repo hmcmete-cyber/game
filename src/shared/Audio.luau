@@ -15,8 +15,8 @@
 local Audio = {}
 
 Audio.Music = {
-	Hub = { SoundId = "", Volume = 0.45 },
-	Sky = { SoundId = "", Volume = 0.55 },
+	Hub = { SoundId = "rbxassetid://9043887091", Volume = 0.25 }, -- "Lo-fi Chill A" (APM, Creator Store) — provisional, Astra 2026-11-16
+	Sky = { SoundId = "rbxassetid://1842524947", Volume = 0.3 }, -- "Summer Solstice" (Creator Store) — provisional
 	HubNight = { SoundId = "", Volume = 0.4 },
 	SkyNight = { SoundId = "", Volume = 0.5 },
 }

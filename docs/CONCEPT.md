@@ -1,4 +1,4 @@
-# Pocket Storm ☁️
+# Steal a Cloud ☁️ (formerly Pocket Storm)
 
 > "Catch the weather. Steal the thunder."
 
@@ -33,6 +33,16 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - Wild weather floats inside **glass spheres**. **Touch** to grab; carrying slows speed and jump a bit.
 - Each base has **5 Vault Spheres**. Delivering drops the storm into an empty vault: coins now + **passive income** while it stays (10% of its value every 5 s). Vault full → it's sold for double.
 - **Rivals can touch a full vault to steal its storm** (this supersedes "the permanent collection is always safe"). Owner gets an alarm; everyone sees a red center banner "X stole Y's Storm!"; the thief is outlined red. If the owner touches the thief, the storm flies back to the vault.
+
+## Update 3 — Steal a Cloud (director request)
+
+- **Name: Steal a Cloud.**
+- **Map**: Spawn Area (6 hex bases along a plaza) → long **Sky Path** with 3 zones. A new cloud spawns in **Breeze Zone 70% / Thunder Canyon 25% / Cosmic Stratosphere 5%**.
+  - Breeze: Cumulus, Rain, Snow · Thunder Canyon: Cumulonimbus (key `Thunder`), Pocket Tornado · Cosmic: Cosmic Neon, Auroral, Chrono.
+  - Thunder Canyon splits into a Snow lane (water gap), a Tornado lane (lift platform) and a longer detour.
+- **Cloud Altars** (mid-map + end of zone 3): every 45 s an empty altar raises a zone-3 cloud; 0.01% chance of the **Mythic Storm Cloud** (server announcement).
+- **Base Lock**: owner steps on the LockPad → 60 s ForceField shield; rivals are pushed out and can't steal; then 90 s recharge.
+- **Cloud looks**: soft puffs + smoke breathing from the center; Cumulonimbus lightning arcs, Cosmic rainbow stars + hue cycle, Auroral waving light ribbons, Chrono time sparks, Mythic = all.
 
 ## Core loop
 

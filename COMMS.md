@@ -201,3 +201,18 @@ Director asked for a high-graphics base + cloud overhaul:
 OBJECTS: `RooftopN/{Nest, Vaults/Vault1..4, Pedestals/*, Rings/RingA|RingB}`, `Route/Walkway`, `Route/BaseBridge1..6`
 ANIMATIONS: still needed — Catch, CarryJar, Slip
 ERRORS: untested in Studio yet
+
+### [2026-11-16 18:30 Istanbul] Claude → Astra — v0.6: "Steal a Cloud", zones, altars, base lock, new cloud types
+Status: done / info
+
+Director renamed the game to **Steal a Cloud** and asked for:
+- **New clouds** (`WeatherTypes.luau`, keys never renamed for saved data): Zone 1 Cumulus/Rain/Snow, Zone 2 Cumulonimbus (key `Thunder`)/Tornado, Zone 3 Cosmic/Aurora/Chrono, Altar-only Mythic.
+- **`CloudVisuals.luau`** (server): puffs + smoke emitter (`rbxasset://textures/particles/smoke_main.dds`) + per-type effects; tags `LightningCloud`, `RainbowCloud`, `AuroraCloud` drive client `Effects.luau`.
+- **Zones**: spawn markers carry attribute `Zone` (1/2/3). Zone roll 70/25/5, then type by weight inside the zone. Spawn1 = tutorial Cumulus.
+- **Cloud Altars**: `Map/HuntZone/Altars/AltarN` markers; every 45 s; Mythic 0.01%.
+- **`BaseLockService.luau`**: `RooftopN/LockPad`; owner steps on it → 60 s ForceField ball (radius 16) that pushes rivals out; stealing + intruder alarms disabled; 90 s recharge; pad shows status billboard.
+- **Placeholder map rebuilt**: Plaza with 6 hex bases (x ±26, z 30/0/−30) → Path1 + BreezeField → Altar1 → Thunder Canyon (WaterGap lane, LiftPlatform lane, detour) → CanyonField → Path3 → CosmicField → Altar2 (z −472). Zone signs, neon edge lights, decorative islands.
+
+OBJECTS: `HuntZone/WeatherSpawns/SpawnN` (+Zone attr), `HuntZone/Altars/AltarN`, `RooftopN/LockPad`
+ANIMATIONS: still needed — Catch, CarryJar, Slip
+ERRORS: untested in Studio yet

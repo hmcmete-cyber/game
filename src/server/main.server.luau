@@ -10,6 +10,7 @@ local DataService = require(Services.DataService)
 local MapService = require(Services.MapService)
 local WeatherService = require(Services.WeatherService)
 local LightingService = require(Services.LightingService)
+local BaseLockService = require(Services.BaseLockService)
 
 -- Remotes (server -> client messages)
 local remotes = Instance.new("Folder")
@@ -31,7 +32,9 @@ remotes.Parent = ReplicatedStorage
 LightingService.Apply()
 DataService.Start()
 MapService.Start()
-WeatherService.Start(MapService, DataService, { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent })
+local remoteTable = { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent }
+WeatherService.Start(MapService, DataService, remoteTable)
+BaseLockService.Start(MapService, remoteTable)
 
 local function onPlayerAdded(player: Player)
 	DataService.Load(player)

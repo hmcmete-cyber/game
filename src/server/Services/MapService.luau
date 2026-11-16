@@ -8,7 +8,8 @@
 --   SpawnLocation
 --   Rooftops/RooftopN (Model) -> Nest (Part), Vaults/VaultN (Part, glass sphere) — see BaseBuilder.luau
 --     (if Vaults is missing, spheres are created above Display/SlotN or around the Nest)
---   HuntZone/WeatherSpawns/SpawnN (Part)   -- Spawn1 = tutorial spot, always a Rain Cloud
+--   HuntZone/WeatherSpawns/SpawnN (Part, attribute Zone = 1|2|3) -- Spawn1 = tutorial spot, always a Cumulus
+--   HuntZone/Altars/AltarN (Part)         -- Cloud Altars: rare clouds + 0.01% Mythic
 --   Route/LiftPlatforms/* (Part, placed in LOWERED position)
 --   Route/WaterGaps/* (Part, CanCollide off; Snow freezes them solid)
 --   CrateArena/CrateSpawns/CrateN (Part)
@@ -78,58 +79,94 @@ end
 
 local MARKER = { Transparency = 1, CanCollide = false, CanQuery = false, CanTouch = false }
 
+local function zoneSign(parent: Instance, name: string, pos: Vector3, text: string, color: Color3)
+	local anchor = newPart(parent, name, Vector3.one, CFrame.new(pos), color, MARKER)
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(420, 70)
+	gui.MaxDistance = 140
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.TextScaled = true
+	label.Font = Enum.Font.GothamBlack
+	label.Text = text
+	label.TextColor3 = color
+	label.TextStrokeTransparency = 0.2
+	label.Parent = gui
+	gui.Parent = anchor
+end
+
+-- Neon strips along both edges of a path segment
+local function edgeLights(parent: Instance, center: Vector3, width: number, length: number, color: Color3)
+	for _, side in { -1, 1 } do
+		newPart(parent, "Edge", Vector3.new(0.4, 0.4, length), CFrame.new(center + Vector3.new(side * width / 2, 1.1, 0)), color, {
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+			CanQuery = false,
+			CastShadow = false,
+		})
+	end
+end
+
+-- Altar: glowing disc + 4 neon pillars; the marker is where clouds rise
+local function altar(parent: Instance, markers: Instance, name: string, top: Vector3)
+	local deco = Instance.new("Model")
+	deco.Name = name .. "Decor"
+	newPart(deco, "Disc", Vector3.new(0.6, 12, 12), CFrame.new(top + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+		Color3.fromRGB(200, 150, 255), { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, Transparency = 0.2 })
+	for i = 1, 4 do
+		local a = (i / 4) * math.pi * 2 + math.pi / 4
+		newPart(deco, "Pillar" .. i, Vector3.new(1.2, 9, 1.2), CFrame.new(top + Vector3.new(math.cos(a) * 9, 4.5, math.sin(a) * 9)),
+			Color3.fromRGB(230, 200, 255), { Material = Enum.Material.Marble })
+		newPart(deco, "PillarTip" .. i, Vector3.one * 1.6, CFrame.new(top + Vector3.new(math.cos(a) * 9, 9.6, math.sin(a) * 9)),
+			Color3.fromRGB(190, 120, 255), { Shape = Enum.PartType.Ball, Material = Enum.Material.Neon, CanCollide = false })
+	end
+	deco.Parent = parent
+	local marker = newPart(markers, name, Vector3.new(2, 2, 2), CFrame.new(top + Vector3.new(0, 4, 0)), Color3.new(1, 1, 1), MARKER)
+	return marker
+end
+
 local function buildPlaceholder(): Instance
 	local m = Instance.new("Folder")
 	m.Name = "Map"
 
 	local Y = 40
-	local grass = Color3.fromRGB(120, 195, 125)
-	local stone = Color3.fromRGB(205, 195, 175)
+	local cloudWhite = Color3.fromRGB(240, 246, 255)
+	local plazaColor = Color3.fromRGB(215, 225, 240)
 
-	-- Start + hunt zone
-	newPart(m, "StartPad", Vector3.new(60, 2, 60), CFrame.new(0, Y, 0), grass)
+	local hunt = getFolder(m, "HuntZone")
+	local spawns = getFolder(hunt, "WeatherSpawns")
+	local altars = getFolder(hunt, "Altars")
+	local route = getFolder(m, "Route")
+	local lifts = getFolder(route, "LiftPlatforms")
+	local gaps = getFolder(route, "WaterGaps")
+	local decor = getFolder(m, "Decor")
+	local signs = getFolder(decor, "Signs")
+
+	local spawnCount = 0
+	local function spawnPoint(pos: Vector3, zone: number)
+		spawnCount += 1
+		local p = newPart(spawns, "Spawn" .. spawnCount, Vector3.new(2, 2, 2), CFrame.new(pos), Color3.new(1, 1, 1), MARKER)
+		p:SetAttribute("Zone", zone)
+	end
+
+	------------------------------------------------------------------
+	-- SPAWN AREA: plaza with the 6 bases lined up on both sides
+	------------------------------------------------------------------
+	newPart(route, "Plaza", Vector3.new(20, 2, 100), CFrame.new(0, Y, 0), plazaColor, { Material = Enum.Material.Marble })
+	edgeLights(decor, Vector3.new(0, Y, 0), 20, 100, Color3.fromRGB(150, 220, 255))
 	local spawnLoc = Instance.new("SpawnLocation")
 	spawnLoc.Name = "SpawnLocation"
 	spawnLoc.Size = Vector3.new(6, 1, 6)
-	spawnLoc.CFrame = CFrame.new(0, Y + 1.5, 22)
+	spawnLoc.CFrame = CFrame.new(0, Y + 1.5, 35)
 	spawnLoc.Anchored = true
 	spawnLoc.Neutral = true
 	spawnLoc.Duration = 0
 	spawnLoc.Parent = m
+	zoneSign(signs, "SpawnSign", Vector3.new(0, Y + 14, 45), "☁️ STEAL A CLOUD ☁️", Color3.fromRGB(255, 255, 255))
 
-	local hunt = getFolder(m, "HuntZone")
-	local spawns = getFolder(hunt, "WeatherSpawns")
-	local spots = {
-		Vector3.new(0, Y + 4, 10), -- Spawn1: tutorial, right in front of the spawn
-		Vector3.new(-20, Y + 4, -15),
-		Vector3.new(20, Y + 4, -15),
-		Vector3.new(-20, Y + 4, 10),
-		Vector3.new(20, Y + 4, 10),
-		Vector3.new(0, Y + 4, -20),
-	}
-	for i, pos in spots do
-		newPart(spawns, "Spawn" .. i, Vector3.new(2, 2, 2), CFrame.new(pos), Color3.new(1, 1, 1), MARKER)
-	end
+	spawnPoint(Vector3.new(0, Y + 4, 15), 1) -- Spawn1: tutorial Cumulus right in front of you
 
-	-- Shortcut route: needs Snow (water gap) and Tornado (lift platform)
-	local route = getFolder(m, "Route")
-	local lifts = getFolder(route, "LiftPlatforms")
-	local gaps = getFolder(route, "WaterGaps")
-	newPart(route, "Bridge1", Vector3.new(12, 2, 30), CFrame.new(0, Y, -45), stone)
-	newPart(gaps, "WaterGap1", Vector3.new(12, 1, 16), CFrame.new(0, Y, -68), Color3.fromRGB(60, 140, 230), {
-		CanCollide = false,
-		Transparency = 0.35,
-	})
-	newPart(route, "Bridge2", Vector3.new(12, 2, 24), CFrame.new(0, Y, -88), stone)
-	newPart(lifts, "LiftPlatform1", Vector3.new(12, 2, 16), CFrame.new(0, Y - 12, -108), Color3.fromRGB(240, 170, 80))
-
-	-- Long detour: always walkable
-	newPart(route, "DetourA", Vector3.new(50, 2, 12), CFrame.new(55, Y, 0), stone)
-	newPart(route, "DetourB", Vector3.new(12, 2, 212), CFrame.new(80, Y, -100), stone)
-	newPart(route, "DetourC", Vector3.new(80, 2, 12), CFrame.new(46, Y, -200), stone)
-
-	-- Bases: 6 hexagon islands on both sides of a central walkway
-	newPart(route, "Walkway", Vector3.new(12, 2, 90), CFrame.new(0, Y, -161), stone)
 	local roofs = getFolder(m, "Rooftops")
 	local accents = {
 		Color3.fromRGB(255, 120, 150),
@@ -139,23 +176,93 @@ local function buildPlaceholder(): Instance
 		Color3.fromRGB(110, 190, 255),
 		Color3.fromRGB(190, 140, 255),
 	}
-	local zs = { -132, -156, -180 }
+	local zs = { 30, 0, -30 }
 	for i = 1, 6 do
 		local side = i <= 3 and -1 or 1
 		local z = zs[(i - 1) % 3 + 1]
 		BaseBuilder.Build(roofs, "Rooftop" .. i, Vector3.new(side * 26, Y + 1, z), accents[i])
-		newPart(route, "BaseBridge" .. i, Vector3.new(12, 1, 6), CFrame.new(side * 11, Y + 0.5, z), stone)
+		newPart(route, "BaseBridge" .. i, Vector3.new(9, 1, 6), CFrame.new(side * 13, Y + 0.5, z), plazaColor, { Material = Enum.Material.Marble })
 	end
 
-	-- Decorative floating islands (client makes them drift; see FloatingIslands.luau)
-	local decor = getFolder(m, "Decor")
+	------------------------------------------------------------------
+	-- SKY PATH, Zone 1: Breeze Zone (z -50 … -180)
+	------------------------------------------------------------------
+	local breeze = Color3.fromRGB(190, 230, 255)
+	newPart(route, "Path1", Vector3.new(16, 2, 130), CFrame.new(0, Y, -115), cloudWhite)
+	newPart(route, "BreezeField", Vector3.new(60, 2, 80), CFrame.new(0, Y, -115), cloudWhite)
+	edgeLights(decor, Vector3.new(0, Y, -115), 60, 80, breeze)
+	zoneSign(signs, "Zone1Sign", Vector3.new(0, Y + 12, -60), "🌤️ BREEZE ZONE", breeze)
+	for _, pos in {
+		Vector3.new(-20, Y + 4, -90), Vector3.new(20, Y + 4, -95), Vector3.new(-15, Y + 4, -120),
+		Vector3.new(15, Y + 4, -125), Vector3.new(-22, Y + 4, -145), Vector3.new(22, Y + 4, -150),
+	} do
+		spawnPoint(pos, 1)
+	end
+
+	-- Mid-map Cloud Altar
+	newPart(route, "AltarPad1", Vector3.new(24, 2, 24), CFrame.new(0, Y, -192), Color3.fromRGB(70, 55, 110), { Material = Enum.Material.Marble })
+	altar(decor, altars, "Altar1", Vector3.new(0, Y + 1, -192))
+
+	------------------------------------------------------------------
+	-- Zone 2: Thunder Canyon (z -204 … -345)
+	-- The straight way splits into two shortcut lanes:
+	--   left  = WaterGap (Snow Cloud freezes it)
+	--   right = LiftPlatform (Pocket Tornado lifts it)
+	-- and a longer detour that always works.
+	------------------------------------------------------------------
+	local canyon = Color3.fromRGB(95, 90, 115)
+	local thunder = Color3.fromRGB(255, 230, 90)
+	newPart(route, "Path2A", Vector3.new(16, 2, 26), CFrame.new(0, Y, -217), canyon, { Material = Enum.Material.Slate })
+	newPart(gaps, "WaterGap1", Vector3.new(8, 1, 32), CFrame.new(-4, Y, -246), Color3.fromRGB(60, 140, 230), {
+		CanCollide = false,
+		Transparency = 0.35,
+	})
+	newPart(lifts, "LiftPlatform1", Vector3.new(8, 2, 32), CFrame.new(4, Y - 12, -246), Color3.fromRGB(240, 170, 80))
+	newPart(route, "DetourA", Vector3.new(30, 2, 10), CFrame.new(23, Y, -225), canyon, { Material = Enum.Material.Slate })
+	newPart(route, "DetourB", Vector3.new(10, 2, 52), CFrame.new(33, Y, -246), canyon, { Material = Enum.Material.Slate })
+	newPart(route, "DetourC", Vector3.new(30, 2, 10), CFrame.new(23, Y, -267), canyon, { Material = Enum.Material.Slate })
+	newPart(route, "Path2B", Vector3.new(16, 2, 38), CFrame.new(0, Y, -281), canyon, { Material = Enum.Material.Slate })
+	newPart(route, "CanyonField", Vector3.new(60, 2, 50), CFrame.new(0, Y, -320), canyon, { Material = Enum.Material.Slate })
+	edgeLights(decor, Vector3.new(0, Y, -320), 60, 50, thunder)
+	zoneSign(signs, "Zone2Sign", Vector3.new(0, Y + 12, -208), "⚡ THUNDER CANYON", thunder)
+	for _, pos in {
+		Vector3.new(-20, Y + 4, -305), Vector3.new(20, Y + 4, -310), Vector3.new(0, Y + 4, -325),
+		Vector3.new(-22, Y + 4, -335), Vector3.new(22, Y + 4, -338),
+	} do
+		spawnPoint(pos, 2)
+	end
+
+	------------------------------------------------------------------
+	-- Zone 3: Cosmic Stratosphere (z -345 … -484) + end Altar
+	------------------------------------------------------------------
+	local cosmic = Color3.fromRGB(35, 28, 70)
+	local neon = Color3.fromRGB(255, 90, 230)
+	newPart(route, "Path3", Vector3.new(16, 2, 60), CFrame.new(0, Y, -375), cosmic, { Material = Enum.Material.Glass, Reflectance = 0.2 })
+	edgeLights(decor, Vector3.new(0, Y, -375), 16, 60, neon)
+	newPart(route, "CosmicField", Vector3.new(60, 2, 60), CFrame.new(0, Y, -430), cosmic, { Material = Enum.Material.Glass, Reflectance = 0.2 })
+	edgeLights(decor, Vector3.new(0, Y, -430), 60, 60, neon)
+	zoneSign(signs, "Zone3Sign", Vector3.new(0, Y + 12, -350), "🌌 COSMIC STRATOSPHERE", neon)
+	for _, pos in {
+		Vector3.new(-20, Y + 4, -415), Vector3.new(20, Y + 4, -420),
+		Vector3.new(-18, Y + 4, -445), Vector3.new(18, Y + 4, -448),
+	} do
+		spawnPoint(pos, 3)
+	end
+	newPart(route, "AltarPad2", Vector3.new(24, 2, 24), CFrame.new(0, Y, -472), Color3.fromRGB(70, 55, 110), { Material = Enum.Material.Marble })
+	altar(decor, altars, "Altar2", Vector3.new(0, Y + 1, -472))
+
+	------------------------------------------------------------------
+	-- Decorative floating islands along the path
+	------------------------------------------------------------------
+	local grass = Color3.fromRGB(120, 195, 125)
 	local islandSpots = {
-		{ Vector3.new(-95, Y + 10, -40), 22 },
-		{ Vector3.new(120, Y + 22, -60), 28 },
-		{ Vector3.new(-75, Y - 6, -190), 20 },
-		{ Vector3.new(60, Y + 26, 55), 18 },
-		{ Vector3.new(-60, Y + 18, 70), 24 },
-		{ Vector3.new(135, Y - 10, -175), 26 },
+		{ Vector3.new(-80, Y + 10, 20), 22 },
+		{ Vector3.new(85, Y + 20, -40), 26 },
+		{ Vector3.new(-75, Y - 6, -140), 20 },
+		{ Vector3.new(90, Y + 18, -200), 24 },
+		{ Vector3.new(-85, Y + 24, -300), 28 },
+		{ Vector3.new(80, Y - 8, -400), 22 },
+		{ Vector3.new(-70, Y + 15, -470), 18 },
 	}
 	for i, spot in islandSpots do
 		local pos, size = spot[1], spot[2]
@@ -165,16 +272,15 @@ local function buildPlaceholder(): Instance
 			Shape = Enum.PartType.Cylinder,
 			Material = Enum.Material.Grass,
 		})
-		newPart(island, "Rock", Vector3.new(size * 0.85, size * 0.6, size * 0.85), CFrame.new(pos - Vector3.new(0, size * 0.3, 0)), Color3.fromRGB(150, 120, 95), {
+		newPart(island, "Rock", Vector3.one * size * 0.7, CFrame.new(pos - Vector3.new(0, size * 0.3, 0)), Color3.fromRGB(150, 120, 95), {
 			Shape = Enum.PartType.Ball,
 			Material = Enum.Material.Slate,
 		})
 		for j = 1, 3 do
 			local a = j * 2.1
-			newPart(island, "Cloud" .. j, Vector3.one * (size * 0.35), CFrame.new(pos + Vector3.new(math.cos(a) * size * 0.45, -size * 0.35, math.sin(a) * size * 0.45)), Color3.fromRGB(245, 248, 255), {
-				Shape = Enum.PartType.Ball,
-				CanCollide = false,
-			})
+			newPart(island, "Cloud" .. j, Vector3.one * (size * 0.35),
+				CFrame.new(pos + Vector3.new(math.cos(a) * size * 0.45, -size * 0.35, math.sin(a) * size * 0.45)),
+				Color3.fromRGB(245, 248, 255), { Shape = Enum.PartType.Ball, CanCollide = false })
 		end
 		island.PrimaryPart = top
 		island:SetAttribute("FloatAmplitude", 1 + (i % 3) * 0.5)
@@ -187,7 +293,7 @@ local function buildPlaceholder(): Instance
 
 	-- Falling off = respawn
 	local abyss = getFolder(m, "Abyss")
-	newPart(abyss, "AbyssFloor", Vector3.new(800, 10, 800), CFrame.new(0, Y - 25, 0), Color3.new(0, 0, 0), {
+	newPart(abyss, "AbyssFloor", Vector3.new(800, 10, 1200), CFrame.new(0, Y - 25, -220), Color3.new(0, 0, 0), {
 		Transparency = 1,
 		CanCollide = false,
 		CanQuery = false,
@@ -224,6 +330,7 @@ function MapService.Start()
 	-- Make sure all expected folders exist so other code never errors
 	getFolder(map, "Rooftops")
 	getFolder(getFolder(map, "HuntZone"), "WeatherSpawns")
+	getFolder(map.HuntZone, "Altars")
 	local route = getFolder(map, "Route")
 	getFolder(route, "LiftPlatforms")
 	getFolder(route, "WaterGaps")
@@ -247,6 +354,10 @@ end
 
 function MapService.GetSpawns(): { BasePart }
 	return sortedParts(map.HuntZone.WeatherSpawns)
+end
+
+function MapService.GetAltars(): { BasePart }
+	return sortedParts(map.HuntZone.Altars)
 end
 
 function MapService.GetLiftPlatforms(): { BasePart }

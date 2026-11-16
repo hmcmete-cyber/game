@@ -2,7 +2,7 @@
 -- Dengeyi değiştirmek için çoğu zaman sadece bu dosyayı düzenlemek yeterli.
 
 local Config = {
-	GameName = "Pocket Storm",
+	GameName = "Steal a Cloud",
 	StartingCoins = 0,
 
 	-- Movement
@@ -10,9 +10,18 @@ local Config = {
 	CarrySpeed = 14, -- walking speed while carrying weather
 
 	-- Wild weather spawning
-	SpawnInterval = 4, -- seconds between spawn checks
-	MaxWild = 10, -- max wild weather creatures in the world
-	SpawnChance = 0.5, -- chance an empty spawn point gets a creature each check
+	SpawnInterval = 2, -- seconds between spawns
+	MaxWild = 14, -- max wild clouds in the world
+
+	-- Cloud Altars (rare spawner)
+	AltarInterval = 45, -- seconds between altar spawns
+	MythicChance = 0.0001, -- 0.01% per altar spawn
+
+	-- Base Lock (shield)
+	LockDuration = 60,
+	LockCooldown = 90, -- recharge after the shield drops
+	ShieldRadius = 16, -- rivals are pushed out of this radius around the Nest
+	LockPadRadius = 3.5, -- how close the owner must be to press the pad
 
 	-- Delivery
 	DeliverRadius = 7, -- how close to your Nest you must be

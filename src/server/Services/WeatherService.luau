@@ -13,7 +13,7 @@
 --   Rain cloud      -> slippery puddles behind you
 --   Pocket tornado  -> lifts nearby LiftPlatforms (shortcut)
 --   Snow cloud      -> freezes nearby WaterGaps into bridges
---   Thunder cloud   -> rarest; faster but glows for everyone
+--   Cumulonimbus    -> (key "Thunder") faster but glows for everyone
 --   Combos: Snow near puddles = ice road, Tornado near puddles = launch pad
 --
 -- "Touch" is checked by distance every 0.1 s on the server. That's more
@@ -26,6 +26,8 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Weather = require(ReplicatedStorage.Shared.WeatherTypes)
+local CloudVisuals = require(script.Parent:WaitForChild("CloudVisuals"))
+local BaseLock = require(script.Parent:WaitForChild("BaseLockService"))
 
 local WeatherService = {}
 
@@ -145,117 +147,52 @@ local function burstAt(position: Vector3, color: Color3, count: number)
 	Debris:AddItem(anchor, 2)
 end
 
-local function rollType(): string
+-- Pick a cloud type that lives in the given zone
+local function rollType(zone: number): string
 	local total = 0
 	for _, name in Weather.Order do
-		total += Weather.Types[name].Weight
+		local def = Weather.Types[name]
+		if def.Zone == zone then
+			total += def.Weight
+		end
 	end
 	local roll = math.random() * total
 	for _, name in Weather.Order do
-		roll -= Weather.Types[name].Weight
-		if roll <= 0 then
-			return name
+		local def = Weather.Types[name]
+		if def.Zone == zone then
+			roll -= def.Weight
+			if roll <= 0 then
+				return name
+			end
 		end
 	end
-	return Weather.Order[1]
+	return "Cumulus"
+end
+
+-- Pick a zone using the overall split (70 / 25 / 5)
+local function rollZone(): number
+	local total = 0
+	for _, z in Weather.Zones do
+		total += z.Chance
+	end
+	local roll = math.random() * total
+	for i = 1, 3 do
+		roll -= Weather.Zones[i].Chance
+		if roll <= 0 then
+			return i
+		end
+	end
+	return 1
 end
 
 local function rewardOf(typeName: string, shiny: boolean): number
 	return Weather.Types[typeName].Reward * (shiny and Weather.ShinyMultiplier or 1)
 end
 
--- Puffy cloud: several soft spheres welded together around a center puff.
--- Thunder clouds are dark and tagged "LightningCloud" so clients add electric
--- arcs (see client Effects.luau).
-local PUFFS = {
-	-- offset (in cloud diameters), size (in cloud diameters), colour shade
-	{ Vector3.new(0, 0, 0), 0.55, 1 },
-	{ Vector3.new(0.3, -0.06, 0.02), 0.42, 0.94 },
-	{ Vector3.new(-0.3, -0.05, -0.03), 0.42, 0.96 },
-	{ Vector3.new(0.02, 0.14, 0.22), 0.4, 1.04 },
-	{ Vector3.new(-0.05, 0.12, -0.22), 0.38, 1.02 },
-	{ Vector3.new(0.16, 0.22, -0.08), 0.32, 1.06 },
-	{ Vector3.new(-0.18, -0.12, 0.2), 0.32, 0.92 },
-}
-
-local CLOUD_TINT = {
-	Rain = Color3.fromRGB(190, 205, 225),
-	Tornado = Color3.fromRGB(200, 195, 180),
-	Snow = Color3.fromRGB(250, 252, 255),
-	Thunder = Color3.fromRGB(70, 72, 90),
-}
-
-local function shade(c: Color3, k: number): Color3
-	return Color3.new(math.clamp(c.R * k, 0, 1), math.clamp(c.G * k, 0, 1), math.clamp(c.B * k, 0, 1))
-end
-
--- Move a part and every BasePart under it, keeping their relative offsets.
--- (Welds only act once parts are in workspace, so new models must be moved this way.)
-local function moveAssembly(root: BasePart, cf: CFrame)
-	local old = root.CFrame
-	for _, d in root:GetDescendants() do
-		if d:IsA("BasePart") then
-			d.CFrame = cf * old:ToObjectSpace(d.CFrame)
-		end
-	end
-	root.CFrame = cf
-end
-
+-- Cloud look lives in CloudVisuals.luau
+local moveAssembly = CloudVisuals.Move
 local function makeCore(typeName: string, shiny: boolean, scale: number): BasePart
-	local def = Weather.Types[typeName]
-	local diameter = def.Size * 0.7 * scale
-	local tint = shiny and Weather.ShinyColor or (CLOUD_TINT[typeName] or def.Color)
-	local thunder = typeName == "Thunder"
-
-	local center
-	for i, puff in PUFFS do
-		local p = Instance.new("Part")
-		p.Name = i == 1 and "Core" or ("Puff" .. i)
-		p.Shape = Enum.PartType.Ball
-		p.Size = Vector3.one * diameter * puff[2]
-		p.Color = shade(tint, puff[3])
-		p.Material = shiny and Enum.Material.Neon or (thunder and Enum.Material.Slate or Enum.Material.SmoothPlastic)
-		p.Transparency = thunder and 0.05 or 0.12
-		p.Anchored = i == 1
-		p.CanCollide = false
-		p.CanQuery = false
-		p.CanTouch = false
-		p.CastShadow = false
-		p.Massless = true
-		if center then
-			p.CFrame = center.CFrame * CFrame.new(puff[1] * diameter)
-			local weld = Instance.new("WeldConstraint")
-			weld.Part0 = center
-			weld.Part1 = p
-			weld.Parent = p
-			p.Parent = center
-		else
-			center = p
-		end
-	end
-
-	local particles = Instance.new("ParticleEmitter")
-	particles.Color = ColorSequence.new(shiny and Weather.ShinyColor or def.ParticleColor)
-	particles.Acceleration = def.ParticleAcceleration
-	particles.Rate = shiny and 30 or (thunder and 25 or 12)
-	particles.Lifetime = thunder and NumberRange.new(0.1, 0.25) or NumberRange.new(0.5, 1)
-	particles.Speed = thunder and NumberRange.new(4, 9) or NumberRange.new(0.5, 2)
-	particles.SpreadAngle = Vector2.new(180, 180)
-	particles.Size = NumberSequence.new((thunder and 0.18 or 0.3) * scale)
-	particles.LightEmission = (shiny or thunder) and 1 or 0.3
-	particles.Parent = center
-
-	local light = Instance.new("PointLight")
-	light.Name = "CloudLight"
-	light.Color = shiny and Weather.ShinyColor or def.ParticleColor
-	light.Brightness = (thunder or shiny) and 2.5 or 0.8
-	light.Range = 8 * scale
-	light.Parent = center
-
-	if thunder then
-		CollectionService:AddTag(center, "LightningCloud")
-	end
-	return center
+	return CloudVisuals.Make(typeName, shiny, scale)
 end
 
 -- A weather sphere: glass shell + storm core inside (one assembly)
@@ -577,8 +514,10 @@ local function catch(player: Player, sphere: BasePart, root: BasePart)
 	startCarry(player, root, sphere, info.Type, info.Shiny, nil)
 
 	hint(player, `You caught a {def.DisplayName}! Bring it to your base — follow the beam`, 5)
-	if info.Type == "Thunder" then
-		hintAll(`⚡ {player.DisplayName} has a THUNDER CLOUD! ⚡`, 4)
+	if info.Type == "Mythic" then
+		hintAll(`🌌 {player.DisplayName} CAUGHT THE MYTHIC STORM CLOUD! 🌌`, 8)
+	elseif def.Zone >= 2 then
+		hintAll(`⚡ {player.DisplayName} has a {string.upper(def.DisplayName)}! ⚡`, 4)
 	end
 	if info.Shiny then
 		hintAll(`✨ {player.DisplayName} caught a SHINY {def.DisplayName}! ✨`, 6)
@@ -619,7 +558,16 @@ local function setupStorm()
 	end
 
 	-- No storm in the map: place a visual one above the spawn points
-	local spawns = MapService.GetSpawns()
+	-- Hover over Thunder Canyon (zone 2) if the map has zones
+	local spawns = {}
+	for _, sp in MapService.GetSpawns() do
+		if sp:GetAttribute("Zone") == 2 then
+			table.insert(spawns, sp)
+		end
+	end
+	if #spawns == 0 then
+		spawns = MapService.GetSpawns()
+	end
 	local sum = Vector3.zero
 	for _, s in spawns do
 		sum += s.Position
@@ -718,24 +666,62 @@ local function countWild()
 	return n
 end
 
+local function freeSpawns(zone: number)
+	local list = {}
+	for _, spawnPart in MapService.GetSpawns() do
+		local current = occupied[spawnPart]
+		if current and not current.Parent then
+			occupied[spawnPart] = nil
+			current = nil
+		end
+		if not current and (spawnPart:GetAttribute("Zone") or 1) == zone then
+			table.insert(list, spawnPart)
+		end
+	end
+	return list
+end
+
 local function spawnLoop()
 	while true do
-		for i, spawnPart in MapService.GetSpawns() do
-			local current = occupied[spawnPart]
-			if current and not current.Parent then
-				occupied[spawnPart] = nil
-				current = nil
-			end
-			if not current and countWild() < Config.MaxWild then
-				if i == 1 then
-					-- Tutorial spot: always a normal Rain Cloud, always refilled
-					spawnWild(spawnPart, "Rain", false)
-				elseif math.random() < Config.SpawnChance then
-					spawnWild(spawnPart, rollType(), math.random() < Weather.ShinyChance)
+		-- Tutorial spot (Spawn1): always a plain Cumulus, always refilled
+		local first = MapService.GetSpawns()[1]
+		if first and not (occupied[first] and occupied[first].Parent) then
+			spawnWild(first, "Cumulus", false)
+		end
+
+		if countWild() < Config.MaxWild then
+			local zone = rollZone()
+			local spots = freeSpawns(zone)
+			if #spots > 0 then
+				local spot = spots[math.random(1, #spots)]
+				if spot ~= first then
+					spawnWild(spot, rollType(zone), math.random() < Weather.ShinyChance)
 				end
 			end
 		end
 		task.wait(Config.SpawnInterval)
+	end
+end
+
+-- Cloud Altars: every AltarInterval, an empty altar raises a rare cloud.
+-- 0.01% of the time it's the Mythic Storm Cloud.
+local function altarLoop()
+	while true do
+		task.wait(Config.AltarInterval)
+		for _, altar in MapService.GetAltars() do
+			if occupied[altar] and occupied[altar].Parent then
+				continue
+			end
+			local mythic = math.random() < Config.MythicChance
+			local typeName = mythic and "Mythic" or rollType(3)
+			spawnWild(altar, typeName, not mythic and math.random() < Weather.ShinyChance * 5)
+			burstAt(altar.Position, Weather.Types[typeName].ParticleColor, 60)
+			if mythic then
+				hintAll("🌌 A MYTHIC STORM CLOUD has appeared at a Cloud Altar! 🌌", 10)
+			else
+				hintAll(`✨ A {Weather.Types[typeName].DisplayName} rose from a Cloud Altar!`, 5)
+			end
+		end
 	end
 end
 
@@ -1002,7 +988,7 @@ local function mainLoop()
 					continue
 				end
 				local roof = MapService.GetRooftop(owner)
-				local slots = roof and getVaultData(owner)
+				local slots = roof and not BaseLock.IsLocked(roof) and getVaultData(owner)
 				if not slots then
 					continue
 				end
@@ -1021,7 +1007,8 @@ local function mainLoop()
 
 		-- Alarm when a rival walks onto a base with a full vault
 		for _, owner in Players:GetPlayers() do
-			local nest = getNest(owner)
+			local roof = MapService.GetRooftop(owner)
+			local nest = roof and not BaseLock.IsLocked(roof) and getNest(owner)
 			local slots = nest and getVaultData(owner)
 			local hasLoot = false
 			for i = 1, Config.VaultCount do
@@ -1113,6 +1100,7 @@ function WeatherService.Start(mapService, dataService, remotes)
 	task.spawn(spawnLoop)
 	task.spawn(mainLoop)
 	task.spawn(incomeLoop)
+	task.spawn(altarLoop)
 end
 
 return WeatherService

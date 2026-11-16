@@ -6,6 +6,7 @@
 -- RooftopN (Model, PrimaryPart = Top1)
 -- ├── Top1..3, Glass1..3, Rim1..6, Rock*, Core   (the island)
 -- ├── Nest (Part)                                 deposit pad in the middle
+-- ├── LockPad (Part)                              owner steps on it → shield
 -- ├── Vaults/Vault1..N (Part, Ball, glass)        tagged VaultSphere + FloatingIsland
 -- ├── Pedestals/*                                 under each sphere
 -- └── Rings/RingA, RingB (Model)                  tagged SpinRing (client spins them)
@@ -179,6 +180,13 @@ function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent:
 	-- Central deposit pad
 	part(base, "Nest", Vector3.new(0.4, 7, 7), topCF * CFrame.new(0, 0.2, 0) * CFrame.Angles(0, 0, math.pi / 2),
 		Color3.fromRGB(255, 225, 90), {
+			Shape = Enum.PartType.Cylinder,
+			Material = Enum.Material.Neon,
+		})
+
+	-- Lock pad (see BaseLockService.luau)
+	part(base, "LockPad", Vector3.new(0.5, 3.5, 3.5), topCF * CFrame.new(0, 0.25, -8.5) * CFrame.Angles(0, 0, math.pi / 2),
+		Color3.fromRGB(90, 255, 140), {
 			Shape = Enum.PartType.Cylinder,
 			Material = Enum.Material.Neon,
 		})

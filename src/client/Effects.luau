@@ -2,6 +2,8 @@
 --   SpinRing       models rotate around their own axis (attribute SpinSpeed, rad/s)
 --   VaultSphere    flashes when a storm is deposited (server sets Pulse/PulseFrom/PulseColor)
 --   LightningCloud dark storm clouds crackle with small electric arcs
+--   RainbowCloud   cosmic clouds slowly cycle through rainbow colours
+--   AuroraCloud    aurora light ribbons under the cloud wave like northern lights
 
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
@@ -145,6 +147,39 @@ local function arc(core: BasePart)
 end
 
 ------------------------------------------------------------------------
+-- Rainbow + aurora clouds
+------------------------------------------------------------------------
+
+local rainbows = {} -- [core] = { Parts = {BasePart}, Light = PointLight?, Phase }
+local auroras = {} -- [core] = { Beams = {Beam}, Phase }
+
+local function addRainbow(core: Instance)
+	if not core:IsA("BasePart") then
+		return
+	end
+	local parts = { core }
+	for _, d in core:GetChildren() do
+		if d:IsA("BasePart") then
+			table.insert(parts, d)
+		end
+	end
+	rainbows[core] = { Parts = parts, Light = core:FindFirstChild("CloudLight"), Phase = math.random() }
+end
+
+local function addAurora(core: Instance)
+	if not core:IsA("BasePart") then
+		return
+	end
+	local beams = {}
+	for _, d in core:GetChildren() do
+		if d:IsA("Beam") then
+			table.insert(beams, d)
+		end
+	end
+	auroras[core] = { Beams = beams, Phase = math.random() * 10 }
+end
+
+------------------------------------------------------------------------
 
 local function watch(tag: string, add: (Instance) -> (), remove: ((Instance) -> ())?)
 	for _, inst in CollectionService:GetTagged(tag) do
@@ -164,6 +199,12 @@ function Effects.Start()
 	watch("LightningCloud", addCloud, function(inst)
 		clouds[inst] = nil
 	end)
+	watch("RainbowCloud", addRainbow, function(inst)
+		rainbows[inst] = nil
+	end)
+	watch("AuroraCloud", addAurora, function(inst)
+		auroras[inst] = nil
+	end)
 
 	RunService.RenderStepped:Connect(function()
 		local t = os.clock()
@@ -177,6 +218,37 @@ function Effects.Start()
 		end
 
 		local camPos = camera.CFrame.Position
+
+		for core, r in rainbows do
+			if not core.Parent then
+				rainbows[core] = nil
+				continue
+			end
+			if (core.Position - camPos).Magnitude < 200 then
+				for i, p in r.Parts do
+					local hue = (t * 0.12 + r.Phase + i * 0.04) % 1
+					p.Color = Color3.fromHSV(hue, 0.6, 0.85)
+				end
+				if r.Light then
+					r.Light.Color = Color3.fromHSV((t * 0.12 + r.Phase) % 1, 0.8, 1)
+				end
+			end
+		end
+
+		for core, a in auroras do
+			if not core.Parent then
+				auroras[core] = nil
+				continue
+			end
+			if (core.Position - camPos).Magnitude < 200 then
+				for i, beam in a.Beams do
+					local w = t * 1.3 + a.Phase + i * 1.7
+					beam.CurveSize0 = math.sin(w) * 2.5
+					beam.CurveSize1 = math.cos(w * 0.8) * 2.5
+				end
+			end
+		end
+
 		for core, c in clouds do
 			if not core.Parent then
 				clouds[core] = nil

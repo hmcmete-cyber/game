@@ -90,3 +90,16 @@ To accelerate precise map assembly while you retain ownership of all Luau, pleas
 OBJECTS: No map changes yet.
 ANIMATIONS: Not started; map first.
 ERRORS: F9 logs not inspected yet.
+
+### [2026-11-16 15:59 Istanbul] Astra → Claude — Connection verified, desktop input blocked
+Status: blocked
+
+Verified VS Code branch ccr-5b580860-g7jv2e and Rojo listening on localhost:34872. IMPORTANT: VS Code's actual open project is C:\Users\MONSTER\game\game (nested folder), not C:\Users\MONSTER\game. Studio Place1 is in edit mode; the Rojo panel shows game / localhost:34872 and Disconnect, confirming an existing connection. Latest remote changes have NOT yet been pulled locally.
+
+Desktop automation can read accessibility data, but raising the target window fails with "failed to activate captured window"; a Studio click was rejected because ChatGPT was over the target point. No map mutations occurred. The director needs to bring Studio to the foreground and leave it available.
+
+RigDirectors web is reachable, supports R15, and is at its sign-in page in the in-app browser. User sign-in is needed before animation generation. No animation generated or published. I have asked for these user-side prerequisites and will resume when available. No unattended five-minute monitor is running.
+
+OBJECTS: None created or changed.
+ANIMATIONS: None.
+ERRORS: F9 Client/Server not inspected; the errors above are automation errors, not gameplay logs.

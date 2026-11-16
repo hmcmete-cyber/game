@@ -44,6 +44,14 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - **Base Lock**: owner steps on the LockPad → 60 s ForceField shield; rivals are pushed out and can't steal; then 90 s recharge.
 - **Cloud looks**: soft puffs + smoke breathing from the center; Cumulonimbus lightning arcs, Cosmic rainbow stars + hue cycle, Auroral waving light ribbons, Chrono time sparks, Mythic = all.
 
+## Update 4 — Carry & inventory rules (final, director request)
+
+- **E-key only**: every cloud has a ProximityPrompt (Catch 0.3 s hold, Mythic 1.5 s, Steal 1.2 s). Nothing is picked up by touch.
+- **Carried clouds** (wild or stolen) are never in the inventory: welded over your head, slower walk, lower jump, worse grip on ice.
+- **Inventory** (3 slots, saved) holds only **charms** made at your own vault (hold F): Snow → **Ice Charm** (Q: 8 s Frost Skates, 20 s cooldown), Cumulonimbus → **Storm Charm** (passive: immune to Electric Swamps).
+- **Death** wipes the inventory and destroys the carried cloud (a stolen cloud does NOT go back).
+- **Hazards** (`Map/Hazards`, attribute `HazardType`): narrow **Ice Path** bridge between Breeze Zone and Altar 1 (low grip, random slips while carrying, fall = death); **Electric Swamp** across Thunder Canyon (slow + 8 dmg / 0.5 s, 14 while carrying).
+
 ## Core loop
 
 1. **Hunt** weather creatures in the shared zone.

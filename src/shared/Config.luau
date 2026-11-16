@@ -17,6 +17,27 @@ local Config = {
 	AltarInterval = 45, -- seconds between altar spawns
 	MythicChance = 0.0001, -- 0.01% per altar spawn
 
+	-- E-key prompts (hold times in seconds)
+	CatchHold = 0.3,
+	MythicCatchHold = 1.5,
+	StealHold = 1.2, -- stealing takes nerve
+	CharmHold = 0.5,
+
+	-- Inventory (charms only; wiped on death)
+	InventorySize = 3,
+	SkatesDuration = 8, -- Ice Charm (Q)
+	SkatesCooldown = 20,
+	SkatesBoost = 10,
+
+	-- Hazards
+	IceTraction = 1.6, -- how fast you can change direction on ice (per second)
+	IceTractionCarrying = 0.6, -- much worse with a cloud on your head
+	IceSlipChance = 0.35, -- per second, only while carrying on ice
+	ElectricInterval = 0.5,
+	ElectricDamage = 8,
+	ElectricDamageCarrying = 14,
+	ElectricSlow = 0.55, -- speed multiplier inside an Electric Swamp
+
 	-- Base Lock (shield)
 	LockDuration = 60,
 	LockCooldown = 90, -- recharge after the shield drops

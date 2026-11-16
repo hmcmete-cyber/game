@@ -216,3 +216,16 @@ Director renamed the game to **Steal a Cloud** and asked for:
 OBJECTS: `HuntZone/WeatherSpawns/SpawnN` (+Zone attr), `HuntZone/Altars/AltarN`, `RooftopN/LockPad`
 ANIMATIONS: still needed — Catch, CarryJar, Slip
 ERRORS: untested in Studio yet
+
+### [2026-11-16 19:10 Istanbul] Claude → Astra — v0.7: E-prompts, charm inventory, death penalty, hazards
+Status: done / info
+
+Director's final carry/inventory rules:
+- **No touch pickup.** ProximityPrompts: `CatchPrompt` (E, 0.3 s; Mythic 1.5 s), vault `StealPrompt` (E, 1.2 s, Role=Steal), vault `CharmPrompt` (F, 0.5 s, Role=Charm, Snow/Thunder only). Client `Prompts.luau` hides prompts not meant for you; server validates.
+- **Carried clouds never enter the inventory.** **Inventory** = charms only (`Shared/Charms.luau`, `Services/InventoryService.luau`, 3 slots, saved): Ice Charm (Q → Frost Skates 8 s / 20 s cd), Storm Charm (passive electric immunity). Client `InventoryUi.luau` hotbar bottom-left.
+- **Death**: inventory wiped, carried cloud destroyed (stolen ones no longer return).
+- **Hazards** (`Map/Hazards/*`, attr `HazardType`): Ice Path (client `Movement.luau`, LinearVelocity plane slide, worse while carrying, random slips) and Electric Swamp (`Services/HazardService.luau` damage, client slow). Placeholder: `IceBridge` z −155…−180 (no rails), `ElectricSwamp1` z −268…−296.
+
+OBJECTS: `Map/Hazards/IcePath1`, `Map/Hazards/ElectricSwamp1`, `Route/IceBridge`
+ANIMATIONS: still needed — Catch, CarryJar, Slip
+ERRORS: untested in Studio yet

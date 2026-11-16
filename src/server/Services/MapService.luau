@@ -10,6 +10,7 @@
 --     (if Vaults is missing, spheres are created above Display/SlotN or around the Nest)
 --   HuntZone/WeatherSpawns/SpawnN (Part, attribute Zone = 1|2|3) -- Spawn1 = tutorial spot, always a Cumulus
 --   HuntZone/Altars/AltarN (Part)         -- Cloud Altars: rare clouds + 0.01% Mythic
+--   Hazards/* (Part, attribute HazardType = "Ice" | "Electric", CanCollide off, CanQuery on)
 --   Route/LiftPlatforms/* (Part, placed in LOWERED position)
 --   Route/WaterGaps/* (Part, CanCollide off; Snow freezes them solid)
 --   CrateArena/CrateSpawns/CrateN (Part)
@@ -188,7 +189,7 @@ local function buildPlaceholder(): Instance
 	-- SKY PATH, Zone 1: Breeze Zone (z -50 … -180)
 	------------------------------------------------------------------
 	local breeze = Color3.fromRGB(190, 230, 255)
-	newPart(route, "Path1", Vector3.new(16, 2, 130), CFrame.new(0, Y, -115), cloudWhite)
+	newPart(route, "Path1", Vector3.new(16, 2, 26), CFrame.new(0, Y, -62), cloudWhite)
 	newPart(route, "BreezeField", Vector3.new(60, 2, 80), CFrame.new(0, Y, -115), cloudWhite)
 	edgeLights(decor, Vector3.new(0, Y, -115), 60, 80, breeze)
 	zoneSign(signs, "Zone1Sign", Vector3.new(0, Y + 12, -60), "🌤️ BREEZE ZONE", breeze)
@@ -198,6 +199,23 @@ local function buildPlaceholder(): Instance
 	} do
 		spawnPoint(pos, 1)
 	end
+
+	-- HAZARD: narrow Ice Path bridge, no rails (z -155 … -180).
+	-- Ice Charm (Q) = Frost Skates. With a cloud on your head it's very risky.
+	local hazards = getFolder(m, "Hazards")
+	newPart(route, "IceBridge", Vector3.new(10, 2, 25), CFrame.new(0, Y, -167.5), Color3.fromRGB(190, 225, 255), {
+		Material = Enum.Material.Ice,
+	})
+	local ice = newPart(hazards, "IcePath1", Vector3.new(10, 0.2, 25), CFrame.new(0, Y + 1.1, -167.5), Color3.fromRGB(215, 240, 255), {
+		Material = Enum.Material.Glacier,
+		Transparency = 0.2,
+		CanCollide = false,
+		CanQuery = true, -- clients detect it with an overlap query
+		CanTouch = false,
+		CastShadow = false,
+	})
+	ice:SetAttribute("HazardType", "Ice")
+	zoneSign(signs, "IceSign", Vector3.new(0, Y + 9, -157), "❄️ ICE PATH — slippery!", Color3.fromRGB(200, 235, 255))
 
 	-- Mid-map Cloud Altar
 	newPart(route, "AltarPad1", Vector3.new(24, 2, 24), CFrame.new(0, Y, -192), Color3.fromRGB(70, 55, 110), { Material = Enum.Material.Marble })
@@ -223,6 +241,34 @@ local function buildPlaceholder(): Instance
 	newPart(route, "DetourC", Vector3.new(30, 2, 10), CFrame.new(23, Y, -267), canyon, { Material = Enum.Material.Slate })
 	newPart(route, "Path2B", Vector3.new(16, 2, 38), CFrame.new(0, Y, -281), canyon, { Material = Enum.Material.Slate })
 	newPart(route, "CanyonField", Vector3.new(60, 2, 50), CFrame.new(0, Y, -320), canyon, { Material = Enum.Material.Slate })
+
+	-- HAZARD: Electric Swamp across the whole path (z -268 … -296). Slows and burns;
+	-- Storm Charm = immune.
+	local swamp = newPart(hazards, "ElectricSwamp1", Vector3.new(16, 0.3, 28), CFrame.new(0, Y + 1.15, -282), Color3.fromRGB(70, 95, 55), {
+		Material = Enum.Material.Mud,
+		Transparency = 0.1,
+		CanCollide = false,
+		CanQuery = true,
+		CanTouch = false,
+		CastShadow = false,
+	})
+	swamp:SetAttribute("HazardType", "Electric")
+	local zap = Instance.new("ParticleEmitter")
+	zap.Color = ColorSequence.new(Color3.fromRGB(170, 120, 255), Color3.fromRGB(120, 230, 255))
+	zap.LightEmission = 1
+	zap.Lifetime = NumberRange.new(0.1, 0.25)
+	zap.Rate = 40
+	zap.Speed = NumberRange.new(4, 8)
+	zap.SpreadAngle = Vector2.new(30, 30)
+	zap.EmissionDirection = Enum.NormalId.Top
+	zap.Size = NumberSequence.new(0.3, 0)
+	zap.Parent = swamp
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(160, 120, 255)
+	glow.Brightness = 2
+	glow.Range = 18
+	glow.Parent = swamp
+	zoneSign(signs, "SwampSign", Vector3.new(0, Y + 9, -266), "⚡ ELECTRIC SWAMP — it burns!", Color3.fromRGB(190, 150, 255))
 	edgeLights(decor, Vector3.new(0, Y, -320), 60, 50, thunder)
 	zoneSign(signs, "Zone2Sign", Vector3.new(0, Y + 12, -208), "⚡ THUNDER CANYON", thunder)
 	for _, pos in {
@@ -331,6 +377,7 @@ function MapService.Start()
 	getFolder(map, "Rooftops")
 	getFolder(getFolder(map, "HuntZone"), "WeatherSpawns")
 	getFolder(map.HuntZone, "Altars")
+	getFolder(map, "Hazards")
 	local route = getFolder(map, "Route")
 	getFolder(route, "LiftPlatforms")
 	getFolder(route, "WaterGaps")
@@ -358,6 +405,17 @@ end
 
 function MapService.GetAltars(): { BasePart }
 	return sortedParts(map.HuntZone.Altars)
+end
+
+-- Hazard parts (attribute HazardType = "Ice" | "Electric")
+function MapService.GetHazards(): { BasePart }
+	local list = {}
+	for _, d in map.Hazards:GetDescendants() do
+		if d:IsA("BasePart") and d:GetAttribute("HazardType") then
+			table.insert(list, d)
+		end
+	end
+	return list
 end
 
 function MapService.GetLiftPlatforms(): { BasePart }

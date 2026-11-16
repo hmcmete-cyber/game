@@ -1,11 +1,12 @@
 -- Weather spheres: spawning, catching, carrying, vault storage, stealing,
 -- world effects.
 --
--- Wild weather floats inside glass spheres. TOUCH one to grab it: it sticks
+-- Wild weather floats inside glass spheres. Hold E to catch it: it sticks
 -- above your head and you get a bit slower (speed + jump).
 -- Bring it to your base: it drops into an empty Vault sphere, pays coins now
 -- and keeps paying passive income while it stays in your vault.
--- Rivals can sneak onto your base and TOUCH a full vault to steal its storm.
+-- Rivals can sneak onto your base and hold E on a full vault to steal it.
+-- Carried clouds NEVER go into the inventory; dying destroys them.
 -- Everyone sees "X stole Y's Storm!". If the owner touches the thief, the
 -- storm flies back.
 --
@@ -28,6 +29,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Weather = require(ReplicatedStorage.Shared.WeatherTypes)
 local CloudVisuals = require(script.Parent:WaitForChild("CloudVisuals"))
 local BaseLock = require(script.Parent:WaitForChild("BaseLockService"))
+local InventoryService = require(script.Parent:WaitForChild("InventoryService"))
+local Charms = require(ReplicatedStorage.Shared.Charms)
 
 local WeatherService = {}
 
@@ -246,9 +249,10 @@ end
 -- Weld a sphere above the player's head
 local function attachOverhead(part: BasePart, root: BasePart, height: number)
 	CollectionService:RemoveTag(part, "FloatingIsland")
-	local label = part:FindFirstChild("Label")
-	if label then
-		label:Destroy()
+	for _, child in part:GetChildren() do
+		if child:IsA("ProximityPrompt") or child.Name == "Label" then
+			child:Destroy()
+		end
 	end
 	part.Anchored = false
 	part.Massless = true
@@ -297,8 +301,37 @@ local function getVaultData(player: Player)
 	return data.Vault
 end
 
+-- E-key prompt. Role/OwnerUserId attributes let each client hide prompts
+-- that aren't for them (owners don't see "Steal", rivals don't see "Make Charm").
+local function makePrompt(parent: Instance, name: string, action: string, object: string, hold: number, role: string?, ownerId: number?)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = name
+	prompt.ActionText = action
+	prompt.ObjectText = object
+	prompt.HoldDuration = hold
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	if role then
+		prompt:SetAttribute("Role", role)
+	end
+	if ownerId then
+		prompt:SetAttribute("OwnerUserId", ownerId)
+	end
+	prompt.Parent = parent
+	return prompt
+end
+
+local onStealPrompt, onCharmPrompt -- defined further down
+
 -- Empty spheres breathe softly; full spheres show their storm
-local function renderVault(vault: BasePart, entry)
+local function renderVault(vault: BasePart, entry, owner: Player?)
+	for _, name in { "StealPrompt", "CharmPrompt" } do
+		local p = vault:FindFirstChild(name)
+		if p then
+			p:Destroy()
+		end
+	end
 	local old = vault:FindFirstChild("Stored")
 	if old then
 		old:Destroy()
@@ -339,6 +372,23 @@ local function renderVault(vault: BasePart, entry)
 		local perTick = math.max(1, math.floor(rewardOf(entry.Type, entry.Shiny) * Config.VaultIncomeRate))
 		addLabel(vault, `{entry.Shiny and "✨ " or ""}{def.DisplayName}  +{perTick}/{Config.VaultIncomeInterval}s`,
 			entry.Shiny and Weather.ShinyColor or Color3.new(1, 1, 1), 50)
+
+		if owner then
+			local steal = makePrompt(vault, "StealPrompt", "Steal", def.DisplayName, Config.StealHold, "Steal", owner.UserId)
+			steal.Triggered:Connect(function(player)
+				onStealPrompt(player, owner, vault)
+			end)
+			local charmId = Charms.FromCloud(entry.Type)
+			if charmId then
+				local charm = makePrompt(vault, "CharmPrompt", `Make {Charms.Types[charmId].DisplayName}`, def.DisplayName,
+					Config.CharmHold, "Charm", owner.UserId)
+				charm.UIOffset = Vector2.new(0, 60)
+				charm.KeyboardKeyCode = Enum.KeyCode.F
+				charm.Triggered:Connect(function(player)
+					onCharmPrompt(player, owner, vault)
+				end)
+			end
+		end
 	else
 		vault.Transparency = 0.6
 		vault.Color = SPHERE_COLOR
@@ -353,7 +403,8 @@ local function refreshVaults(player: Player)
 		return
 	end
 	for i, vault in MapService.GetVaults(roof) do
-		renderVault(vault, slots[i])
+		vault:SetAttribute("Slot", i)
+		renderVault(vault, slots[i], player)
 	end
 end
 
@@ -498,9 +549,13 @@ local function deliver(player: Player, c, nest: BasePart)
 	Remotes.Delivered:FireClient(player, reward, c.Type, c.Shiny, nest.Position)
 end
 
-local function catch(player: Player, sphere: BasePart, root: BasePart)
+local function catch(player: Player, sphere: BasePart)
 	local info = wild[sphere]
-	if not info or not info.Ready then
+	if not info or not info.Ready or carriers[player] then
+		return
+	end
+	local root = getRoot(player)
+	if not root then
 		return
 	end
 	wild[sphere] = nil
@@ -543,6 +598,47 @@ local function steal(thief: Player, root: BasePart, owner: Player, slot: number,
 	alarm(owner, thief)
 	Remotes.Stolen:FireAllClients(thief.DisplayName, owner.DisplayName, def.DisplayName)
 	hint(thief, `You stole {owner.DisplayName}'s {def.DisplayName}! Run home — if they tag you, it flies back!`, 5)
+end
+
+-- Rival holds E on a full vault
+onStealPrompt = function(player: Player, owner: Player, vault: BasePart)
+	if player == owner or carriers[player] or not owner.Parent then
+		return
+	end
+	local roof = MapService.GetRooftop(owner)
+	if not roof or not vault:IsDescendantOf(roof) then
+		return
+	end
+	if BaseLock.IsLocked(roof) then
+		hint(player, "🛡️ This base is shielded!", 2)
+		return
+	end
+	local root = getRoot(player)
+	if root then
+		steal(player, root, owner, vault:GetAttribute("Slot") or 1, vault)
+	end
+end
+
+-- Owner holds F on their own vault: the cloud becomes an inventory charm
+onCharmPrompt = function(player: Player, owner: Player, vault: BasePart)
+	if player ~= owner then
+		return
+	end
+	local slots = getVaultData(owner)
+	local slot = vault:GetAttribute("Slot") or 1
+	local entry = slots and slots[slot]
+	local charmId = entry and Charms.FromCloud(entry.Type)
+	if not charmId then
+		return
+	end
+	if not InventoryService.Add(player, charmId) then
+		hint(player, `Inventory full ({Config.InventorySize} slots)!`, 2)
+		return
+	end
+	slots[slot] = false
+	refreshVaults(owner)
+	burstAt(vault.Position, Color3.fromRGB(180, 230, 255), 30)
+	hint(player, `{Charms.Types[charmId].Icon} {Charms.Types[charmId].DisplayName} added — {Charms.Types[charmId].Description}. Lost if you die!`, 5)
 end
 
 ------------------------------------------------------------------------
@@ -626,6 +722,13 @@ local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean)
 	local base = spawnPart.Position + Vector3.new(0, 1.5, 0)
 	moveAssembly(sphere, CFrame.new(stormPos)) -- born inside the storm
 	addLabel(sphere, shiny and `✨ SHINY {def.DisplayName} ✨` or def.DisplayName, shiny and Weather.ShinyColor or Color3.new(1, 1, 1))
+	local prompt = makePrompt(sphere, "CatchPrompt", "Catch", def.DisplayName,
+		typeName == "Mythic" and Config.MythicCatchHold or Config.CatchHold)
+	prompt.Enabled = false -- until it lands
+	prompt:SetAttribute("Ready", false)
+	prompt.Triggered:Connect(function(player)
+		catch(player, sphere)
+	end)
 	sphere.Parent = wildFolder
 
 	local info = {
@@ -647,6 +750,8 @@ local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean)
 	tween.Completed:Connect(function()
 		if wild[sphere] then
 			info.Ready = true
+			prompt:SetAttribute("Ready", true)
+			prompt.Enabled = true
 			burstAt(base, shiny and Weather.ShinyColor or def.Color, 12)
 			-- clients make it bob and spin (see FloatingIslands.luau)
 			sphere:SetAttribute("FloatAmplitude", 0.8)
@@ -912,10 +1017,6 @@ local function updateWorld(now: number)
 	end
 end
 
-local function touching(root: BasePart, part: BasePart): boolean
-	return (root.Position - part.Position).Magnitude <= part.Size.X / 2 + Config.TouchRadius
-end
-
 local function mainLoop()
 	local Players = game:GetService("Players")
 	while true do
@@ -934,7 +1035,7 @@ local function mainLoop()
 		for player, c in carriers do
 			local root = roots[player]
 			if not root or not c.Part or not c.Part.Parent then
-				clearCarry(player, true)
+				clearCarry(player, false)
 				continue
 			end
 
@@ -964,44 +1065,6 @@ local function mainLoop()
 			elseif c.Type == "Thunder" and now >= (c.NextFlash or 0) then
 				c.NextFlash = now + Config.ThunderFlashInterval
 				burstAt(root.Position + Vector3.new(0, 6, 0), Weather.Types.Thunder.ParticleColor, 15)
-			end
-		end
-
-		-- Empty-handed players: touch wild spheres to catch, full vaults to steal
-		for player, root in roots do
-			if carriers[player] or now < (grabCooldown[player] or 0) then
-				continue
-			end
-			local grabbed = false
-			for sphere, info in wild do
-				if info.Ready and touching(root, sphere) then
-					catch(player, sphere, root)
-					grabbed = true
-					break
-				end
-			end
-			if grabbed then
-				continue
-			end
-			for _, owner in Players:GetPlayers() do
-				if owner == player then
-					continue
-				end
-				local roof = MapService.GetRooftop(owner)
-				local slots = roof and not BaseLock.IsLocked(roof) and getVaultData(owner)
-				if not slots then
-					continue
-				end
-				for i, vault in MapService.GetVaults(roof) do
-					if slots[i] and touching(root, vault) then
-						steal(player, root, owner, i, vault)
-						grabbed = true
-						break
-					end
-				end
-				if grabbed then
-					break
-				end
 			end
 		end
 
@@ -1043,7 +1106,7 @@ function WeatherService.OnPlayerAdded(player: Player)
 		hum.WalkSpeed = Config.WalkSpeed
 		player:SetAttribute("BaseSpeed", Config.WalkSpeed)
 		hum.Died:Connect(function()
-			clearCarry(player, true)
+			clearCarry(player, false) -- dying destroys the carried cloud
 		end)
 		task.delay(1.5, function()
 			if carriers[player] then
@@ -1051,7 +1114,7 @@ function WeatherService.OnPlayerAdded(player: Player)
 			end
 			local data = DataService.Get(player)
 			if data and data.Delivered == 0 then
-				hint(player, "Touch the cloud sphere to catch it! ☁️", 8)
+				hint(player, "Walk up to the cloud and press E to catch it! ☁️", 8)
 			else
 				hint(player, "Catch storms, fill your vaults, raid other bases!", 5)
 			end
@@ -1063,7 +1126,7 @@ function WeatherService.OnPlayerAdded(player: Player)
 	end
 	player.CharacterAdded:Connect(onCharacter)
 	player.CharacterRemoving:Connect(function()
-		clearCarry(player, true)
+		clearCarry(player, false)
 	end)
 end
 

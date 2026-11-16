@@ -11,6 +11,8 @@ local MapService = require(Services.MapService)
 local WeatherService = require(Services.WeatherService)
 local LightingService = require(Services.LightingService)
 local BaseLockService = require(Services.BaseLockService)
+local InventoryService = require(Services.InventoryService)
+local HazardService = require(Services.HazardService)
 
 -- Remotes (server -> client messages)
 local remotes = Instance.new("Folder")
@@ -27,14 +29,19 @@ alarmEvent.Parent = remotes
 local stolenEvent = Instance.new("RemoteEvent")
 stolenEvent.Name = "Stolen"
 stolenEvent.Parent = remotes
+local useCharmEvent = Instance.new("RemoteEvent") -- client -> server: use a charm (Q)
+useCharmEvent.Name = "UseCharm"
+useCharmEvent.Parent = remotes
 remotes.Parent = ReplicatedStorage
 
 LightingService.Apply()
 DataService.Start()
 MapService.Start()
-local remoteTable = { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent }
+local remoteTable = { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent, UseCharm = useCharmEvent }
 WeatherService.Start(MapService, DataService, remoteTable)
 BaseLockService.Start(MapService, remoteTable)
+InventoryService.Start(DataService, remoteTable)
+HazardService.Start(MapService)
 
 local function onPlayerAdded(player: Player)
 	DataService.Load(player)
@@ -48,6 +55,7 @@ local function onPlayerAdded(player: Player)
 	end
 
 	WeatherService.OnPlayerAdded(player)
+	InventoryService.OnPlayerAdded(player)
 end
 
 local function onPlayerRemoving(player: Player)

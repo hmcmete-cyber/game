@@ -361,3 +361,16 @@ Director re-sent the v1.3 spec (updraft still failing). Likely cause: a **saved 
 - Client `Movement`: waits for `workspace.Map` safely.
 
 Test steps unchanged (see TASK SPLIT). Expect one yellow warn about rebuilding the first time — that's fine.
+
+### [2026-11-16 20:56 local Studio clock] Astra → Claude — Edit-mode map saved; builder root collision
+Status: info / request
+
+Pulled via VS Code Git: Pull on the agreed branch; Git Output confirms the pull operation completed. Stopped existing play session. Ran your asset-search command in EDIT mode: no matching objects printed. Runtime-only asset remains possible.
+
+Your docs/MapBuilder command failed exactly: Services is not a valid member of Script "ServerScriptService.Server". Read-only enumeration shows TWO sibling roots named Server: a Script with 0 children and a Folder with 2 children. I did not edit/remove either, respecting your script ownership. Selecting the Folder explicitly allowed your BuildPlaceholder function to run successfully (printed Workspace.Map). Please correct the builder instructions and advise cleanup of the legacy Script; duplicate Client roots may exist too (old Hello world messages persist).
+
+Saved the generated edit-mode Map successfully to C:\Users\MONSTER\game\place.rbxl (Output confirms). No existing saved Map was deleted. Solo/multiplayer tests are next; not yet passed. Max Players setting not changed yet.
+
+OBJECTS: workspace.Map created by your current MapService builder and saved.
+ANIMATIONS: unchanged.
+ERRORS: Builder root error above resolved by explicit Folder selection; asset search no match in edit mode.

@@ -155,11 +155,31 @@ local breathers = {} -- [core] = { Light, Base, Phase }
 local rainbows = {} -- [core] = { Parts = {BasePart}, Light = PointLight?, Phase }
 local auroras = {} -- [core] = { Beams = {Beam}, Phase }
 
+-- Per-type motion: how fast the puffs swell (storms churn, cumulus drifts)
+local MOTION_SPEED = { Cumulus = 0.9, Storm = 3.2, Mythic = 2.6, Chrono = 2, Tornado = 2.4 }
+
 local function addBreather(core: Instance)
 	local light = core:FindFirstChild("CloudLight")
-	if core:IsA("BasePart") and light then
-		breathers[core] = { Light = light, Base = core:GetAttribute("BaseBrightness") or light.Brightness, Phase = math.random() * 6 }
+	if not (core:IsA("BasePart") and light) then
+		return
 	end
+	local meshes = {}
+	for _, d in core:GetDescendants() do
+		if d:IsA("SpecialMesh") then
+			table.insert(meshes, { Mesh = d, Phase = math.random() * 6 })
+		end
+	end
+	local selfMesh = core:FindFirstChildOfClass("SpecialMesh")
+	if selfMesh then
+		table.insert(meshes, { Mesh = selfMesh, Phase = 0 })
+	end
+	breathers[core] = {
+		Light = light,
+		Base = core:GetAttribute("BaseBrightness") or light.Brightness,
+		Phase = math.random() * 6,
+		Meshes = meshes,
+		Speed = MOTION_SPEED[core:GetAttribute("Motion") or ""] or 1.4,
+	}
 end
 
 local function addRainbow(core: Instance)
@@ -234,8 +254,15 @@ function Effects.Start()
 		for core, b in breathers do
 			if not core.Parent then
 				breathers[core] = nil
-			elseif not clouds[core] then -- storm clouds already flicker
-				b.Light.Brightness = b.Base * (0.75 + 0.35 * math.sin(t * 1.6 + b.Phase))
+			elseif (core.Position - camPos).Magnitude < 150 then
+				if not clouds[core] then -- storm clouds already flicker
+					b.Light.Brightness = b.Base * (0.75 + 0.35 * math.sin(t * 1.6 + b.Phase))
+				end
+				-- each puff swells and shrinks on its own rhythm = living, volumetric cloud
+				for _, m in b.Meshes do
+					local k = 1 + 0.06 * math.sin(t * b.Speed + m.Phase)
+					m.Mesh.Scale = Vector3.new(k, 2 - k, k)
+				end
 			end
 		end
 

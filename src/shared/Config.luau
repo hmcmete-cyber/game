@@ -21,13 +21,8 @@ local Config = {
 	CatchHold = 0.3,
 	MythicCatchHold = 1.5,
 	StealHold = 1.2, -- stealing takes nerve
-	CharmHold = 0.5,
+	PerkHold = 0.5,
 
-	-- Inventory (charms only; wiped on death)
-	InventorySize = 3,
-	SkatesDuration = 8, -- Ice Charm (Q)
-	SkatesCooldown = 20,
-	SkatesBoost = 10,
 
 	-- Leash: carried clouds float behind you on a rope held in your LEFT hand
 	LeashLength = 9,
@@ -35,11 +30,10 @@ local Config = {
 	LeashBack = 5, -- how far behind you
 	LeashResponsiveness = 12,
 
-	-- Nitro (inventory slot 2, key R): bought at the Nitro Station
-	NitroPrice = 25,
-	NitroMax = 3,
-	NitroBoost = 12,
-	NitroDuration = 4,
+	-- Inventories (both wiped on death)
+	ItemSlots = 4, -- normal Inventory: shop items, keys 1-4
+	ItemStack = 5, -- max of one item per slot
+	PerkSlots = 2, -- Quirks/Perks: clouds equipped from your own vault
 
 	-- Gate 2: Electric River (pulses: calm → warning → shock)
 	RiverCalm = 2.6,

@@ -245,3 +245,18 @@ Map-building note for later: please keep gates single-path (no way around).
 OBJECTS: `Map/Zones/*`, `Map/Shops/NitroStation`, `Map/Hazards/{IcePath1, ElectricRiver1, StormBridge1}`
 ANIMATIONS: still needed — Catch, Slip, (new) LeashHold (left arm raised holding a rope)
 ERRORS: untested in Studio yet
+
+### [2026-11-16 21:00 Istanbul] Claude → Astra — v0.9: perks, Cloud Shop + Tayron, cloud shapes, pastel sky
+Status: done / info
+
+- **Perks**: `WeatherTypes.Perk` per cloud. Vault prompt `PerkPrompt` (F, Role=Perk) → `InventoryService.EquipPerk`. Perk totals → player attributes (PerkSpeed, PerkJump, NoSlip, IceGrip, WindImmune, ElectricImmune, LightningImmune, Regen, ItemTime). Death wipes perks (cloud gone) + items.
+- **Shop**: `Shared/ShopItems.luau`; remotes `BuyItem(id)`, `UseItem(id)`, `PerkAction("Return", i)`, `OpenShop`. Client `ShopUi.luau`, `InventoryUi.luau` (items 1-4 + perks panel). Charms removed.
+- **Cloud Shop** (`Services/ShopBuilder.luau`) at z ≈ 59…85 behind the spawn, linked by `Route/ShopDeckLink`. **Tayron** (`Services/NpcService.luau`) built from a HumanoidDescription at `TayronSpot`; client `NpcAnimator.luau` animates Motor6Ds (idle sway, head look, wave + bubble). Put an `Animation` named `Idle`/`Wave` inside Tayron to use real animations.
+- **Cloud shapes**: `CloudVisuals` LAYOUT of ellipsoids (Part + SpecialMesh Sphere), mirrored/jittered per cloud; wild/carried clouds use an invisible handle (no glass sphere). Client breathing scales each puff mesh.
+- **Sky**: `LightingService` pastel golden hour + `Terrain.Clouds`. A custom pastel skybox needs Creator Store image IDs — not set by code.
+
+Help wanted when you're back: a nicer Tayron outfit/avatar, real Idle/Wave animations (rigdirectors), and a pastel skybox asset.
+
+OBJECTS: `Map/Shops/CloudShop/{TayronSpot, Tayron}`, `Map/Zones/ShopArea`
+ANIMATIONS: wanted — Tayron Idle, Tayron Wave, player LeashHold, Catch, Slip
+ERRORS: untested in Studio yet

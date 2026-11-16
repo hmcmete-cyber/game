@@ -9,6 +9,9 @@
 --   Mythic    huge black-purple storm with all of the above
 --   Rain / Snow / Tornado: tinted puffs + drops / flakes / dust
 --
+-- No balls: every cloud is an asymmetric stack of ellipsoids (see LAYOUT).
+-- Clients animate each puff (breathing scale, per-type motion) in Effects.luau.
+--
 -- Returns the center Part ("Core"); every other piece is welded to it.
 
 local CollectionService = game:GetService("CollectionService")
@@ -20,15 +23,25 @@ local CloudVisuals = {}
 
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 
--- offset (in cloud diameters), size (in cloud diameters), colour shade
-local PUFFS = {
-	{ Vector3.new(0, 0, 0), 0.55, 1 },
-	{ Vector3.new(0.3, -0.06, 0.02), 0.42, 0.94 },
-	{ Vector3.new(-0.3, -0.05, -0.03), 0.42, 0.96 },
-	{ Vector3.new(0.02, 0.14, 0.22), 0.4, 1.04 },
-	{ Vector3.new(-0.05, 0.12, -0.22), 0.38, 1.02 },
-	{ Vector3.new(0.16, 0.22, -0.08), 0.32, 1.06 },
-	{ Vector3.new(-0.18, -0.12, 0.2), 0.32, 0.92 },
+-- Asymmetric puffy cloud made of ellipsoids (Part + SpecialMesh "Sphere",
+-- which stretches to the Part's size). Three layers:
+--   base  wide, flat, slightly darker underside
+--   body  medium lumps, offset to one side
+--   crown small bright tops
+-- Each entry: offset (in cloud widths), size (w, h, d in cloud widths), shade
+local LAYOUT = {
+	-- base
+	{ Vector3.new(0, -0.12, 0), Vector3.new(1.0, 0.32, 0.62), 0.9 },
+	{ Vector3.new(0.32, -0.1, 0.12), Vector3.new(0.55, 0.28, 0.5), 0.88 },
+	{ Vector3.new(-0.36, -0.11, -0.08), Vector3.new(0.5, 0.26, 0.46), 0.9 },
+	-- body
+	{ Vector3.new(-0.12, 0.06, 0.02), Vector3.new(0.58, 0.48, 0.5), 1 },
+	{ Vector3.new(0.2, 0.08, -0.06), Vector3.new(0.5, 0.44, 0.46), 1.02 },
+	{ Vector3.new(0.4, 0.0, 0.1), Vector3.new(0.34, 0.3, 0.34), 0.97 },
+	{ Vector3.new(-0.4, 0.0, 0.12), Vector3.new(0.3, 0.28, 0.32), 0.96 },
+	-- crown
+	{ Vector3.new(-0.02, 0.24, 0.0), Vector3.new(0.36, 0.32, 0.34), 1.06 },
+	{ Vector3.new(0.2, 0.2, 0.1), Vector3.new(0.26, 0.24, 0.26), 1.08 },
 }
 
 local STYLE = {
@@ -85,16 +98,21 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 	local def = Weather.Types[typeName]
 	local visual = def.Visual or "Cumulus"
 	local style = STYLE[visual] or STYLE.Cumulus
-	local d = def.Size * 0.7 * scale -- cloud diameter
+	local d = def.Size * 0.9 * scale -- cloud width
 	local tint = shiny and Weather.ShinyColor or style.Tint
 
-	-- Soft puffs
+	-- Asymmetric puffy body. A random mirror + jitter makes every cloud unique.
+	local rng = Random.new()
+	local mirror = rng:NextNumber() < 0.5 and -1 or 1
 	local center
-	for i, puff in PUFFS do
+	for i, puff in LAYOUT do
+		local jitter = Vector3.new(rng:NextNumber(-0.04, 0.04), rng:NextNumber(-0.03, 0.03), rng:NextNumber(-0.04, 0.04))
+		local offset = (Vector3.new(puff[1].X * mirror, puff[1].Y, puff[1].Z) + jitter) * d
+		local size = puff[2] * d * rng:NextNumber(0.92, 1.08)
+
 		local p = Instance.new("Part")
 		p.Name = i == 1 and "Core" or ("Puff" .. i)
-		p.Shape = Enum.PartType.Ball
-		p.Size = Vector3.one * d * puff[2]
+		p.Size = size
 		p.Color = shade(tint, puff[3])
 		p.Material = shiny and Enum.Material.Neon or style.Material
 		p.Transparency = style.Alpha
@@ -104,8 +122,11 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 		p.CanTouch = false
 		p.CastShadow = false
 		p.Massless = true
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere -- ellipsoid stretched to the part size
+		mesh.Parent = p
 		if center then
-			p.CFrame = center.CFrame * CFrame.new(puff[1] * d)
+			p.CFrame = center.CFrame * CFrame.new(offset - LAYOUT[1][1] * d)
 			local weld = Instance.new("WeldConstraint")
 			weld.Part0 = center
 			weld.Part1 = p
@@ -115,6 +136,7 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 			center = p
 		end
 	end
+	center:SetAttribute("Motion", visual)
 
 	-- Puffy smoke breathing out of the center
 	emitter(center, {

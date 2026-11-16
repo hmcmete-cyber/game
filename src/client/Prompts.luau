@@ -1,7 +1,7 @@
 -- Hides E-prompts that aren't meant for you. The server still checks
 -- everything; this only keeps the screen clean.
 --   Role "Steal" → hidden on your own base
---   Role "Charm" → only shown on your own base
+--   Role "Perk"  → only shown on your own base
 -- Also hides catch prompts while you're already carrying a cloud.
 
 local Players = game:GetService("Players")
@@ -18,7 +18,7 @@ local function apply(prompt: ProximityPrompt)
 	local show = true
 	if role == "Steal" then
 		show = owner ~= player.UserId and not carrying
-	elseif role == "Charm" then
+	elseif role == "Perk" then
 		show = owner == player.UserId
 	elseif prompt.Name == "CatchPrompt" then
 		show = not carrying

@@ -12,7 +12,7 @@
 --   HuntZone/Altars/AltarN (Part)         -- Cloud Altars: rare clouds + 0.01% Mythic
 --   Hazards/* (Part, attribute HazardType = "Ice" | "River" | "Storm" | "Electric", CanCollide off, CanQuery on)
 --   Zones/* (Part volumes, attributes ZoneName, ZoneColor, Warning?) — for the HUD
---   Shops/* (Part, attribute Shop = "Nitro")
+--   Shops/CloudShop (Model, see ShopBuilder.luau) with a TayronSpot part for the NPC
 --   Route/LiftPlatforms/* (Part, placed in LOWERED position)
 --   Route/WaterGaps/* (Part, CanCollide off; Snow freezes them solid)
 --   CrateArena/CrateSpawns/CrateN (Part)
@@ -24,6 +24,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local BaseBuilder = require(script.Parent:WaitForChild("BaseBuilder"))
+local ShopBuilder = require(script.Parent:WaitForChild("ShopBuilder"))
 
 local MapService = {}
 
@@ -195,7 +196,6 @@ local function buildPlaceholder(): Instance
 	------------------------------------------------------------------
 	local hazards = getFolder(m, "Hazards")
 	local zones = getFolder(m, "Zones")
-	local shops = getFolder(m, "Shops")
 
 	-- Zone volumes: the client shows where you are (top-center panel)
 	local function zoneVolume(name: string, center: Vector3, size: Vector3, label: string, color: Color3, warning: string?)
@@ -224,12 +224,10 @@ local function buildPlaceholder(): Instance
 
 	zoneVolume("SpawnArea", Vector3.new(0, Y + 10, 0), Vector3.new(90, 40, 110), "🏠 Spawn Area", Color3.fromRGB(200, 230, 255))
 
-	-- Nitro Station in the plaza
-	local station = newPart(shops, "NitroStation", Vector3.new(4, 5, 4), CFrame.new(7, Y + 3.5, -38), Color3.fromRGB(255, 120, 60), {
-		Material = Enum.Material.Neon,
-	})
-	station:SetAttribute("Shop", "Nitro")
-	zoneSign(signs, "NitroSign", Vector3.new(7, Y + 9, -38), "🚀 NITRO", Color3.fromRGB(255, 150, 90))
+	-- CLOUD SHOP right behind the spawn (+Z), Tayron inside (NpcService)
+	newPart(route, "ShopDeckLink", Vector3.new(20, 2, 10), CFrame.new(0, Y, 54.5), plazaColor, { Material = Enum.Material.Marble })
+	ShopBuilder.Build(getFolder(m, "Shops"), Vector3.new(0, Y + 1, 72))
+	zoneVolume("ShopArea", Vector3.new(0, Y + 10, 72), Vector3.new(40, 40, 30), "🛍️ Cloud Shop", Color3.fromRGB(255, 190, 220))
 
 	-- GATE 1: Ice Path (z -50 … -80), narrow, no rails
 	local iceColor = Color3.fromRGB(200, 235, 255)
@@ -239,7 +237,7 @@ local function buildPlaceholder(): Instance
 		Transparency = 0.2,
 	})
 	zoneVolume("Gate1", Vector3.new(0, Y + 10, -65), Vector3.new(40, 40, 30), "❄️ Gate 1 · Ice Path", iceColor,
-		"Slippery! You lose control — Ice Charm (Q) helps")
+		"Slippery! You lose control — the Snow Cloud perk (Frost Grip) helps")
 	zoneSign(signs, "Gate1Sign", Vector3.new(0, Y + 10, -52), "❄️ GATE 1 · ICE PATH", iceColor)
 
 	-- ZONE 1: Breeze (z -80 … -160)

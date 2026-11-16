@@ -60,6 +60,14 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - **Volumetric clouds**: puffs + 4 smoke layers (Fill, Wisps, Glow, Smoke) + breathing inner light.
 - **HUD**: top-center zone pill + alert panel (red thefts, amber gate warnings) + hints; top-right status (coins, leashed cloud + rarity, vault x/y); bottom-left item slots.
 
+## Update 6 — Perks, Tayron's Cloud Shop, new cloud shapes, pastel sky (director request)
+
+- **Perks (risk/reward)**: every cloud type has a perk (Cumulus +40% jump, Rain no-slip, Snow ice grip, Cumulonimbus electric immunity, Tornado wind immunity, Cosmic +50% speed, Aurora regen, Chrono 2× item time, Mythic all-round). Hold **F** on a cloud in **your own vault** → it moves into the **Quirks/Perks inventory** (2 slots) and the perk is active. "↩ Vault" puts it back. **Die while equipped → the cloud is destroyed.**
+- **Two inventories**: Inventory (shop items, 4 slots, keys 1-4) and Quirks/Perks. Charms (v0.7/v0.8) and the Q/R/T bar are replaced by this.
+- **Cloud Shop** behind the spawn: wooden stall, pastel awning, cloud roof, lanterns, potions. **Tayron** (R15 NPC, procedural idle/look/wave, greeting bubble). E → glass Shop UI: Speed Potion, Jump Potion, Nitro, Signal Flare, Fuel Can (coming soon).
+- **Clouds** are no longer spheres: asymmetric stacks of ellipsoids (SpecialMesh) + smoke layers; each puff breathes on its own rhythm, speed per type.
+- **Sky**: golden-hour pastel lighting, lilac/peach atmosphere, Terrain Clouds, stronger sun rays.
+
 ## Core loop
 
 1. **Hunt** weather creatures in the shared zone.

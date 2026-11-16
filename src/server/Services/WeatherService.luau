@@ -30,7 +30,7 @@ local Weather = require(ReplicatedStorage.Shared.WeatherTypes)
 local CloudVisuals = require(script.Parent:WaitForChild("CloudVisuals"))
 local BaseLock = require(script.Parent:WaitForChild("BaseLockService"))
 local InventoryService = require(script.Parent:WaitForChild("InventoryService"))
-local Charms = require(ReplicatedStorage.Shared.Charms)
+
 
 local WeatherService = {}
 
@@ -198,17 +198,15 @@ local function makeCore(typeName: string, shiny: boolean, scale: number): BasePa
 	return CloudVisuals.Make(typeName, shiny, scale)
 end
 
--- A weather sphere: glass shell + storm core inside (one assembly)
+-- A cloud body: an invisible handle part (prompt, leash, physics) with the
+-- visible puffy cloud welded to it. No glass sphere around it anymore.
 local function makeSphere(typeName: string, shiny: boolean, scale: number): BasePart
 	local def = Weather.Types[typeName]
 	local shell = Instance.new("Part")
 	shell.Name = typeName
 	shell.Shape = Enum.PartType.Ball
 	shell.Size = Vector3.one * def.Size * scale
-	shell.Color = shiny and Weather.ShinyColor or SPHERE_COLOR
-	shell.Material = Enum.Material.Glass
-	shell.Transparency = 0.7
-	shell.Reflectance = 0.08
+	shell.Transparency = 1
 	shell.Anchored = true
 	shell.CanCollide = false
 	shell.CanQuery = false
@@ -353,7 +351,7 @@ local function getVaultData(player: Player)
 end
 
 -- E-key prompt. Role/OwnerUserId attributes let each client hide prompts
--- that aren't for them (owners don't see "Steal", rivals don't see "Make Charm").
+-- that aren't for them (owners don't see "Steal", rivals don't see "Equip Perk").
 local function makePrompt(parent: Instance, name: string, action: string, object: string, hold: number, role: string?, ownerId: number?)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = name
@@ -373,11 +371,11 @@ local function makePrompt(parent: Instance, name: string, action: string, object
 	return prompt
 end
 
-local onStealPrompt, onCharmPrompt -- defined further down
+local onStealPrompt, onPerkPrompt -- defined further down
 
 -- Empty spheres breathe softly; full spheres show their storm
 local function renderVault(vault: BasePart, entry, owner: Player?)
-	for _, name in { "StealPrompt", "CharmPrompt" } do
+	for _, name in { "StealPrompt", "PerkPrompt" } do
 		local p = vault:FindFirstChild(name)
 		if p then
 			p:Destroy()
@@ -429,14 +427,13 @@ local function renderVault(vault: BasePart, entry, owner: Player?)
 			steal.Triggered:Connect(function(player)
 				onStealPrompt(player, owner, vault)
 			end)
-			local charmId = Charms.FromCloud(entry.Type)
-			if charmId then
-				local charm = makePrompt(vault, "CharmPrompt", `Make {Charms.Types[charmId].DisplayName}`, def.DisplayName,
-					Config.CharmHold, "Charm", owner.UserId)
-				charm.UIOffset = Vector2.new(0, 60)
-				charm.KeyboardKeyCode = Enum.KeyCode.F
-				charm.Triggered:Connect(function(player)
-					onCharmPrompt(player, owner, vault)
+			if def.Perk then
+				local perk = makePrompt(vault, "PerkPrompt", `Equip Perk: {def.Perk.Name}`, def.Perk.Desc,
+					Config.PerkHold, "Perk", owner.UserId)
+				perk.UIOffset = Vector2.new(0, 60)
+				perk.KeyboardKeyCode = Enum.KeyCode.F
+				perk.Triggered:Connect(function(player)
+					onPerkPrompt(player, owner, vault)
 				end)
 			end
 		end
@@ -683,26 +680,36 @@ onStealPrompt = function(player: Player, owner: Player, vault: BasePart)
 	end
 end
 
--- Owner holds F on their own vault: the cloud becomes an inventory charm
-onCharmPrompt = function(player: Player, owner: Player, vault: BasePart)
+-- Owner holds F on their own vault: the cloud moves into the Quirks/Perks
+-- inventory and its perk turns on. Risk: dying destroys it.
+onPerkPrompt = function(player: Player, owner: Player, vault: BasePart)
 	if player ~= owner then
 		return
 	end
 	local slots = getVaultData(owner)
 	local slot = vault:GetAttribute("Slot") or 1
 	local entry = slots and slots[slot]
-	local charmId = entry and Charms.FromCloud(entry.Type)
-	if not charmId then
+	local def = entry and Weather.Types[entry.Type]
+	if not def or not def.Perk then
 		return
 	end
-	local replaced = InventoryService.SetCharm(player, charmId)
-	if replaced and replaced ~= charmId then
-		hint(player, `Your {Charms.Types[replaced].DisplayName} was replaced.`, 2)
+	if not InventoryService.EquipPerk(player, entry.Type, entry.Shiny == true) then
+		hint(player, `Perk slots full ({Config.PerkSlots}) — return one to your vault first`, 3)
+		return
 	end
 	slots[slot] = false
 	refreshVaults(owner)
-	burstAt(vault.Position, Color3.fromRGB(180, 230, 255), 30)
-	hint(player, `{Charms.Types[charmId].Icon} {Charms.Types[charmId].DisplayName} added — {Charms.Types[charmId].Description}. Lost if you die!`, 5)
+	burstAt(vault.Position, def.ParticleColor, 30)
+	hint(player, `✨ {def.Perk.Name} active — {def.Perk.Desc}. If you die, this cloud is GONE!`, 5)
+end
+
+-- Perks inventory → back into the vault (called by InventoryService)
+local function returnToVault(player: Player, typeName: string, shiny: boolean): boolean
+	if not storeInVault(player, typeName, shiny) then
+		return false
+	end
+	refreshVaults(player)
+	return true
 end
 
 ------------------------------------------------------------------------
@@ -1223,6 +1230,7 @@ function WeatherService.Start(mapService, dataService, remotes)
 	puddleFolder.Parent = weatherFolder
 	weatherFolder.Parent = workspace
 
+	InventoryService.ReturnToVault = returnToVault
 	setupStorm()
 	task.spawn(spawnLoop)
 	task.spawn(mainLoop)

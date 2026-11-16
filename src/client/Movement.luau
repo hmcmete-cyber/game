@@ -3,12 +3,14 @@
 --   Hazards (Map/Hazards):
 --     Ice Path      → you lose grip: your velocity only slowly follows your input.
 --                     Carrying a cloud = much less grip + random slips.
---                     Frost Skates (Ice Charm, Q) = full grip + speed boost.
---     Electric      → slower (damage is done by the server). Storm Charm = immune.
+--                     Frost Grip perk (Snow Cloud) = full grip.
+--     Electric      → slower (damage is done by the server). Grounded perk (Cumulonimbus) = immune.
 --     Electric River→ pulses Calm/Warn/Shock (same clock as the server): slower,
---                     much slower while shocking. Storm Charm = immune.
+--                     much slower while shocking. Grounded perk (Cumulonimbus) = immune.
 --     Storm Bridge  → side wind gusts push you (worse with a cloud: it's a balloon!)
---   Lightning knockback (server Knock remote), Nitro speed burst (NitroUntil)
+--   Lightning knockback (server Knock remote)
+--   Perks (PerkSpeed, PerkJump, NoSlip, IceGrip, WindImmune, ElectricImmune)
+--   Shop items (SpeedUntil/SpeedMult, JumpUntil/JumpMult, NitroUntil)
 --
 -- The ice slide uses a LinearVelocity constraint (plane mode) so the Humanoid's
 -- own walking can't instantly cancel the slide.
@@ -44,8 +46,13 @@ local function riverShocking(): boolean
 	return workspace:GetServerTimeNow() % period >= Config.RiverCalm + Config.RiverWarn
 end
 
+-- Frost Grip perk (Snow Cloud equipped) = full control on Ice Paths
 local function skatesOn(): boolean
-	return (player:GetAttribute("SkatesUntil") or 0) > workspace:GetServerTimeNow()
+	return player:GetAttribute("IceGrip") == true
+end
+
+local function active(untilAttr: string): boolean
+	return (player:GetAttribute(untilAttr) or 0) > workspace:GetServerTimeNow()
 end
 
 local function getHumanoid()
@@ -53,6 +60,8 @@ local function getHumanoid()
 	return char and char:FindFirstChildOfClass("Humanoid")
 end
 
+-- Speed & jump = base × perks × potions. Recomputed every frame (cheap),
+-- so perks, potions and hazards always combine correctly.
 local function applySpeed()
 	local hum = getHumanoid()
 	if not hum then
@@ -62,8 +71,12 @@ local function applySpeed()
 	if onIceRoad then
 		speed += Config.IceBoost
 	end
-	if onIceHazard and skatesOn() then
-		speed += Config.SkatesBoost
+	if active("NitroUntil") then
+		speed += Config.NitroBoost
+	end
+	speed *= player:GetAttribute("PerkSpeed") or 1
+	if active("SpeedUntil") then
+		speed *= player:GetAttribute("SpeedMult") or 1
 	end
 	local immune = player:GetAttribute("ElectricImmune")
 	if inSwamp and not immune then
@@ -72,10 +85,20 @@ local function applySpeed()
 	if inRiver and not immune then
 		speed *= riverShock and Config.RiverSlowShock or Config.RiverSlowCalm
 	end
-	if (player:GetAttribute("NitroUntil") or 0) > workspace:GetServerTimeNow() then
-		speed += Config.NitroBoost
+
+	local carrying = player:GetAttribute("Carrying") ~= nil
+	local jump = (carrying and Config.CarryJumpHeight or 7.2) * (player:GetAttribute("PerkJump") or 1)
+	if active("JumpUntil") then
+		jump *= player:GetAttribute("JumpMult") or 1
 	end
-	hum.WalkSpeed = speed
+
+	if math.abs(hum.WalkSpeed - speed) > 0.01 then
+		hum.WalkSpeed = speed
+	end
+	if math.abs(hum.JumpHeight - jump) > 0.01 then
+		hum.UseJumpPower = false
+		hum.JumpHeight = jump
+	end
 end
 
 local function slip(hum: Humanoid, root: BasePart)
@@ -146,12 +169,6 @@ end
 
 function Movement.Start()
 	player:GetAttributeChangedSignal("BaseSpeed"):Connect(applySpeed)
-	player:GetAttributeChangedSignal("SkatesUntil"):Connect(function()
-		applySpeed()
-		-- re-check when skates expire
-		local untilT = player:GetAttribute("SkatesUntil") or 0
-		task.delay(math.max(0, untilT - workspace:GetServerTimeNow()) + 0.05, applySpeed)
-	end)
 	player:GetAttributeChangedSignal("ElectricImmune"):Connect(applySpeed)
 	player:GetAttributeChangedSignal("NitroUntil"):Connect(function()
 		applySpeed()
@@ -210,7 +227,8 @@ function Movement.Start()
 			elseif kind == "Launch" and now - lastLaunch > 1 then
 				lastLaunch = now
 				launch(root)
-			elseif kind == "Slip" and moving and not slipping and now - lastSlip > Config.SlipCooldown then
+			elseif kind == "Slip" and moving and not slipping and now - lastSlip > Config.SlipCooldown
+				and not player:GetAttribute("NoSlip") then
 				local owner = p:GetAttribute("OwnerUserId")
 				local created = p:GetAttribute("CreatedAt") or 0
 				local fresh = workspace:GetServerTimeNow() - created < Config.OwnerPuddleGrace
@@ -242,7 +260,7 @@ function Movement.Start()
 		end
 
 		-- Storm Bridge: side gusts (a cloud on a leash catches extra wind)
-		if storm and not slipping then
+		if storm and not slipping and not player:GetAttribute("WindImmune") then
 			local t = os.clock()
 			local gust = math.sin(t * 0.7) + 0.5 * math.sin(t * 1.9 + 1)
 			local strength = Config.WindStrength * (player:GetAttribute("Carrying") and 1.5 or 1)
@@ -251,6 +269,7 @@ function Movement.Start()
 		end
 
 		updateIce(hum, root, dt)
+		applySpeed()
 	end)
 end
 

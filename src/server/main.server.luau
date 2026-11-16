@@ -13,6 +13,7 @@ local LightingService = require(Services.LightingService)
 local BaseLockService = require(Services.BaseLockService)
 local InventoryService = require(Services.InventoryService)
 local HazardService = require(Services.HazardService)
+local NpcService = require(Services.NpcService)
 
 -- Remotes (server -> client messages)
 local remotes = Instance.new("Folder")
@@ -29,9 +30,16 @@ alarmEvent.Parent = remotes
 local stolenEvent = Instance.new("RemoteEvent")
 stolenEvent.Name = "Stolen"
 stolenEvent.Parent = remotes
-local useItemEvent = Instance.new("RemoteEvent") -- client -> server: use inventory slot (Q / R / T)
-useItemEvent.Name = "UseItem"
-useItemEvent.Parent = remotes
+local function remote(name: string)
+	local r = Instance.new("RemoteEvent")
+	r.Name = name
+	r.Parent = remotes
+	return r
+end
+local useItemEvent = remote("UseItem") -- client -> server: use a shop item (id)
+local buyItemEvent = remote("BuyItem") -- client -> server: buy from Tayron (id)
+local perkActionEvent = remote("PerkAction") -- client -> server: ("Return", index)
+local openShopEvent = remote("OpenShop") -- server -> client: open the Shop UI
 local knockEvent = Instance.new("RemoteEvent") -- server -> client: lightning knockback
 knockEvent.Name = "Knock"
 knockEvent.Parent = remotes
@@ -40,11 +48,13 @@ remotes.Parent = ReplicatedStorage
 LightingService.Apply()
 DataService.Start()
 MapService.Start()
-local remoteTable = { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent, UseItem = useItemEvent, Knock = knockEvent }
+local remoteTable = { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent, UseItem = useItemEvent, Knock = knockEvent,
+	BuyItem = buyItemEvent, PerkAction = perkActionEvent, OpenShop = openShopEvent }
 WeatherService.Start(MapService, DataService, remoteTable)
 BaseLockService.Start(MapService, remoteTable)
 InventoryService.Start(DataService, remoteTable)
 HazardService.Start(MapService, remoteTable)
+NpcService.Start(remoteTable)
 
 local function onPlayerAdded(player: Player)
 	DataService.Load(player)

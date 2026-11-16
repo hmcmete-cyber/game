@@ -3,6 +3,8 @@
 -- Zone: which map zone it spawns in (1 Breeze, 2 Thunder Canyon, 3 Cosmic
 -- Stratosphere, 0 = Cloud Altar only). Weight = chance inside its zone.
 -- Visual: look built by server CloudVisuals.luau (+ client Effects.luau).
+-- Perk: what the cloud does when you equip it from your vault into your
+-- Quirks/Perks inventory (lost forever if you die while it's equipped).
 -- Keys (Rain, Thunder, ...) are saved in player data — never rename a key,
 -- change DisplayName instead.
 
@@ -11,6 +13,7 @@ local WeatherTypes = {}
 WeatherTypes.Types = {
 	-- Zone 1: Breeze Zone ------------------------------------------------
 	Cumulus = {
+		Perk = { Name = "Cloud Hop", Desc = "+40% jump height", Jump = 1.4 },
 		DisplayName = "Cumulus",
 		Zone = 1,
 		Weight = 50,
@@ -23,6 +26,7 @@ WeatherTypes.Types = {
 		Visual = "Cumulus",
 	},
 	Rain = {
+		Perk = { Name = "Slick Feet", Desc = "Rain puddles can't make you slip", NoSlip = true },
 		DisplayName = "Rain Cloud",
 		Zone = 1,
 		Weight = 30,
@@ -35,6 +39,7 @@ WeatherTypes.Types = {
 		Visual = "Rain",
 	},
 	Snow = {
+		Perk = { Name = "Frost Grip", Desc = "Full grip on Ice Paths", IceGrip = true },
 		DisplayName = "Snow Cloud",
 		Zone = 1,
 		Weight = 20,
@@ -49,6 +54,7 @@ WeatherTypes.Types = {
 
 	-- Zone 2: Thunder Canyon ---------------------------------------------
 	Thunder = {
+		Perk = { Name = "Grounded", Desc = "Immune to electric rivers and swamps", ElectricImmune = true },
 		DisplayName = "Cumulonimbus",
 		Zone = 2,
 		Weight = 50,
@@ -61,6 +67,7 @@ WeatherTypes.Types = {
 		Visual = "Storm",
 	},
 	Tornado = {
+		Perk = { Name = "Eye of the Storm", Desc = "Storm Bridge wind can't push you", WindImmune = true },
 		DisplayName = "Pocket Tornado",
 		Zone = 2,
 		Weight = 50,
@@ -75,6 +82,7 @@ WeatherTypes.Types = {
 
 	-- Zone 3: Cosmic Stratosphere ----------------------------------------
 	Cosmic = {
+		Perk = { Name = "Nebula Dash", Desc = "+50% walk speed", Speed = 1.5 },
 		DisplayName = "Cosmic Neon Cloud",
 		Zone = 3,
 		Weight = 40,
@@ -87,6 +95,7 @@ WeatherTypes.Types = {
 		Visual = "Cosmic",
 	},
 	Aurora = {
+		Perk = { Name = "Aurora Mend", Desc = "Regenerate 3 HP every second", Regen = 3 },
 		DisplayName = "Auroral Cloud",
 		Zone = 3,
 		Weight = 40,
@@ -99,6 +108,7 @@ WeatherTypes.Types = {
 		Visual = "Aurora",
 	},
 	Chrono = {
+		Perk = { Name = "Time Stretch", Desc = "Shop item effects last twice as long", ItemTime = 2 },
 		DisplayName = "Chrono Cloud",
 		Zone = 3,
 		Weight = 20,
@@ -113,6 +123,7 @@ WeatherTypes.Types = {
 
 	-- Cloud Altar only ----------------------------------------------------
 	Mythic = {
+		Perk = { Name = "Storm Lord", Desc = "+30% speed & jump, immune to lightning and electricity", Speed = 1.3, Jump = 1.3, ElectricImmune = true, LightningImmune = true },
 		DisplayName = "Mythic Storm Cloud",
 		Zone = 0,
 		Weight = 0,

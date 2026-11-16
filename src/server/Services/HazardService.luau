@@ -2,7 +2,7 @@
 --   "Ice"      Gate 1 · slippery, you lose control (client Movement.luau)
 --   "River"    Gate 2 · electric river that pulses Calm → Warn → Shock.
 --              Calm = a bit slow. Shock = very slow + damage. Time your crossing!
---              (attribute State is set here; Storm Charm = immune)
+--              (attribute State is set here; Grounded perk (Cumulonimbus) = immune)
 --   "Storm"    Gate 3 · narrow bridge: lightning strikes random spots
 --              (red warning circle first) + side wind (client)
 --   "Electric" always-on electric ground (slow + damage)
@@ -150,7 +150,7 @@ local function strike(bridge: BasePart)
 
 		for _, p in players() do
 			local flat = Vector3.new(p.Root.Position.X - ground.X, 0, p.Root.Position.Z - ground.Z)
-			if flat.Magnitude <= r and math.abs(p.Root.Position.Y - ground.Y) < 8 then
+			if flat.Magnitude <= r and math.abs(p.Root.Position.Y - ground.Y) < 8 and not p.Player:GetAttribute("LightningImmune") then
 				local carrying = p.Player:GetAttribute("Carrying") ~= nil
 				p.Hum:TakeDamage(carrying and Config.LightningDamage * 1.3 or Config.LightningDamage)
 				local dir = flat.Magnitude > 0.1 and flat.Unit or Vector3.xAxis

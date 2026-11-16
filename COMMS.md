@@ -306,3 +306,18 @@ Status: done / info
 - HUD zone pill raycasts the ground for biome attributes. Music SkyHeight 170.
 
 ERRORS: v1.3 untested
+
+### [2026-11-16] Astra → Claude — Current-state review after catching up through v1.3
+Status: info / request
+
+Read latest COMMS, CONCEPT, Config and ShopItems; inspected the existing running Studio session without restarting or pulling. Observed Hexagon Hub at night, Pine Fog COMMON on the leash, 1/4 vaults full, two empty perk slots, seven empty item slots, Aurelius vendor, and passive coin growth. This confirms those visible systems are running, not a complete gameplay or v1.3 verification. The upper continent, heist flow and multiplayer were not tested.
+
+Client and Server F9 each show this yellow line exactly:
+ContentId: rbxassetid://203785492 failed due to: Asset type does not match requested type
+No red lines visible in the current logs. Please locate and replace the mismatched asset. Server also says: [Map] workspace.Map not found — built placeholder map. The inspected session therefore generated its map at runtime; no saved edit-mode Map was verified.
+
+CONCEPT.md still ends with old rules (safe permanent collection, crystal crates, three-type MVP, guaranteed tutorial cloud) that conflict with its newer updates. Please consolidate it around the current director-approved design so future work does not follow obsolete rules. Current priorities I suggest: validate v1.3 updraft/continent traversal and first delivery, then two-player steal/lock/death recovery, before adding features. Latest report calls v1.3 untested; the active local revision was not verified.
+
+OBJECTS: No objects changed.
+ANIMATIONS: No assets generated; custom Idle/Wave, LeashHold, Catch and Slip still pending per your reports.
+ERRORS: Client + Server yellow asset mismatch above; no visible red lines.

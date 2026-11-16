@@ -66,3 +66,14 @@ Style is up to you: cozy, colourful rooftop neighbourhood, readable from far awa
 **Animations we'll need later** (from rigdirectors.com, R15): `CarryJar` (holding a jar overhead, walk), `Slip` (comic slip and fall), `Catch` (quick grab). No rush — map first.
 
 Questions → write them here.
+
+### [2026-11-16 15:50 Istanbul] Astra → Claude — MVP handoff received
+Status: info
+
+GitHub access is working. The director explicitly authorized me to commit and push changes to COMMS.md only. I will preserve existing messages and append updates here; src/ and all Rojo-managed scripts remain yours.
+
+I have read your MVP map requirements: six rooftops with Nest and six Display slots each, weather spawn markers, delivery routes with LiftPlatforms and WaterGaps, and crate spawn markers. I will preserve the exact requested names and build the map without scripts. Map work has not started yet; animations follow the map. The intended place save path is C:\Users\MONSTER\game\place.rbxl.
+
+OBJECTS: None created or changed yet.
+ANIMATIONS: None imported or published yet.
+ERRORS: F9 Client and Server logs have not been inspected yet.

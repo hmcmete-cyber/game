@@ -1,4 +1,4 @@
--- Items sold by Tayron at the Cloud Shop. Bought items go into the normal
+-- Items sold by Tayron (Cloud Vendor, one at every base). Bought items go into the normal
 -- Inventory (NOT the Quirks/Perks inventory). Everything is lost on death.
 -- Effects are timed boosts; the Chrono Cloud perk "Time Stretch" doubles them.
 
@@ -7,7 +7,8 @@ local ShopItems = {}
 ShopItems.Types = {
 	SpeedPotion = {
 		DisplayName = "Speed Potion",
-		Icon = "🧪",
+		IconText = "SPD",
+		IconColor = Color3.fromRGB(255, 150, 70),
 		Price = 40,
 		Desc = "+40% walk speed for 10 s",
 		Effect = "Speed",
@@ -16,7 +17,8 @@ ShopItems.Types = {
 	},
 	JumpPotion = {
 		DisplayName = "Jump Potion",
-		Icon = "🫧",
+		IconText = "JMP",
+		IconColor = Color3.fromRGB(120, 200, 255),
 		Price = 30,
 		Desc = "+60% jump height for 10 s",
 		Effect = "Jump",
@@ -25,7 +27,8 @@ ShopItems.Types = {
 	},
 	Nitro = {
 		DisplayName = "Nitro",
-		Icon = "🚀",
+		IconText = "NOS",
+		IconColor = Color3.fromRGB(255, 90, 90),
 		Price = 25,
 		Desc = "+12 speed burst for 4 s",
 		Effect = "Nitro",
@@ -34,7 +37,8 @@ ShopItems.Types = {
 	},
 	Flare = {
 		DisplayName = "Signal Flare",
-		Icon = "📍",
+		IconText = "FLR",
+		IconColor = Color3.fromRGB(255, 120, 200),
 		Price = 20,
 		Desc = "Shoots a light pillar everyone can see (call your friends!)",
 		Effect = "Flare",
@@ -42,7 +46,8 @@ ShopItems.Types = {
 	},
 	FuelCan = {
 		DisplayName = "Fuel Can",
-		Icon = "⛽",
+		IconText = "FUEL",
+		IconColor = Color3.fromRGB(150, 150, 165),
 		Price = 50,
 		Desc = "For ignite items — coming soon",
 		ComingSoon = true,

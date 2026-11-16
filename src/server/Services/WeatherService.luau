@@ -81,6 +81,9 @@ end
 
 -- Speed + jump. Carrying = slower and lower jumps.
 local function setMovement(player: Player, speed: number, carrying: boolean)
+	if carrying then
+		speed += player:GetAttribute("CarryBonus") or 0 -- Aurelius "Strong Grip"
+	end
 	player:SetAttribute("BaseSpeed", speed)
 	local _, hum = getRoot(player)
 	if hum then
@@ -186,6 +189,11 @@ local function rollZone(): number
 		end
 	end
 	return 1
+end
+
+-- Solar Flare perk etc.
+local function coinMult(player: Player): number
+	return player:GetAttribute("CoinMult") or 1
 end
 
 local function rewardOf(typeName: string, shiny: boolean): number
@@ -419,7 +427,7 @@ local function renderVault(vault: BasePart, entry, owner: Player?)
 		vault.Color = entry.Shiny and Weather.ShinyColor or def.Color:Lerp(Color3.new(1, 1, 1), 0.5)
 		glow.Color = entry.Shiny and Weather.ShinyColor or def.ParticleColor
 		local perTick = math.max(1, math.floor(rewardOf(entry.Type, entry.Shiny) * Config.VaultIncomeRate))
-		addLabel(vault, `{entry.Shiny and "✨ " or ""}{def.DisplayName}  +{perTick}/{Config.VaultIncomeInterval}s`,
+		addLabel(vault, `{entry.Shiny and "* " or ""}{def.DisplayName}  +{perTick}/{Config.VaultIncomeInterval}s`,
 			entry.Shiny and Weather.ShinyColor or Color3.new(1, 1, 1), 50)
 
 		if owner then
@@ -577,7 +585,7 @@ end
 
 local function deliver(player: Player, c, nest: BasePart)
 	local def = Weather.Types[c.Type]
-	local reward = rewardOf(c.Type, c.Shiny)
+	local reward = math.floor(rewardOf(c.Type, c.Shiny) * coinMult(player))
 	local data = DataService.Get(player)
 	if data then
 		data.Delivered += 1
@@ -598,7 +606,7 @@ local function deliver(player: Player, c, nest: BasePart)
 			vault:SetAttribute("Pulse", os.clock())
 		end
 		burstAt(vault and vault.Position or nest.Position, c.Shiny and Weather.ShinyColor or def.Color, c.Shiny and 80 or 40)
-		hint(player, c.Victim and `Heist complete! {def.DisplayName} is yours now 😈`
+		hint(player, c.Victim and `Heist complete! {def.DisplayName} is yours now `
 			or `{def.DisplayName} stored in your vault — it earns coins while it stays!`, 3)
 	else
 		-- Vault full: sell it for double
@@ -631,12 +639,12 @@ local function catch(player: Player, sphere: BasePart)
 
 	hint(player, `You caught a {def.DisplayName}! Bring it to your base — follow the beam`, 5)
 	if info.Type == "Mythic" then
-		hintAll(`🌌 {player.DisplayName} CAUGHT THE MYTHIC STORM CLOUD! 🌌`, 8)
+		hintAll(`{player.DisplayName} CAUGHT THE MYTHIC STORM CLOUD!`, 8)
 	elseif def.Zone >= 2 then
-		hintAll(`⚡ {player.DisplayName} has a {string.upper(def.DisplayName)}! ⚡`, 4)
+		hintAll(`{player.DisplayName} has a {string.upper(def.DisplayName)}!`, 4)
 	end
 	if info.Shiny then
-		hintAll(`✨ {player.DisplayName} caught a SHINY {def.DisplayName}! ✨`, 6)
+		hintAll(`* {player.DisplayName} caught a SHINY {def.DisplayName}! *`, 6)
 	end
 end
 
@@ -671,7 +679,7 @@ onStealPrompt = function(player: Player, owner: Player, vault: BasePart)
 		return
 	end
 	if BaseLock.IsLocked(roof) then
-		hint(player, "🛡️ This base is shielded!", 2)
+		hint(player, "This base is shielded!", 2)
 		return
 	end
 	local root = getRoot(player)
@@ -700,10 +708,10 @@ onPerkPrompt = function(player: Player, owner: Player, vault: BasePart)
 	slots[slot] = false
 	refreshVaults(owner)
 	burstAt(vault.Position, def.ParticleColor, 30)
-	hint(player, `✨ {def.Perk.Name} active — {def.Perk.Desc}. If you die, this cloud is GONE!`, 5)
+	hint(player, `* {def.Perk.Name} active — {def.Perk.Desc}. If you die, this cloud is GONE!`, 5)
 end
 
--- Perks inventory → back into the vault (called by InventoryService)
+-- Perks inventory -> back into the vault (called by InventoryService)
 local function returnToVault(player: Player, typeName: string, shiny: boolean): boolean
 	if not storeInVault(player, typeName, shiny) then
 		return false
@@ -792,7 +800,7 @@ local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean)
 	local sphere = makeSphere(typeName, shiny, 1)
 	local base = spawnPart.Position + Vector3.new(0, 1.5, 0)
 	moveAssembly(sphere, CFrame.new(stormPos)) -- born inside the storm
-	addLabel(sphere, shiny and `✨ SHINY {def.DisplayName} ✨` or def.DisplayName, shiny and Weather.ShinyColor or Color3.new(1, 1, 1))
+	addLabel(sphere, shiny and `* SHINY {def.DisplayName} *` or def.DisplayName, shiny and Weather.ShinyColor or Color3.new(1, 1, 1))
 	local prompt = makePrompt(sphere, "CatchPrompt", "Catch", def.DisplayName,
 		typeName == "Mythic" and Config.MythicCatchHold or Config.CatchHold)
 	prompt.Enabled = false -- until it lands
@@ -893,9 +901,9 @@ local function altarLoop()
 			spawnWild(altar, typeName, not mythic and math.random() < Weather.ShinyChance * 5)
 			burstAt(altar.Position, Weather.Types[typeName].ParticleColor, 60)
 			if mythic then
-				hintAll("🌌 A MYTHIC STORM CLOUD has appeared at a Cloud Altar! 🌌", 10)
+				hintAll("A MYTHIC STORM CLOUD has appeared at a Cloud Altar!", 10)
 			else
-				hintAll(`✨ A {Weather.Types[typeName].DisplayName} rose from a Cloud Altar!`, 5)
+				hintAll(`* A {Weather.Types[typeName].DisplayName} rose from a Cloud Altar!`, 5)
 			end
 		end
 	end
@@ -914,6 +922,7 @@ local function incomeLoop()
 						total += math.max(1, math.floor(rewardOf(entry.Type, entry.Shiny == true) * Config.VaultIncomeRate))
 					end
 				end
+				total = math.floor(total * (player:GetAttribute("IncomeMult") or 1) * coinMult(player))
 				if total > 0 then
 					addCoins(player, total)
 				end
@@ -1117,7 +1126,7 @@ local function mainLoop()
 					local victim = c.Victim
 					clearCarry(player, true)
 					hint(player, `{victim.DisplayName} caught you! The storm flew back.`, 4)
-					hint(victim, `You caught {player.DisplayName}! Storm recovered 🛡️`, 4)
+					hint(victim, `You caught {player.DisplayName}! Storm recovered`, 4)
 					continue
 				end
 			end
@@ -1185,7 +1194,7 @@ function WeatherService.OnPlayerAdded(player: Player)
 			end
 			local data = DataService.Get(player)
 			if data and data.Delivered == 0 then
-				hint(player, "Walk up to the cloud and press E to catch it! ☁️", 8)
+				hint(player, "Walk up to the cloud and press E to catch it!", 8)
 			else
 				hint(player, "Catch storms, fill your vaults, raid other bases!", 5)
 			end

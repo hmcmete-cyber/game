@@ -4,8 +4,8 @@
 -- ManualLighting = true on the Lighting service.
 --
 -- Manual Studio steps (can't be done from scripts):
---   Lighting → Technology = Future
---   Optional custom skybox: Lighting → Sky → set SkyboxBk/Dn/Ft/Lf/Rt/Up to a
+--   Lighting -> Technology = Future
+--   Optional custom skybox: Lighting -> Sky -> set SkyboxBk/Dn/Ft/Lf/Rt/Up to a
 --   pastel skybox from the Creator Store (any 6-image skybox works).
 
 local Lighting = game:GetService("Lighting")

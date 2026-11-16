@@ -1,7 +1,7 @@
 -- Hides E-prompts that aren't meant for you. The server still checks
 -- everything; this only keeps the screen clean.
---   Role "Steal" → hidden on your own base
---   Role "Perk"  → only shown on your own base
+--   Role "Steal" -> hidden on your own base
+--   Role "Perk"  -> only shown on your own base
 -- Also hides catch prompts while you're already carrying a cloud.
 
 local Players = game:GetService("Players")

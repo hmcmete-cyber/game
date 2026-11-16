@@ -1,6 +1,6 @@
 -- Hazard gates (Map/Hazards/*, attribute HazardType):
 --   "Ice"      Gate 1 · slippery, you lose control (client Movement.luau)
---   "River"    Gate 2 · electric river that pulses Calm → Warn → Shock.
+--   "River"    Gate 2 · electric river that pulses Calm -> Warn -> Shock.
 --              Calm = a bit slow. Shock = very slow + damage. Time your crossing!
 --              (attribute State is set here; Grounded perk (Cumulonimbus) = immune)
 --   "Storm"    Gate 3 · narrow bridge: lightning strikes random spots
@@ -152,9 +152,10 @@ local function strike(bridge: BasePart)
 			local flat = Vector3.new(p.Root.Position.X - ground.X, 0, p.Root.Position.Z - ground.Z)
 			if flat.Magnitude <= r and math.abs(p.Root.Position.Y - ground.Y) < 8 and not p.Player:GetAttribute("LightningImmune") then
 				local carrying = p.Player:GetAttribute("Carrying") ~= nil
-				p.Hum:TakeDamage(carrying and Config.LightningDamage * 1.3 or Config.LightningDamage)
+				local resist = p.Player:GetAttribute("BlastResist") and 0.5 or 1 -- Phoenix perk
+				p.Hum:TakeDamage((carrying and Config.LightningDamage * 1.3 or Config.LightningDamage) * resist)
 				local dir = flat.Magnitude > 0.1 and flat.Unit or Vector3.xAxis
-				Remotes.Knock:FireClient(p.Player, dir * Config.LightningKnock + Vector3.new(0, 30, 0))
+				Remotes.Knock:FireClient(p.Player, (dir * Config.LightningKnock + Vector3.new(0, 30, 0)) * resist)
 			end
 		end
 	end)
@@ -175,7 +176,20 @@ local function damageLoop()
 			end
 		end
 
-		for _, p in players() do
+		-- Thunder Storm perk: a static field slows rivals around the holder
+		local list = players()
+		for _, holder in list do
+			if holder.Player:GetAttribute("StormAura") then
+				for _, other in list do
+					if other ~= holder and not other.Player:GetAttribute("ElectricImmune")
+						and (other.Root.Position - holder.Root.Position).Magnitude <= Config.StormAuraRadius then
+						other.Player:SetAttribute("ShockedUntil", now + Config.ElectricInterval + 0.2)
+					end
+				end
+			end
+		end
+
+		for _, p in list do
 			if p.Player:GetAttribute("ElectricImmune") then
 				continue
 			end

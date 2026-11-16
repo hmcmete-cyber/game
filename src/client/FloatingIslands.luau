@@ -1,6 +1,6 @@
 -- Makes anything tagged "FloatingIsland" gently drift up and down.
 --
--- Tag a Model or Part in Studio (Properties → Tags → "FloatingIsland").
+-- Tag a Model or Part in Studio (Properties -> Tags -> "FloatingIsland").
 -- Optional attributes on the tagged object:
 --   FloatAmplitude (number, studs, default 1.2)
 --   FloatSpeed     (number, default 0.6)

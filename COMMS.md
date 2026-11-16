@@ -260,3 +260,17 @@ Help wanted when you're back: a nicer Tayron outfit/avatar, real Idle/Wave anima
 OBJECTS: `Map/Shops/CloudShop/{TayronSpot, Tayron}`, `Map/Zones/ShopArea`
 ANIMATIONS: wanted — Tayron Idle, Tayron Wave, player LeashHold, Catch, Slip
 ERRORS: untested in Studio yet
+
+### [2026-11-16 22:00 Istanbul] Claude → Astra — v1.0: hub map, 12 bases, updraft, Aurelius, fixes
+Status: done / info
+
+- **Fixes**: no emoji anywhere in Luau (UI uses coloured text chips: `WeatherTypes.Icon`, `ShopItems.IconText/IconColor`). `NpcAnimator.luau` builds Idle/Wave KeyframeSequences, registers them (KeyframeSequenceProvider) and plays AnimationTracks; fallback poses joints in `Stepped`. Custom `Animation` children named Idle/Wave still win.
+- **Map** (`MapService.buildPlaceholder`): Hexagon Hub Y=40 R=60, 6 SpawnLocations, `AirColumns/Updraft` (Lift 70, push −Z above Y 128) → `Route/SkyLanding` (Y 130, z −20…−100), `AirColumns/Descent` (Lift −14). 12 bases at radius 95 via `BaseBuilder.Build(..., facing)`. Sky path z −100…−454 at Y 130. Old plaza, shop and Nitro station removed (`ShopBuilder.luau` deleted).
+- **Vendors**: `RooftopN/Market/{TayronSpot, AureliusSpot}` (attr `Npc`). `NpcService` spawns both on every base; `OpenShop(shop, vendor)`.
+- **Upgrades**: `Shared/Upgrades.luau`, `Services/UpgradeService.luau`, remote `BuyUpgrade`. Attributes UpgradeSpeed/UpgradeJump/CarryBonus/IncomeMult/PerkSlots.
+- **New clouds**: Phoenix (zone 2), Void + Solar (zone 3); Snow → "Frost Cloud", Thunder → "Thunder Storm". Perk abilities via `PerkAbility(slot)` (keys G/H/J), `Dazzle` remote.
+- Max players should be **12** now (Game Settings).
+
+OBJECTS: `Map/AirColumns/{Updraft, Descent}`, `Map/Route/SkyLanding`, `RooftopN/Market/*`
+ANIMATIONS: still wanted — Tayron/Aurelius Idle + Wave (real ones), player LeashHold, Catch, Slip
+ERRORS: untested in Studio yet

@@ -1,13 +1,13 @@
 -- Everything that changes how YOUR character moves:
 --   Puddles (from Rain clouds): Slip / Ice road / Launch pad
 --   Hazards (Map/Hazards):
---     Ice Path      → you lose grip: your velocity only slowly follows your input.
+--     Ice Path      -> you lose grip: your velocity only slowly follows your input.
 --                     Carrying a cloud = much less grip + random slips.
 --                     Frost Grip perk (Snow Cloud) = full grip.
---     Electric      → slower (damage is done by the server). Grounded perk (Cumulonimbus) = immune.
---     Electric River→ pulses Calm/Warn/Shock (same clock as the server): slower,
+--     Electric      -> slower (damage is done by the server). Grounded perk (Cumulonimbus) = immune.
+--     Electric River-> pulses Calm/Warn/Shock (same clock as the server): slower,
 --                     much slower while shocking. Grounded perk (Cumulonimbus) = immune.
---     Storm Bridge  → side wind gusts push you (worse with a cloud: it's a balloon!)
+--     Storm Bridge  -> side wind gusts push you (worse with a cloud: it's a balloon!)
 --   Lightning knockback (server Knock remote)
 --   Perks (PerkSpeed, PerkJump, NoSlip, IceGrip, WindImmune, ElectricImmune)
 --   Shop items (SpeedUntil/SpeedMult, JumpUntil/JumpMult, NitroUntil)
@@ -40,7 +40,7 @@ local function baseSpeed(): number
 	return player:GetAttribute("BaseSpeed") or Config.WalkSpeed
 end
 
--- Same clock as HazardService: Calm → Warn → Shock
+-- Same clock as HazardService: Calm -> Warn -> Shock
 local function riverShocking(): boolean
 	local period = Config.RiverCalm + Config.RiverWarn + Config.RiverShock
 	return workspace:GetServerTimeNow() % period >= Config.RiverCalm + Config.RiverWarn
@@ -75,6 +75,10 @@ local function applySpeed()
 		speed += Config.NitroBoost
 	end
 	speed *= player:GetAttribute("PerkSpeed") or 1
+	speed *= player:GetAttribute("UpgradeSpeed") or 1 -- Aurelius
+	if active("ShockedUntil") and not player:GetAttribute("ElectricImmune") then
+		speed *= Config.StormAuraSlow -- someone's Thunder Storm static field
+	end
 	if active("SpeedUntil") then
 		speed *= player:GetAttribute("SpeedMult") or 1
 	end
@@ -88,6 +92,7 @@ local function applySpeed()
 
 	local carrying = player:GetAttribute("Carrying") ~= nil
 	local jump = (carrying and Config.CarryJumpHeight or 7.2) * (player:GetAttribute("PerkJump") or 1)
+		* (player:GetAttribute("UpgradeJump") or 1)
 	if active("JumpUntil") then
 		jump *= player:GetAttribute("JumpMult") or 1
 	end
@@ -202,6 +207,12 @@ function Movement.Start()
 	puddleParams.FilterType = Enum.RaycastFilterType.Include
 	puddleParams.FilterDescendantsInstances = { puddles }
 
+	-- Air columns (hub updraft / descent chute)
+	local airFolder = workspace.Map:WaitForChild("AirColumns")
+	local airParams = OverlapParams.new()
+	airParams.FilterType = Enum.RaycastFilterType.Include
+	airParams.FilterDescendantsInstances = { airFolder }
+
 	local hazardParams = OverlapParams.new()
 	hazardParams.FilterType = Enum.RaycastFilterType.Include
 	hazardParams.FilterDescendantsInstances = { hazards }
@@ -270,6 +281,25 @@ function Movement.Start()
 
 		updateIce(hum, root, dt)
 		applySpeed()
+
+		-- Updraft / descent: smoothly match the column's vertical speed,
+		-- plus a sideways push near the top (throws you onto the sky landing)
+		local column = workspace:GetPartBoundsInBox(root.CFrame, Vector3.new(2, 2, 2), airParams)[1]
+		if column and not slipping then
+			local lift = column:GetAttribute("Lift") or 0
+			local v = root.AssemblyLinearVelocity
+			local vy = v.Y + (lift - v.Y) * math.clamp(dt * Config.AirAccel, 0, 1)
+			local vx, vz = v.X, v.Z
+			local pushAbove = column:GetAttribute("PushAbove")
+			if pushAbove and root.Position.Y >= pushAbove then
+				vx = column:GetAttribute("PushX") or vx
+				vz = column:GetAttribute("PushZ") or vz
+			end
+			root.AssemblyLinearVelocity = Vector3.new(vx, vy, vz)
+			if hum:GetState() ~= Enum.HumanoidStateType.Freefall and lift > 0 then
+				hum:ChangeState(Enum.HumanoidStateType.Freefall)
+			end
+		end
 	end)
 end
 

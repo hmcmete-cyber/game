@@ -14,6 +14,7 @@ local BaseLockService = require(Services.BaseLockService)
 local InventoryService = require(Services.InventoryService)
 local HazardService = require(Services.HazardService)
 local NpcService = require(Services.NpcService)
+local UpgradeService = require(Services.UpgradeService)
 
 -- Remotes (server -> client messages)
 local remotes = Instance.new("Folder")
@@ -39,7 +40,10 @@ end
 local useItemEvent = remote("UseItem") -- client -> server: use a shop item (id)
 local buyItemEvent = remote("BuyItem") -- client -> server: buy from Tayron (id)
 local perkActionEvent = remote("PerkAction") -- client -> server: ("Return", index)
-local openShopEvent = remote("OpenShop") -- server -> client: open the Shop UI
+local openShopEvent = remote("OpenShop") -- server -> client: open a shop ("Items" | "Upgrades", vendor)
+local buyUpgradeEvent = remote("BuyUpgrade") -- client -> server: Aurelius upgrade (id)
+local perkAbilityEvent = remote("PerkAbility") -- client -> server: use perk ability (slot)
+local dazzleEvent = remote("Dazzle") -- server -> client: white-out flash (seconds)
 local knockEvent = Instance.new("RemoteEvent") -- server -> client: lightning knockback
 knockEvent.Name = "Knock"
 knockEvent.Parent = remotes
@@ -49,11 +53,13 @@ LightingService.Apply()
 DataService.Start()
 MapService.Start()
 local remoteTable = { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent, UseItem = useItemEvent, Knock = knockEvent,
-	BuyItem = buyItemEvent, PerkAction = perkActionEvent, OpenShop = openShopEvent }
+	BuyItem = buyItemEvent, PerkAction = perkActionEvent, OpenShop = openShopEvent,
+	BuyUpgrade = buyUpgradeEvent, PerkAbility = perkAbilityEvent, Dazzle = dazzleEvent }
 WeatherService.Start(MapService, DataService, remoteTable)
 BaseLockService.Start(MapService, remoteTable)
 InventoryService.Start(DataService, remoteTable)
 HazardService.Start(MapService, remoteTable)
+UpgradeService.Start(DataService, remoteTable)
 NpcService.Start(remoteTable)
 
 local function onPlayerAdded(player: Player)
@@ -69,6 +75,7 @@ local function onPlayerAdded(player: Player)
 
 	WeatherService.OnPlayerAdded(player)
 	InventoryService.OnPlayerAdded(player)
+	UpgradeService.OnPlayerAdded(player)
 end
 
 local function onPlayerRemoving(player: Player)

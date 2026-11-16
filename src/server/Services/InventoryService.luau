@@ -62,6 +62,9 @@ local function perkTotals(perks)
 		LightningImmune = false,
 		Regen = 0,
 		ItemTime = 1,
+		CoinMult = 1,
+		StormAura = false,
+		BlastResist = false,
 	}
 	for _, entry in perks do
 		local def = Weather.Types[entry.Type]
@@ -76,6 +79,9 @@ local function perkTotals(perks)
 			t.LightningImmune = t.LightningImmune or perk.LightningImmune == true
 			t.Regen += perk.Regen or 0
 			t.ItemTime = math.max(t.ItemTime, perk.ItemTime or 1)
+			t.CoinMult = math.max(t.CoinMult, perk.CoinMult or 1)
+			t.StormAura = t.StormAura or perk.StormAura == true
+			t.BlastResist = t.BlastResist or perk.BlastResist == true
 		end
 	end
 	return t
@@ -108,7 +114,7 @@ end
 
 function InventoryService.EquipPerk(player: Player, typeName: string, shiny: boolean): boolean
 	local d = data(player)
-	if not d or #d.Perks >= Config.PerkSlots then
+	if not d or #d.Perks >= (player:GetAttribute("PerkSlots") or Config.PerkSlots) then
 		return false
 	end
 	table.insert(d.Perks, { Type = typeName, Shiny = shiny })
@@ -132,6 +138,74 @@ local function perkAction(player: Player, action: unknown, index: unknown)
 	else
 		Remotes.Hint:FireClient(player, "Your vault is full!", 2)
 	end
+end
+
+------------------------------------------------------------------------
+-- Perk abilities (G / H / J = perk slot 1 / 2 / 3)
+------------------------------------------------------------------------
+
+local function blink(player: Player, root: BasePart)
+	local char = player.Character
+	local look = root.CFrame.LookVector * Vector3.new(1, 0, 1)
+	local dir = look.Magnitude > 0 and look.Unit or Vector3.zAxis
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { char, workspace:FindFirstChild("Weather") }
+	local hit = workspace:Raycast(root.Position, dir * Config.BlinkDistance, params)
+	local dist = hit and math.max(0, hit.Distance - 2) or Config.BlinkDistance
+	root.CFrame = root.CFrame + dir * dist
+
+	-- invisible for a moment (everyone sees it: server-side transparency)
+	local saved = {}
+	for _, d in char:GetDescendants() do
+		if (d:IsA("BasePart") or d:IsA("Decal")) and d.Name ~= "HumanoidRootPart" then
+			saved[d] = d.Transparency
+			d.Transparency = 1
+		end
+	end
+	task.delay(Config.BlinkInvisible, function()
+		for inst, t in saved do
+			if inst.Parent then
+				inst.Transparency = t
+			end
+		end
+	end)
+end
+
+local function dazzle(player: Player, root: BasePart)
+	for _, other in Players:GetPlayers() do
+		local r = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if r and (r.Position - root.Position).Magnitude <= Config.DazzleRadius then
+			Remotes.Dazzle:FireClient(other, Config.DazzleDuration)
+		end
+	end
+	Remotes.Dazzle:FireClient(player, 0.25) -- small flash for yourself
+end
+
+local ABILITIES = {
+	Blink = { Run = blink, Cooldown = Config.BlinkCooldown },
+	Dazzle = { Run = dazzle, Cooldown = Config.DazzleCooldown },
+}
+
+local function perkAbility(player: Player, slot: unknown)
+	local d = data(player)
+	if not d or type(slot) ~= "number" then
+		return
+	end
+	local entry = d.Perks[slot]
+	local perk = entry and Weather.Types[entry.Type] and Weather.Types[entry.Type].Perk
+	local ability = perk and perk.Ability and ABILITIES[perk.Ability]
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not ability or not root then
+		return
+	end
+	local now = workspace:GetServerTimeNow()
+	local key = "AbilityReady" .. slot
+	if now < (player:GetAttribute(key) or 0) then
+		return
+	end
+	player:SetAttribute(key, now + ability.Cooldown)
+	ability.Run(player, root)
 end
 
 ------------------------------------------------------------------------
@@ -172,7 +246,7 @@ local function buy(player: Player, id: unknown)
 	d.Coins -= item.Price
 	DataService.Sync(player)
 	sync(player)
-	Remotes.Hint:FireClient(player, `{item.Icon} Bought {item.DisplayName}!`, 2)
+	Remotes.Hint:FireClient(player, `Bought {item.DisplayName}!`, 2)
 end
 
 local function flare(player: Player)
@@ -199,7 +273,7 @@ local function flare(player: Player)
 	light.Parent = pillar
 	pillar.Parent = workspace
 	Debris:AddItem(pillar, ShopItems.Types.Flare.Duration)
-	Remotes.Hint:FireAllClients(`📍 {player.DisplayName} sent a flare!`, 3)
+	Remotes.Hint:FireAllClients(`{player.DisplayName} sent a flare!`, 3)
 end
 
 local function useItem(player: Player, id: unknown)
@@ -283,9 +357,9 @@ function InventoryService.OnPlayerAdded(player: Player)
 		hum.Died:Connect(function()
 			local items, perks = InventoryService.Wipe(player)
 			if perks > 0 then
-				Remotes.Hint:FireClient(player, `💀 You died — {perks} perk cloud(s) and your items are GONE!`, 5)
+				Remotes.Hint:FireClient(player, `You died — {perks} perk cloud(s) and your items are GONE!`, 5)
 			elseif items > 0 then
-				Remotes.Hint:FireClient(player, "💀 You died — your items were lost!", 4)
+				Remotes.Hint:FireClient(player, "You died — your items were lost!", 4)
 			end
 		end)
 	end
@@ -301,6 +375,7 @@ function InventoryService.Start(dataService, remotes)
 	Remotes.UseItem.OnServerEvent:Connect(useItem)
 	Remotes.BuyItem.OnServerEvent:Connect(buy)
 	Remotes.PerkAction.OnServerEvent:Connect(perkAction)
+	Remotes.PerkAbility.OnServerEvent:Connect(perkAbility)
 	task.spawn(regenLoop)
 end
 

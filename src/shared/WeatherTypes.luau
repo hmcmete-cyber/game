@@ -39,8 +39,8 @@ WeatherTypes.Types = {
 		Visual = "Rain",
 	},
 	Snow = {
-		Perk = { Name = "Frost Grip", Desc = "Full grip on Ice Paths", IceGrip = true },
-		DisplayName = "Snow Cloud",
+		Perk = { Name = "Frost Grip", Desc = "Slippery ice can't make you lose control", IceGrip = true },
+		DisplayName = "Frost Cloud",
 		Zone = 1,
 		Weight = 20,
 		Reward = 15,
@@ -54,10 +54,10 @@ WeatherTypes.Types = {
 
 	-- Zone 2: Thunder Canyon ---------------------------------------------
 	Thunder = {
-		Perk = { Name = "Grounded", Desc = "Immune to electric rivers and swamps", ElectricImmune = true },
-		DisplayName = "Cumulonimbus",
+		Perk = { Name = "Static Field", Desc = "Rivals near you are slowed; you're immune to electricity", StormAura = true, ElectricImmune = true },
+		DisplayName = "Thunder Storm",
 		Zone = 2,
-		Weight = 50,
+		Weight = 40,
 		Reward = 45,
 		Size = 4.5,
 		Color = Color3.fromRGB(55, 55, 75),
@@ -70,7 +70,7 @@ WeatherTypes.Types = {
 		Perk = { Name = "Eye of the Storm", Desc = "Storm Bridge wind can't push you", WindImmune = true },
 		DisplayName = "Pocket Tornado",
 		Zone = 2,
-		Weight = 50,
+		Weight = 30,
 		Reward = 35,
 		Size = 3.5,
 		Color = Color3.fromRGB(170, 165, 150),
@@ -121,9 +121,49 @@ WeatherTypes.Types = {
 		Visual = "Chrono",
 	},
 
+	Phoenix = {
+		Perk = { Name = "Phoenix Blood", Desc = "+25% speed, half damage & knockback from lightning", Speed = 1.25, BlastResist = true },
+		DisplayName = "Phoenix Cloud",
+		Zone = 2,
+		Weight = 30,
+		Reward = 60,
+		Size = 4.5,
+		Color = Color3.fromRGB(255, 120, 50),
+		ParticleColor = Color3.fromRGB(255, 170, 60),
+		ParticleAcceleration = Vector3.new(0, 8, 0), -- rising embers
+		Spin = 1.2,
+		Visual = "Phoenix",
+	},
+	Void = {
+		Perk = { Name = "Void Step", Desc = "Press the perk key: blink forward and turn invisible for 3 s", Ability = "Blink" },
+		DisplayName = "Void Star Cloud",
+		Zone = 3,
+		Weight = 15,
+		Reward = 200,
+		Size = 4.5,
+		Color = Color3.fromRGB(25, 15, 45),
+		ParticleColor = Color3.fromRGB(200, 170, 255),
+		ParticleAcceleration = Vector3.new(0, 0, 0),
+		Spin = 0.6,
+		Visual = "Void",
+	},
+	Solar = {
+		Perk = { Name = "Solar Flare", Desc = "x1.5 coins. Perk key: blind nearby rivals with a flash", CoinMult = 1.5, Ability = "Dazzle" },
+		DisplayName = "Solar Flare Cloud",
+		Zone = 3,
+		Weight = 15,
+		Reward = 220,
+		Size = 4.5,
+		Color = Color3.fromRGB(255, 215, 90),
+		ParticleColor = Color3.fromRGB(255, 240, 160),
+		ParticleAcceleration = Vector3.new(0, 2, 0),
+		Spin = 0.8,
+		Visual = "Solar",
+	},
+
 	-- Cloud Altar only ----------------------------------------------------
 	Mythic = {
-		Perk = { Name = "Storm Lord", Desc = "+30% speed & jump, immune to lightning and electricity", Speed = 1.3, Jump = 1.3, ElectricImmune = true, LightningImmune = true },
+		Perk = { Name = "Storm Lord", Desc = "+30% speed & jump, immune to lightning and electricity", Speed = 1.3, Jump = 1.3, ElectricImmune = true, LightningImmune = true, CoinMult = 1.25 },
 		DisplayName = "Mythic Storm Cloud",
 		Zone = 0,
 		Weight = 0,
@@ -138,7 +178,23 @@ WeatherTypes.Types = {
 }
 
 -- Fixed order (UI lists)
-WeatherTypes.Order = { "Cumulus", "Rain", "Snow", "Thunder", "Tornado", "Cosmic", "Aurora", "Chrono", "Mythic" }
+WeatherTypes.Order = { "Cumulus", "Rain", "Snow", "Thunder", "Tornado", "Phoenix", "Cosmic", "Aurora", "Chrono", "Void", "Solar", "Mythic" }
+
+-- Short text + colour for UI icon chips (emoji-free, renders everywhere)
+WeatherTypes.Icon = {
+	Cumulus = { "CU", Color3.fromRGB(230, 236, 245) },
+	Rain = { "RN", Color3.fromRGB(110, 160, 230) },
+	Snow = { "FR", Color3.fromRGB(170, 225, 255) },
+	Thunder = { "TS", Color3.fromRGB(120, 110, 170) },
+	Tornado = { "TO", Color3.fromRGB(190, 180, 150) },
+	Phoenix = { "PX", Color3.fromRGB(255, 130, 60) },
+	Cosmic = { "CO", Color3.fromRGB(190, 100, 255) },
+	Aurora = { "AU", Color3.fromRGB(110, 240, 180) },
+	Chrono = { "CH", Color3.fromRGB(255, 220, 140) },
+	Void = { "VD", Color3.fromRGB(90, 60, 150) },
+	Solar = { "SO", Color3.fromRGB(255, 210, 80) },
+	Mythic = { "MY", Color3.fromRGB(255, 90, 120) },
+}
 
 -- Which zone a new cloud appears in (overall spawn split)
 WeatherTypes.Zones = {

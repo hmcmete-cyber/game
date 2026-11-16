@@ -30,12 +30,25 @@ local Config = {
 	LeashBack = 5, -- how far behind you
 	LeashResponsiveness = 12,
 
+	-- Hub air columns (Map/AirColumns, attributes Lift / PushX / PushZ / PushAbove)
+	AirAccel = 6, -- how quickly you match the column's vertical speed
+
+	-- Perk abilities (keys G = perk slot 1, H = slot 2, J = slot 3)
+	BlinkDistance = 22,
+	BlinkInvisible = 3,
+	BlinkCooldown = 12,
+	DazzleRadius = 35,
+	DazzleDuration = 1.6,
+	DazzleCooldown = 15,
+	StormAuraRadius = 14, -- Thunder Storm perk: rivals in range are slowed
+	StormAuraSlow = 0.6,
+
 	-- Inventories (both wiped on death)
 	ItemSlots = 4, -- normal Inventory: shop items, keys 1-4
 	ItemStack = 5, -- max of one item per slot
 	PerkSlots = 2, -- Quirks/Perks: clouds equipped from your own vault
 
-	-- Gate 2: Electric River (pulses: calm → warning → shock)
+	-- Gate 2: Electric River (pulses: calm -> warning -> shock)
 	RiverCalm = 2.6,
 	RiverWarn = 0.6,
 	RiverShock = 1.2,

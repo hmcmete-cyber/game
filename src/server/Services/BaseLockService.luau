@@ -1,4 +1,4 @@
--- Base Lock: each base has a LockPad. The owner steps on it → a big
+-- Base Lock: each base has a LockPad. The owner steps on it -> a big
 -- ForceField shield covers the base for Config.LockDuration seconds. While it's
 -- up, rivals are pushed out and can't steal. Then it recharges for
 -- Config.LockCooldown seconds.
@@ -129,7 +129,7 @@ local function tryLock(player: Player, roof: Model, nest: BasePart)
 		LastHint = now,
 	}
 	roof:SetAttribute("Locked", true)
-	Remotes.Hint:FireClient(player, `🛡️ Base locked for {Config.LockDuration}s — nobody can steal!`, 4)
+	Remotes.Hint:FireClient(player, `Base locked for {Config.LockDuration}s — nobody can steal!`, 4)
 end
 
 -- Push a rival out of the shield
@@ -180,7 +180,7 @@ local function loop()
 			end
 
 			if st and now < st.LockedUntil then
-				setPadLook(pad, LOCKED, `🛡️ {math.ceil(st.LockedUntil - now)}s`)
+				setPadLook(pad, LOCKED, `{math.ceil(st.LockedUntil - now)}s`)
 				local nest = roof.Nest
 				for _, player in Players:GetPlayers() do
 					if player ~= st.Owner then
@@ -200,9 +200,9 @@ local function loop()
 					end
 				end
 				if st and now < st.CooldownUntil then
-					setPadLook(pad, RECHARGE, `⏳ {math.ceil(st.CooldownUntil - now)}s`)
+					setPadLook(pad, RECHARGE, `{math.ceil(st.CooldownUntil - now)}s`)
 				else
-					setPadLook(pad, READY, roof:GetAttribute("OwnerUserId") and "🔒 LOCK BASE" or "")
+					setPadLook(pad, READY, roof:GetAttribute("OwnerUserId") and "LOCK BASE" or "")
 				end
 			end
 		end

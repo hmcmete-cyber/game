@@ -3,13 +3,13 @@
 -- PlayerGui
 -- └── StealACloudHUD (ScreenGui)
 --     ├── TopCenter (Frame)                    where am I + danger
---     │   ├── ZonePill (Frame)  ZoneText       "🌤️ Breeze Zone"
+--     │   ├── ZonePill (Frame)  ZoneText       "Breeze Zone"
 --     │   ├── Alert (Frame)     AlertText      red: thefts / alarms · yellow: gate warnings
 --     │   └── Hint (TextLabel)                 tutorial / info messages
 --     ├── Status (Frame, top-right)            cloud & vault status
 --     │   ├── CoinsTitle, CoinsValue
 --     │   ├── CarryTitle, CarryValue, Rarity   "Mythic Storm Cloud" · MYTHIC
---     │   └── VaultTitle, VaultValue, Dots     "2 / 4 spheres full" ● ● ○ ○
+--     │   └── VaultTitle, VaultValue, Dots     "2 / 4 spheres full" # # o o
 --     └── AlarmFlash (Frame)                   full-screen red flash when robbed
 --
 -- Also: the yellow beam from you to your Nest while carrying, "+N" popups.
@@ -171,7 +171,7 @@ local function buildUi()
 		})
 	end
 
-	small("CoinsTitle", 0, "☁️ STORM COINS")
+	small("CoinsTitle", 0, "STORM COINS")
 	coinsValue = text("CoinsValue", status, {
 		Text = "0",
 		Font = Enum.Font.GothamBlack,
@@ -183,7 +183,7 @@ local function buildUi()
 	coinsScale = Instance.new("UIScale")
 	coinsScale.Parent = coinsValue
 
-	small("CarryTitle", 56, "🪢 ON YOUR LEASH")
+	small("CarryTitle", 56, "ON YOUR LEASH")
 	carryValue = text("CarryValue", status, {
 		Text = "—",
 		Position = UDim2.fromOffset(0, 72),
@@ -198,7 +198,7 @@ local function buildUi()
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
 
-	small("VaultTitle", 120, "🫧 YOUR VAULT")
+	small("VaultTitle", 120, "YOUR VAULT")
 	vaultValue = text("VaultValue", status, {
 		Text = "0 / 0 spheres full",
 		Position = UDim2.fromOffset(0, 136),
@@ -310,7 +310,7 @@ local function updateCarry()
 	carryValue.Text = def.DisplayName
 	carryValue.TextColor3 = rarity.Color
 	local stolen = player:GetAttribute("CarryingStolen")
-	rarityText.Text = string.upper(rarity.Name) .. (stolen and "  ·  🚨 STOLEN" or "")
+	rarityText.Text = string.upper(rarity.Name) .. (stolen and "  -  STOLEN!" or "")
 	rarityText.TextColor3 = stolen and RED or rarity.Color
 end
 
@@ -319,7 +319,7 @@ local function updateVault()
 	local size = player:GetAttribute("VaultSize") or 0
 	vaultValue.Text = `{filled} / {size} spheres full`
 	vaultValue.TextColor3 = (size > 0 and filled >= size) and GOLD or Color3.new(1, 1, 1)
-	dots.Text = string.rep("● ", filled) .. string.rep("○ ", math.max(0, size - filled))
+	dots.Text = string.rep("[#] ", filled) .. string.rep("[  ] ", math.max(0, size - filled))
 end
 
 -- Beam from you to your Nest while carrying
@@ -404,20 +404,20 @@ local function floatText(position: Vector3, message: string, color: Color3)
 end
 
 local function onDelivered(reward: number, _kind: string, shiny: boolean, nestPos: Vector3)
-	floatText(nestPos, shiny and `✨ +{reward} ✨` or `+{reward}`, shiny and Weather.ShinyColor or GOLD)
+	floatText(nestPos, shiny and `* +{reward} *` or `+{reward}`, shiny and Weather.ShinyColor or GOLD)
 	playSound(PING, 0.7, shiny and 0.8 or 1.2)
 end
 
 local function onStolen(thiefName: string, victimName: string, stormName: string)
 	if victimName == player.DisplayName then
-		showAlert(`🚨 WARNING: {thiefName} STOLE YOUR {string.upper(stormName)}!`, true, 3)
+		showAlert(`WARNING: {thiefName} STOLE YOUR {string.upper(stormName)}!`, true, 3)
 	else
-		showAlert(`⚠️ {thiefName} stole {victimName}'s {stormName}!`, true, 2.5)
+		showAlert(`{thiefName} stole {victimName}'s {stormName}!`, true, 2.5)
 	end
 end
 
 local function onAlarm(thiefName: string)
-	showAlert(`🚨 {thiefName} is on your base! Touch them to take your cloud back!`, true, 3)
+	showAlert(`{thiefName} is on your base! Touch them to take your cloud back!`, true, 3)
 	for i = 1, 3 do
 		task.delay((i - 1) * 0.35, function()
 			playSound(PING, 0.9, 0.6)
@@ -453,7 +453,7 @@ local function zoneLoop()
 			end
 			gateWarning = zone and zone:GetAttribute("Warning") or nil
 			if gateWarning then
-				showAlert(`⚠️ {gateWarning}`, false, 4)
+				showAlert(`{gateWarning}`, false, 4)
 			elseif alert.BackgroundColor3 == AMBER then
 				alert.Visible = false
 			end
@@ -471,6 +471,17 @@ function Hud.Start()
 	remotes:WaitForChild("Delivered").OnClientEvent:Connect(onDelivered)
 	remotes:WaitForChild("Alarm").OnClientEvent:Connect(onAlarm)
 	remotes:WaitForChild("Stolen").OnClientEvent:Connect(onStolen)
+	-- Solar Flare perk: someone blinded you
+	remotes:WaitForChild("Dazzle").OnClientEvent:Connect(function(seconds: number)
+		alarmFlash.BackgroundColor3 = Color3.fromRGB(255, 252, 235)
+		alarmFlash.BackgroundTransparency = 0
+		TweenService:Create(alarmFlash, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			BackgroundTransparency = 1,
+		}):Play()
+		task.delay(seconds, function()
+			alarmFlash.BackgroundColor3 = RED
+		end)
+	end)
 
 	player:GetAttributeChangedSignal("Carrying"):Connect(function()
 		task.defer(function() -- wait for CarryingStolen to be set too

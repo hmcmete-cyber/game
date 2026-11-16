@@ -68,6 +68,13 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - **Clouds** are no longer spheres: asymmetric stacks of ellipsoids (SpecialMesh) + smoke layers; each puff breathes on its own rhythm, speed per type.
 - **Sky**: golden-hour pastel lighting, lilac/peach atmosphere, Terrain Clouds, stronger sun rays.
 
+## Update 7 — Hexagon Hub, 12 bases, updraft, two vendors per base (director request)
+
+- **Fixes**: emoji removed from all UI text (newer emoji render as boxes) → coloured text chips; NPC animation now uses real AnimationTracks from KeyframeSequences built in code (fallback: joint posing in Stepped, after the Animator).
+- **Map**: no baseplate/default spawn references. Central **Hexagon Hub** (radius 60) with 6 spawn pads, pillars, neon rim. **12 bases** around it (radius 95, facing the hub, bridges). **Updraft** in the hub center lifts you to the **Sky Landing** (Y 130); the **Descent** chute glides you back. Sky path: Gate 1 Ice → Breeze → Gate 2 River → Canyon (+Altar 1) → Gate 3 Storm Bridge → Cosmic → Altar 2.
+- **New clouds/perks**: Frost Cloud (ice grip), Thunder Storm (static field slows rivals + electric immunity), **Phoenix** (+25% speed, half lightning damage/knockback), **Void Star** (G/H/J: blink + 3 s invisibility), **Solar Flare** (x1.5 coins, ability: blind nearby rivals).
+- **Vendors on every base** (Market ledge): **Tayron** (temporary items) and **Aurelius** (permanent upgrades: speed, jump, carry speed, vault income, +1 perk slot — kept on death).
+
 ## Core loop
 
 1. **Hunt** weather creatures in the shared zone.

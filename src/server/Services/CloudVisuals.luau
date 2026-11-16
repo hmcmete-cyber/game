@@ -2,9 +2,9 @@
 -- breathes out of the center, plus a signature effect per type.
 --
 --   Cumulus   white cotton smoke drifting slowly
---   Storm     dark slate smoke, sparks; tag LightningCloud → client arcs + flashes
---   Cosmic    deep purple puffs, rainbow star particles; tag RainbowCloud → client hue cycle
---   Aurora    pale teal puffs, green→purple light ribbons below; tag AuroraCloud → client waves
+--   Storm     dark slate smoke, sparks; tag LightningCloud -> client arcs + flashes
+--   Cosmic    deep purple puffs, rainbow star particles; tag RainbowCloud -> client hue cycle
+--   Aurora    pale teal puffs, green->purple light ribbons below; tag AuroraCloud -> client waves
 --   Chrono    golden puffs with cyan/gold time sparks spiralling
 --   Mythic    huge black-purple storm with all of the above
 --   Rain / Snow / Tornado: tinted puffs + drops / flakes / dust
@@ -53,6 +53,9 @@ local STYLE = {
 	Cosmic = { Tint = Color3.fromRGB(70, 35, 130), Smoke = Color3.fromRGB(120, 60, 200), Material = Enum.Material.SmoothPlastic, Alpha = 0.3 },
 	Aurora = { Tint = Color3.fromRGB(190, 255, 235), Smoke = Color3.fromRGB(160, 255, 210), Material = Enum.Material.SmoothPlastic, Alpha = 0.4 },
 	Chrono = { Tint = Color3.fromRGB(255, 235, 175), Smoke = Color3.fromRGB(255, 225, 150), Material = Enum.Material.SmoothPlastic, Alpha = 0.35 },
+	Phoenix = { Tint = Color3.fromRGB(255, 140, 70), Smoke = Color3.fromRGB(255, 110, 50), Material = Enum.Material.SmoothPlastic, Alpha = 0.25 },
+	Void = { Tint = Color3.fromRGB(30, 18, 55), Smoke = Color3.fromRGB(70, 40, 120), Material = Enum.Material.SmoothPlastic, Alpha = 0.15 },
+	Solar = { Tint = Color3.fromRGB(255, 225, 120), Smoke = Color3.fromRGB(255, 240, 170), Material = Enum.Material.Neon, Alpha = 0.3 },
 	Mythic = { Tint = Color3.fromRGB(45, 20, 70), Smoke = Color3.fromRGB(80, 30, 120), Material = Enum.Material.Slate, Alpha = 0.1 },
 }
 
@@ -325,6 +328,89 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 		light.Color = Color3.fromRGB(120, 255, 190)
 		light.Brightness = 2
 		CollectionService:AddTag(center, "AuroraCloud")
+	end
+
+	if visual == "Phoenix" then
+		-- flames licking up + embers
+		emitter(center, {
+			Name = "Flames",
+			Texture = SMOKE,
+			Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 240, 150)),
+				ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 140, 50)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 40, 20)),
+			}),
+			Size = NumberSequence.new(d * 0.35, d * 0.05),
+			Transparency = NumberSequence.new(0.2, 1),
+			Lifetime = NumberRange.new(0.5, 0.9),
+			Rate = 22,
+			Speed = NumberRange.new(2, 4),
+			SpreadAngle = Vector2.new(25, 25),
+			EmissionDirection = Enum.NormalId.Top,
+			LightEmission = 1,
+			LightInfluence = 0,
+		})
+		emitter(center, {
+			Name = "Embers",
+			Color = ColorSequence.new(Color3.fromRGB(255, 200, 90)),
+			Lifetime = NumberRange.new(1, 1.6),
+			Rate = 12,
+			Speed = NumberRange.new(1, 3),
+			Acceleration = Vector3.new(0, 4, 0),
+			SpreadAngle = Vector2.new(180, 180),
+			Size = ns(0.2 * scale, 0),
+			LightEmission = 1,
+		})
+		light.Color = Color3.fromRGB(255, 150, 70)
+		light.Brightness = 2.5
+	end
+
+	if visual == "Void" then
+		-- a dark hole full of white stars, purple rim glow
+		emitter(center, {
+			Name = "VoidStars",
+			Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(190, 160, 255)),
+			Lifetime = NumberRange.new(1.2, 2),
+			Rate = 20,
+			Speed = NumberRange.new(0.2, 0.8),
+			SpreadAngle = Vector2.new(180, 180),
+			Size = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0),
+				NumberSequenceKeypoint.new(0.3, 0.22 * scale),
+				NumberSequenceKeypoint.new(1, 0),
+			}),
+			LightEmission = 1,
+		})
+		emitter(center, {
+			Name = "Pull",
+			Texture = SMOKE,
+			Color = ColorSequence.new(Color3.fromRGB(150, 90, 255)),
+			Size = NumberSequence.new(d * 0.9, d * 0.2), -- shrinks inward
+			Transparency = NumberSequence.new(0.8, 0.4),
+			Lifetime = NumberRange.new(1.2, 1.6),
+			Rate = 4,
+			Speed = NumberRange.new(0, 0),
+			LightEmission = 0.8,
+		})
+		light.Color = Color3.fromRGB(160, 100, 255)
+		light.Brightness = 2
+	end
+
+	if visual == "Solar" then
+		-- blinding golden core + flare rays
+		emitter(center, {
+			Name = "Rays",
+			Color = ColorSequence.new(Color3.fromRGB(255, 245, 190), Color3.fromRGB(255, 190, 70)),
+			Lifetime = NumberRange.new(0.4, 0.7),
+			Rate = 18,
+			Speed = NumberRange.new(5, 8),
+			SpreadAngle = Vector2.new(180, 180),
+			Size = NumberSequence.new(0.5 * scale, 0),
+			LightEmission = 1,
+		})
+		light.Color = Color3.fromRGB(255, 230, 150)
+		light.Brightness = 4
+		light.Range = 14 * scale
 	end
 
 	if visual == "Chrono" then

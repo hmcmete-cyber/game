@@ -6,9 +6,10 @@
 -- RooftopN (Model, PrimaryPart = Top1)
 -- ├── Top1..3, Glass1..3, Rim1..6, Rock*, Core   (the island)
 -- ├── Nest (Part)                                 deposit pad in the middle
--- ├── LockPad (Part)                              owner steps on it → shield
+-- ├── LockPad (Part)                              owner steps on it -> shield
 -- ├── Vaults/Vault1..N (Part, Ball, glass)        tagged VaultSphere + FloatingIsland
 -- ├── Pedestals/*                                 under each sphere
+-- ├── Market/ (ledge at the back)                 Tayron + Aurelius kiosks, NpcSpot parts (attr Npc)
 -- └── Rings/RingA, RingB (Model)                  tagged SpinRing (client spins them)
 
 local CollectionService = game:GetService("CollectionService")
@@ -135,12 +136,14 @@ function BaseBuilder.Vault(vaults: Instance, pedestals: Instance?, name: string,
 end
 
 -- top: position of the walkable top surface center
-function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent: Color3): Model
+-- facing (optional): point the base's front (local -Z: lock pad, entrance)
+-- toward this position. The market ledge with the two vendors is at the back.
+function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent: Color3, facing: Vector3?): Model
 	local R = BaseBuilder.Radius
 	local base = Instance.new("Model")
 	base.Name = name
 
-	local topCF = CFrame.new(top)
+	local topCF = facing and CFrame.lookAt(top, Vector3.new(facing.X, top.Y, facing.Z)) or CFrame.new(top)
 
 	-- Shiny metal deck + glass inlay
 	local deck = hexagon(base, "Top", topCF * CFrame.new(0, -0.5, 0), R, 1, METAL, {
@@ -196,7 +199,50 @@ function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent:
 	local pedestals = folder(base, "Pedestals")
 	for n = 1, Config.VaultCount do
 		local a = math.rad(45) + (n - 1) * (math.pi * 2 / Config.VaultCount)
-		BaseBuilder.Vault(vaults, pedestals, "Vault" .. n, top + Vector3.new(math.cos(a) * 6.8, 3.3, math.sin(a) * 6.8))
+		BaseBuilder.Vault(vaults, pedestals, "Vault" .. n, topCF:PointToWorldSpace(Vector3.new(math.cos(a) * 6.8, 3.3, math.sin(a) * 6.8)))
+	end
+
+	-- Market ledge at the back: Tayron (items) + Aurelius (upgrades)
+	local ledge = folder(base, "Market")
+	local ledgeCF = topCF * CFrame.new(0, 0, R * 0.866 + 4)
+	part(ledge, "Ledge", Vector3.new(16, 1, 9), ledgeCF * CFrame.new(0, -0.5, 0), METAL, {
+		Material = Enum.Material.Metal,
+		Reflectance = 0.1,
+	})
+	for i, info in { { "Tayron", -4, Color3.fromRGB(120, 200, 255) }, { "Aurelius", 4, Color3.fromRGB(255, 205, 90) } } do
+		local x = info[2]
+		-- small kiosk: counter + canopy + light
+		part(ledge, info[1] .. "Counter", Vector3.new(5, 2.6, 1.4), ledgeCF * CFrame.new(x, 1.3, -1.2), Color3.fromRGB(150, 105, 70), {
+			Material = Enum.Material.Wood,
+		})
+		part(ledge, info[1] .. "CounterTop", Vector3.new(5.4, 0.3, 1.8), ledgeCF * CFrame.new(x, 2.75, -1.2), info[3], {
+			Material = Enum.Material.Neon,
+		})
+		part(ledge, info[1] .. "Canopy", Vector3.new(6, 0.3, 5), ledgeCF * CFrame.new(x, 8, 0.8) * CFrame.Angles(math.rad(-10), 0, 0), info[3], {
+			Material = Enum.Material.Fabric,
+		})
+		for _, px in { -2.7, 2.7 } do
+			part(ledge, info[1] .. "Pole", Vector3.new(0.4, 7.6, 0.4), ledgeCF * CFrame.new(x + px, 3.8, 3), Color3.fromRGB(110, 80, 55), {
+				Material = Enum.Material.Wood,
+			})
+		end
+		local lamp = part(ledge, info[1] .. "Lamp", Vector3.new(0.8, 0.8, 0.8), ledgeCF * CFrame.new(x, 7.4, 0.5), Color3.fromRGB(255, 230, 170), {
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+		})
+		local l = Instance.new("PointLight")
+		l.Range = 12
+		l.Brightness = 1.5
+		l.Color = Color3.fromRGB(255, 220, 170)
+		l.Parent = lamp
+		-- where the NPC stands (behind the counter, facing the base center)
+		local spot = part(ledge, info[1] .. "Spot", Vector3.one, ledgeCF * CFrame.new(x, 0, 0.8), Color3.new(1, 1, 1), {
+			Transparency = 1,
+			CanCollide = false,
+			CanQuery = false,
+			CanTouch = false,
+		})
+		spot:SetAttribute("Npc", info[1])
 	end
 
 	-- Energy rings

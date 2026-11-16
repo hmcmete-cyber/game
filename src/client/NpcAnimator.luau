@@ -1,11 +1,19 @@
--- Procedural animation for NPCs tagged "Npc" (Tayron). No animation assets:
--- we drive the R15 Motor6D joints directly every frame.
---   Idle   gentle breathing + side-to-side sway
---   Look   head turns toward you when you're close
---   Wave   when you walk up (within 16 studs) he waves and greets you
--- If the model has an Animation named "Idle"/"Wave", those are played instead.
+-- NPC animations (Tayron, Aurelius, … tagged "Npc") with real AnimationTracks.
+--
+-- Why the old version failed: it wrote Motor6D.Transform in RenderStepped,
+-- but the Animator resets Transform every frame, so nothing moved.
+--
+-- Now, for every NPC:
+--   1. If the model contains Animation objects named "Idle" / "Wave", play them.
+--   2. Otherwise build KeyframeSequences in code (breathing idle, waving arm),
+--      register them with KeyframeSequenceProvider and play them as
+--      AnimationTracks through the NPC's Animator.
+--   3. If registering isn't allowed on this device, fall back to posing the
+--      joints in RunService.Stepped (that runs AFTER the Animator, so it sticks).
+-- The NPC greets you (wave + speech bubble) when you walk up.
 
 local CollectionService = game:GetService("CollectionService")
+local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -13,14 +21,96 @@ local NpcAnimator = {}
 
 local player = Players.LocalPlayer
 local npcs = {} -- [Model] = state
+local GREET_RANGE = 14
 
-local GREET_RANGE = 16
+------------------------------------------------------------------------
+-- KeyframeSequences built in code (R15 pose hierarchy)
+------------------------------------------------------------------------
 
-local function joint(model: Model, part: string, name: string): Motor6D?
-	local p = model:FindFirstChild(part)
-	local m = p and p:FindFirstChild(name)
-	return (m and m:IsA("Motor6D")) and m or nil
+-- poses: { [partName] = CFrame }, only the parts we move
+local function keyframe(time: number, poses: { [string]: CFrame }): Keyframe
+	local kf = Instance.new("Keyframe")
+	kf.Time = time
+	local function pose(name: string, parent: Instance)
+		local p = Instance.new("Pose")
+		p.Name = name
+		p.CFrame = poses[name] or CFrame.new()
+		p.Weight = 1
+		p.Parent = parent
+		return p
+	end
+	local root = pose("HumanoidRootPart", kf)
+	local lower = pose("LowerTorso", root)
+	local upper = pose("UpperTorso", lower)
+	pose("Head", upper)
+	local rua = pose("RightUpperArm", upper)
+	pose("RightLowerArm", rua)
+	local lua = pose("LeftUpperArm", upper)
+	pose("LeftLowerArm", lua)
+	kf.Parent = nil
+	return kf
 end
+
+local function sequence(name: string, looped: boolean, frames: { Keyframe }): KeyframeSequence
+	local seq = Instance.new("KeyframeSequence")
+	seq.Name = name
+	seq.Loop = looped
+	seq.Priority = looped and Enum.AnimationPriority.Idle or Enum.AnimationPriority.Action
+	for _, kf in frames do
+		kf.Parent = seq
+	end
+	return seq
+end
+
+local function idleSequence()
+	local breathe = CFrame.Angles(math.rad(-3), 0, 0)
+	return sequence("NpcIdle", true, {
+		keyframe(0, {}),
+		keyframe(1.4, {
+			UpperTorso = breathe * CFrame.Angles(0, math.rad(4), 0),
+			Head = CFrame.Angles(math.rad(3), math.rad(-4), 0),
+			RightUpperArm = CFrame.Angles(0, 0, math.rad(3)),
+			LeftUpperArm = CFrame.Angles(0, 0, math.rad(-3)),
+		}),
+		keyframe(2.8, {}),
+	})
+end
+
+local function waveSequence()
+	local up = CFrame.Angles(0, 0, math.rad(150))
+	return sequence("NpcWave", false, {
+		keyframe(0, {}),
+		keyframe(0.3, { RightUpperArm = up, Head = CFrame.Angles(0, 0, math.rad(6)) }),
+		keyframe(0.5, { RightUpperArm = up, RightLowerArm = CFrame.Angles(0, 0, math.rad(30)) }),
+		keyframe(0.7, { RightUpperArm = up, RightLowerArm = CFrame.Angles(0, 0, math.rad(-30)) }),
+		keyframe(0.9, { RightUpperArm = up, RightLowerArm = CFrame.Angles(0, 0, math.rad(30)) }),
+		keyframe(1.1, { RightUpperArm = up, RightLowerArm = CFrame.Angles(0, 0, math.rad(-30)) }),
+		keyframe(1.5, {}),
+	})
+end
+
+-- One registered asset id per sequence for the whole session
+local ids = {}
+local function registeredId(key: string, build: () -> KeyframeSequence): string?
+	if ids[key] == nil then
+		local ok, id = pcall(function()
+			return KeyframeSequenceProvider:RegisterKeyframeSequence(build())
+		end)
+		ids[key] = ok and id or false
+		if not ok then
+			warn("[NpcAnimator] KeyframeSequence registration not available — using joint fallback")
+		end
+	end
+	return ids[key] or nil
+end
+
+local function makeAnimation(id: string): Animation
+	local a = Instance.new("Animation")
+	a.AnimationId = id
+	return a
+end
+
+------------------------------------------------------------------------
 
 local function bubble(model: Model, message: string)
 	local head = model:FindFirstChild("Head")
@@ -57,96 +147,115 @@ local function bubble(model: Model, message: string)
 	end)
 end
 
-local function playAsset(model: Model, name: string): boolean
-	local anim = model:FindFirstChild(name)
-	local hum = model:FindFirstChildOfClass("Humanoid")
-	if anim and anim:IsA("Animation") and hum then
-		local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
-		local track = animator:LoadAnimation(anim)
-		track.Looped = name == "Idle"
-		track:Play()
-		return true
-	end
-	return false
+local GREETINGS = {
+	Tayron = "Hey %s! Need some cloud gear?",
+	Aurelius = "Welcome, %s. Ready to grow stronger?",
+}
+
+local function joint(model: Model, part: string, name: string): Motor6D?
+	local p = model:FindFirstChild(part)
+	local m = p and p:FindFirstChild(name)
+	return (m and m:IsA("Motor6D")) and m or nil
 end
 
 local function add(model: Instance)
-	if not model:IsA("Model") then
+	if not model:IsA("Model") or npcs[model] then
 		return
 	end
+	local hum = model:FindFirstChildOfClass("Humanoid")
+	if not hum then
+		return
+	end
+	local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
+
 	local state = {
-		Waist = joint(model, "UpperTorso", "Waist"),
-		Neck = joint(model, "Head", "Neck"),
-		Shoulder = joint(model, "RightUpperArm", "RightShoulder"),
-		Elbow = joint(model, "RightLowerArm", "RightElbow"),
 		Root = model:FindFirstChild("HumanoidRootPart"),
-		Phase = math.random() * 6,
-		WaveUntil = 0,
 		WasNear = false,
-		HasIdleAsset = playAsset(model, "Idle"),
+		WaveUntil = 0,
+		Phase = math.random() * 6,
+		Joints = {
+			Waist = joint(model, "UpperTorso", "Waist"),
+			Neck = joint(model, "Head", "Neck"),
+			Shoulder = joint(model, "RightUpperArm", "RightShoulder"),
+			Elbow = joint(model, "RightLowerArm", "RightElbow"),
+		},
 	}
+
+	-- 1) custom Animation objects, 2) generated KeyframeSequences
+	local idleAnim = model:FindFirstChild("Idle")
+	local waveAnim = model:FindFirstChild("Wave")
+	if not (idleAnim and idleAnim:IsA("Animation")) then
+		local id = registeredId("idle", idleSequence)
+		idleAnim = id and makeAnimation(id) or nil
+	end
+	if not (waveAnim and waveAnim:IsA("Animation")) then
+		local id = registeredId("wave", waveSequence)
+		waveAnim = id and makeAnimation(id) or nil
+	end
+	local ok1, idleTrack = pcall(function()
+		return idleAnim and animator:LoadAnimation(idleAnim)
+	end)
+	local ok2, waveTrack = pcall(function()
+		return waveAnim and animator:LoadAnimation(waveAnim)
+	end)
+	state.Idle = ok1 and idleTrack or nil
+	state.Wave = ok2 and waveTrack or nil
+	if state.Idle then
+		state.Idle.Looped = true
+		state.Idle:Play(0.3)
+	end
+
 	npcs[model] = state
 end
 
 function NpcAnimator.Start()
 	for _, m in CollectionService:GetTagged("Npc") do
-		add(m)
+		task.spawn(add, m)
 	end
-	CollectionService:GetInstanceAddedSignal("Npc"):Connect(add)
+	CollectionService:GetInstanceAddedSignal("Npc"):Connect(function(m)
+		task.spawn(add, m)
+	end)
 	CollectionService:GetInstanceRemovedSignal("Npc"):Connect(function(m)
 		npcs[m] = nil
 	end)
 
-	RunService.RenderStepped:Connect(function()
-		local t = os.clock()
-		local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		for model, s in npcs do
-			if not model.Parent or not s.Root then
-				npcs[model] = nil
-				continue
-			end
-			local dist = myRoot and (myRoot.Position - s.Root.Position).Magnitude or math.huge
-			local near = dist < GREET_RANGE
-
-			-- Greeting when you arrive
-			if near and not s.WasNear then
-				s.WaveUntil = t + 2.2
-				if not playAsset(model, "Wave") then
-					bubble(model, `Hey {player.DisplayName}! Need some cloud gear? ☁️`)
+	-- Greeting check (cheap, 5×/s)
+	task.spawn(function()
+		while true do
+			task.wait(0.2)
+			local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			for model, s in npcs do
+				if not model.Parent or not s.Root then
+					npcs[model] = nil
+					continue
 				end
-			end
-			s.WasNear = near
-
-			if s.HasIdleAsset then
-				continue
-			end
-
-			-- Idle sway + breathing
-			if s.Waist then
-				s.Waist.Transform = CFrame.Angles(math.sin(t * 2.2 + s.Phase) * 0.03, math.sin(t * 0.9 + s.Phase) * 0.08, math.sin(t * 0.9 + s.Phase) * 0.04)
-			end
-
-			-- Look at you
-			if s.Neck then
-				local yaw = 0
-				if near and myRoot then
-					local rel = s.Root.CFrame:PointToObjectSpace(myRoot.Position)
-					yaw = math.clamp(math.atan2(-rel.X, -rel.Z), -0.8, 0.8)
-				end
-				s.Neck.Transform = s.Neck.Transform:Lerp(CFrame.Angles(0, yaw, 0), 0.1)
-			end
-
-			-- Wave
-			if s.Shoulder then
-				if t < s.WaveUntil then
-					s.Shoulder.Transform = CFrame.Angles(0, 0, math.rad(150))
-					if s.Elbow then
-						s.Elbow.Transform = CFrame.Angles(0, 0, math.sin(t * 12) * 0.5)
+				local near = myRoot ~= nil and (myRoot.Position - s.Root.Position).Magnitude < GREET_RANGE
+				if near and not s.WasNear then
+					s.WaveUntil = os.clock() + 1.5
+					if s.Wave then
+						s.Wave:Play(0.1)
 					end
-				else
-					s.Shoulder.Transform = s.Shoulder.Transform:Lerp(CFrame.Angles(0, 0, math.sin(t * 1.3 + s.Phase) * 0.05), 0.15)
-					if s.Elbow then
-						s.Elbow.Transform = s.Elbow.Transform:Lerp(CFrame.new(), 0.15)
+					bubble(model, string.format(GREETINGS[model.Name] or "Hello, %s!", player.DisplayName))
+				end
+				s.WasNear = near
+			end
+		end
+	end)
+
+	-- 3) Fallback posing for NPCs without tracks. Stepped runs after the
+	-- Animator has written Transform, so these poses actually show.
+	RunService.Stepped:Connect(function()
+		local t = os.clock()
+		for _, s in npcs do
+			local j = s.Joints
+			if not s.Idle and j.Waist then
+				j.Waist.Transform = CFrame.Angles(math.sin(t * 2.2 + s.Phase) * 0.03, math.sin(t * 0.9 + s.Phase) * 0.08, 0)
+			end
+			if not s.Wave and j.Shoulder then
+				if t < s.WaveUntil then
+					j.Shoulder.Transform = CFrame.Angles(0, 0, math.rad(150))
+					if j.Elbow then
+						j.Elbow.Transform = CFrame.Angles(0, 0, math.sin(t * 12) * 0.5)
 					end
 				end
 			end

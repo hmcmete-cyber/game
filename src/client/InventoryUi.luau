@@ -1,18 +1,16 @@
 -- Bottom-left: the two inventories (glass, rounded). Both are lost on death.
 -- Your right hand is free (clouds hang on a leash from your left hand), so
--- items can be used any time.
+-- items and perk abilities can be used any time.
+-- Icons are coloured text chips (no emoji: they don't render everywhere).
 --
 -- PlayerGui
 -- └── InventoryUI (ScreenGui)
---     ├── PerksPanel (Frame)                 QUIRKS / PERKS · risky!
---     │   ├── Title
---     │   └── Card1..N (Frame)               cloud emoji, perk name, desc, [Return] button
---     └── ItemsPanel (Frame)                 INVENTORY · shop items
---         ├── Title
---         └── Slot1..N (TextButton)          icon, name, count, key 1-4
+--     ├── PerksPanel (Frame)            QUIRKS / PERKS - lost forever if you die
+--     │   └── Card1..3 (Frame)          chip, perk name, desc, ability key + cooldown, [Vault] button
+--     └── ItemsPanel (Frame)            INVENTORY - shop items
+--         └── Slot1..4 (TextButton)     chip, name, count, key 1-4
 --
--- Reads attributes from InventoryService: Items "Nitro:2,Flare:1",
--- Perks "Cosmic:0,Snow:1", SpeedUntil, JumpUntil, NitroUntil.
+-- Keys: 1-4 use items · G / H / J use the ability of perk slot 1 / 2 / 3
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,12 +27,12 @@ local player = Players.LocalPlayer
 local remotes
 local itemSlots = {}
 local perkCards = {}
+local perksPanel
 
-local CLOUD_ICON = {
-	Cumulus = "☁️", Rain = "🌧️", Snow = "❄️", Thunder = "⛈️", Tornado = "🌪️",
-	Cosmic = "🌌", Aurora = "🌈", Chrono = "⏳", Mythic = "🌀",
-}
-local KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four }
+local MAX_PERK_CARDS = 3
+local ITEM_KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four }
+local PERK_KEYS = { Enum.KeyCode.G, Enum.KeyCode.H, Enum.KeyCode.J }
+local PERK_KEY_TEXT = { "G", "H", "J" }
 
 local function glass(class: string, parent: Instance, name: string, radius: number): GuiObject
 	local f = Instance.new(class) :: GuiObject
@@ -46,9 +44,7 @@ local function glass(class: string, parent: Instance, name: string, radius: numb
 		f.Text = ""
 	end
 	f.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, radius)
-	corner.Parent = f
+	Instance.new("UICorner", f).CornerRadius = UDim.new(0, radius)
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = Color3.new(1, 1, 1)
 	stroke.Transparency = 0.5
@@ -76,7 +72,40 @@ local function label(parent: Instance, props: { [string]: any }): TextLabel
 	return t
 end
 
-local function parseList(attr: string): { { string } }
+-- coloured round icon with short text
+local function chip(parent: Instance, size: number, pos: UDim2)
+	local c = Instance.new("Frame")
+	c.Name = "Chip"
+	c.Size = UDim2.fromOffset(size, size)
+	c.Position = pos
+	c.BackgroundColor3 = Color3.fromRGB(120, 130, 160)
+	c.Parent = parent
+	Instance.new("UICorner", c).CornerRadius = UDim.new(1, 0)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.new(1, 1, 1)
+	stroke.Thickness = 1.5
+	stroke.Transparency = 0.3
+	stroke.Parent = c
+	local t = label(c, { Name = "Text", Font = Enum.Font.GothamBlack, Size = UDim2.new(1, -8, 1, -8), Position = UDim2.fromOffset(4, 4) })
+	return c, t
+end
+
+local function keyBadge(parent: Instance, text: string, pos: UDim2, anchor: Vector2?)
+	local k = label(parent, {
+		Name = "Key",
+		Text = text,
+		Size = UDim2.fromOffset(20, 20),
+		Position = pos,
+		AnchorPoint = anchor or Vector2.zero,
+		BackgroundTransparency = 0.15,
+		BackgroundColor3 = Color3.fromRGB(30, 35, 55),
+		ZIndex = 3,
+	})
+	Instance.new("UICorner", k).CornerRadius = UDim.new(0, 6)
+	return k
+end
+
+local function parseList(attr: string): { { any } }
 	local out = {}
 	for entry in string.gmatch(player:GetAttribute(attr) or "", "[^,]+") do
 		local a, b = string.match(entry, "([^:]+):(%d+)")
@@ -103,7 +132,7 @@ local function build()
 	items.Parent = gui
 	label(items, {
 		Name = "Title",
-		Text = "🎒 INVENTORY · shop items",
+		Text = "INVENTORY - shop items (1-4)",
 		Size = UDim2.new(1, 0, 0, 14),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(225, 232, 255),
@@ -112,20 +141,12 @@ local function build()
 		local b = glass("TextButton", items, "Slot" .. i, 14) :: TextButton
 		b.Size = UDim2.fromOffset(70, 70)
 		b.Position = UDim2.fromOffset((i - 1) * 78, 20)
-		local icon = label(b, { Name = "Icon", Size = UDim2.new(1, 0, 0.55, 0), Position = UDim2.fromScale(0, 0.08), TextStrokeTransparency = 1 })
+		local c, ct = chip(b, 34, UDim2.fromOffset(18, 6))
 		local name = label(b, { Name = "ItemName", Size = UDim2.new(1, -6, 0.22, 0), Position = UDim2.new(0, 3, 0.7, 0) })
-		local key = label(b, {
-			Name = "Key",
-			Text = tostring(i),
-			Size = UDim2.fromOffset(20, 20),
-			Position = UDim2.fromOffset(3, 3),
-			BackgroundTransparency = 0.15,
-			BackgroundColor3 = Color3.fromRGB(30, 35, 55),
-		})
-		Instance.new("UICorner", key).CornerRadius = UDim.new(0, 6)
+		keyBadge(b, tostring(i), UDim2.fromOffset(3, 3))
 		local count = label(b, {
 			Name = "Count",
-			Size = UDim2.fromOffset(24, 20),
+			Size = UDim2.fromOffset(26, 18),
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, -3, 0, 3),
 			TextColor3 = Color3.fromRGB(255, 220, 90),
@@ -136,50 +157,56 @@ local function build()
 				remotes.UseItem:FireServer(id)
 			end
 		end)
-		itemSlots[i] = { Button = b, Icon = icon, Name = name, Count = count }
+		itemSlots[i] = { Button = b, Chip = c, ChipText = ct, Name = name, Count = count }
 	end
 
 	-- Quirks / Perks -----------------------------------------------------
-	local perks = glass("Frame", gui, "PerksPanel", 16)
-	perks.AnchorPoint = Vector2.new(0, 1)
-	perks.Position = UDim2.new(0, 16, 1, -118)
-	perks.Size = UDim2.fromOffset(300, 30 + Config.PerkSlots * 58)
-	label(perks, {
+	perksPanel = glass("Frame", gui, "PerksPanel", 16)
+	perksPanel.AnchorPoint = Vector2.new(0, 1)
+	perksPanel.Position = UDim2.new(0, 16, 1, -118)
+	label(perksPanel, {
 		Name = "Title",
-		Text = "✨ QUIRKS / PERKS · lost forever if you die!",
+		Text = "QUIRKS / PERKS - lost forever if you die!",
 		Position = UDim2.fromOffset(12, 6),
 		Size = UDim2.new(1, -24, 0, 16),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(255, 200, 230),
 	})
-	for i = 1, Config.PerkSlots do
-		local card = glass("Frame", perks, "Card" .. i, 12)
+	for i = 1, MAX_PERK_CARDS do
+		local card = glass("Frame", perksPanel, "Card" .. i, 12)
 		card.Position = UDim2.fromOffset(8, 26 + (i - 1) * 58)
 		card.Size = UDim2.new(1, -16, 0, 52)
-		local icon = label(card, { Name = "Icon", Size = UDim2.fromOffset(40, 40), Position = UDim2.fromOffset(6, 6), TextStrokeTransparency = 1 })
+		local c, ct = chip(card, 40, UDim2.fromOffset(6, 6))
 		local name = label(card, {
 			Name = "PerkName",
-			Size = UDim2.new(1, -130, 0, 22),
+			Size = UDim2.new(1, -140, 0, 22),
 			Position = UDim2.fromOffset(52, 5),
 			TextXAlignment = Enum.TextXAlignment.Left,
 		})
 		local desc = label(card, {
 			Name = "Desc",
 			Font = Enum.Font.GothamMedium,
-			Size = UDim2.new(1, -130, 0, 16),
+			Size = UDim2.new(1, -140, 0, 16),
 			Position = UDim2.fromOffset(52, 29),
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextColor3 = Color3.fromRGB(225, 230, 245),
+		})
+		local ability = label(card, {
+			Name = "Ability",
+			Size = UDim2.fromOffset(46, 18),
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -82, 0, 6),
+			TextColor3 = Color3.fromRGB(150, 255, 190),
 		})
 		local back = glass("TextButton", card, "Return", 8) :: TextButton
 		back.AnchorPoint = Vector2.new(1, 0.5)
 		back.Position = UDim2.new(1, -6, 0.5, 0)
 		back.Size = UDim2.fromOffset(68, 30)
-		label(back, { Text = "↩ Vault", Size = UDim2.fromScale(1, 1) })
+		label(back, { Text = "< Vault", Size = UDim2.new(1, -10, 1, -10), Position = UDim2.fromOffset(5, 5) })
 		back.Activated:Connect(function()
 			remotes.PerkAction:FireServer("Return", i)
 		end)
-		perkCards[i] = { Card = card, Icon = icon, Name = name, Desc = desc, Return = back }
+		perkCards[i] = { Card = card, Chip = c, ChipText = ct, Name = name, Desc = desc, Ability = ability, Return = back }
 	end
 end
 
@@ -190,13 +217,15 @@ local function renderItems()
 		local def = entry and ShopItems.Types[entry[1]]
 		if def then
 			s.Button:SetAttribute("ItemId", entry[1])
-			s.Icon.Text = def.Icon
+			s.Chip.Visible = true
+			s.Chip.BackgroundColor3 = def.IconColor
+			s.ChipText.Text = def.IconText
 			s.Name.Text = def.DisplayName
-			s.Count.Text = `×{entry[2]}`
+			s.Count.Text = `x{entry[2]}`
 			s.Button.BackgroundTransparency = 0.72
 		else
 			s.Button:SetAttribute("ItemId", nil)
-			s.Icon.Text = ""
+			s.Chip.Visible = false
 			s.Name.Text = ""
 			s.Count.Text = ""
 			s.Button.BackgroundTransparency = 0.88
@@ -205,23 +234,30 @@ local function renderItems()
 end
 
 local function renderPerks()
+	local slotsOwned = math.clamp(player:GetAttribute("PerkSlots") or Config.PerkSlots, 1, MAX_PERK_CARDS)
+	perksPanel.Size = UDim2.fromOffset(320, 30 + slotsOwned * 58)
 	local list = parseList("Perks")
 	for i, c in perkCards do
+		c.Card.Visible = i <= slotsOwned
 		local entry = list[i]
 		local def = entry and Weather.Types[entry[1]]
 		if def and def.Perk then
-			local rarity = Weather.RarityOf(entry[1])
-			c.Icon.Text = CLOUD_ICON[entry[1]] or "☁️"
-			c.Name.Text = `{entry[2] == 1 and "✨ " or ""}{def.Perk.Name}`
-			c.Name.TextColor3 = rarity.Color
-			c.Desc.Text = `{def.DisplayName} · {def.Perk.Desc}`
+			local icon = Weather.Icon[entry[1]] or { "??", Color3.new(0.5, 0.5, 0.5) }
+			c.Chip.BackgroundColor3 = icon[2]
+			c.ChipText.Text = icon[1]
+			c.Name.Text = (entry[2] == 1 and "* " or "") .. def.Perk.Name
+			c.Name.TextColor3 = Weather.RarityOf(entry[1]).Color
+			c.Desc.Text = def.Perk.Desc
 			c.Return.Visible = true
+			c.HasAbility = def.Perk.Ability ~= nil
 		else
-			c.Icon.Text = "＋"
+			c.Chip.BackgroundColor3 = Color3.fromRGB(120, 130, 160)
+			c.ChipText.Text = "+"
 			c.Name.Text = "Empty perk slot"
 			c.Name.TextColor3 = Color3.fromRGB(200, 205, 220)
 			c.Desc.Text = "Hold F on a cloud in YOUR vault"
 			c.Return.Visible = false
+			c.HasAbility = false
 		end
 	end
 end
@@ -233,12 +269,13 @@ function InventoryUi.Start()
 	renderPerks()
 	player:GetAttributeChangedSignal("Items"):Connect(renderItems)
 	player:GetAttributeChangedSignal("Perks"):Connect(renderPerks)
+	player:GetAttributeChangedSignal("PerkSlots"):Connect(renderPerks)
 
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then
 			return
 		end
-		for i, key in KEYS do
+		for i, key in ITEM_KEYS do
 			if input.KeyCode == key and itemSlots[i] then
 				local id = itemSlots[i].Button:GetAttribute("ItemId")
 				if id then
@@ -246,9 +283,14 @@ function InventoryUi.Start()
 				end
 			end
 		end
+		for i, key in PERK_KEYS do
+			if input.KeyCode == key then
+				remotes.PerkAbility:FireServer(i)
+			end
+		end
 	end)
 
-	-- Show remaining time on active items
+	-- Timers: active items + perk ability cooldowns
 	RunService.RenderStepped:Connect(function()
 		local now = workspace:GetServerTimeNow()
 		local timers = {
@@ -265,6 +307,15 @@ function InventoryUi.Start()
 			elseif id then
 				s.Name.Text = ShopItems.Types[id].DisplayName
 				s.Name.TextColor3 = Color3.new(1, 1, 1)
+			end
+		end
+		for i, c in perkCards do
+			if c.HasAbility then
+				local ready = player:GetAttribute("AbilityReady" .. i) or 0
+				c.Ability.Text = now < ready and `{math.ceil(ready - now)}s` or `[{PERK_KEY_TEXT[i]}]`
+				c.Ability.TextColor3 = now < ready and Color3.fromRGB(200, 200, 210) or Color3.fromRGB(150, 255, 190)
+			else
+				c.Ability.Text = ""
 			end
 		end
 	end)

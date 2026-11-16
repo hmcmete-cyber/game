@@ -4,7 +4,11 @@
 --     Ice Path      → you lose grip: your velocity only slowly follows your input.
 --                     Carrying a cloud = much less grip + random slips.
 --                     Frost Skates (Ice Charm, Q) = full grip + speed boost.
---     Electric Swamp→ slower (damage is done by the server). Storm Charm = immune.
+--     Electric      → slower (damage is done by the server). Storm Charm = immune.
+--     Electric River→ pulses Calm/Warn/Shock (same clock as the server): slower,
+--                     much slower while shocking. Storm Charm = immune.
+--     Storm Bridge  → side wind gusts push you (worse with a cloud: it's a balloon!)
+--   Lightning knockback (server Knock remote), Nitro speed burst (NitroUntil)
 --
 -- The ice slide uses a LinearVelocity constraint (plane mode) so the Humanoid's
 -- own walking can't instantly cancel the slide.
@@ -21,6 +25,8 @@ local player = Players.LocalPlayer
 local onIceRoad = false
 local onIceHazard = false
 local inSwamp = false
+local inRiver = false
+local riverShock = false
 local slipping = false
 local lastSlip = 0
 local lastLaunch = 0
@@ -30,6 +36,12 @@ local slideVel = Vector2.zero
 
 local function baseSpeed(): number
 	return player:GetAttribute("BaseSpeed") or Config.WalkSpeed
+end
+
+-- Same clock as HazardService: Calm → Warn → Shock
+local function riverShocking(): boolean
+	local period = Config.RiverCalm + Config.RiverWarn + Config.RiverShock
+	return workspace:GetServerTimeNow() % period >= Config.RiverCalm + Config.RiverWarn
 end
 
 local function skatesOn(): boolean
@@ -53,8 +65,15 @@ local function applySpeed()
 	if onIceHazard and skatesOn() then
 		speed += Config.SkatesBoost
 	end
-	if inSwamp and not player:GetAttribute("ElectricImmune") then
+	local immune = player:GetAttribute("ElectricImmune")
+	if inSwamp and not immune then
 		speed *= Config.ElectricSlow
+	end
+	if inRiver and not immune then
+		speed *= riverShock and Config.RiverSlowShock or Config.RiverSlowCalm
+	end
+	if (player:GetAttribute("NitroUntil") or 0) > workspace:GetServerTimeNow() then
+		speed += Config.NitroBoost
 	end
 	hum.WalkSpeed = speed
 end
@@ -134,9 +153,28 @@ function Movement.Start()
 		task.delay(math.max(0, untilT - workspace:GetServerTimeNow()) + 0.05, applySpeed)
 	end)
 	player:GetAttributeChangedSignal("ElectricImmune"):Connect(applySpeed)
+	player:GetAttributeChangedSignal("NitroUntil"):Connect(function()
+		applySpeed()
+		local untilT = player:GetAttribute("NitroUntil") or 0
+		task.delay(math.max(0, untilT - workspace:GetServerTimeNow()) + 0.05, applySpeed)
+	end)
+
+	-- Lightning knockback from the server
+	ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Knock").OnClientEvent:Connect(function(velocity: Vector3)
+		local char = player.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if root and hum then
+			if slide then
+				slide.Enabled = false
+			end
+			root.AssemblyLinearVelocity = velocity
+			hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		end
+	end)
 	player.CharacterAdded:Connect(function()
 		slide = nil
-		onIceRoad, onIceHazard, inSwamp = false, false, false
+		onIceRoad, onIceHazard, inSwamp, inRiver = false, false, false, false
 	end)
 
 	local weather = workspace:WaitForChild("Weather")
@@ -183,19 +221,33 @@ function Movement.Start()
 		end
 
 		-- Hazards
-		local ice, swamp = false, false
+		local ice, swamp, river, storm = false, false, false, false
 		for _, h in workspace:GetPartBoundsInBox(feet, Vector3.new(2, 3, 2), hazardParams) do
 			local t = h:GetAttribute("HazardType")
 			if t == "Ice" then
 				ice = true
 			elseif t == "Electric" then
 				swamp = true
+			elseif t == "River" then
+				river = true
+			elseif t == "Storm" then
+				storm = true
 			end
 		end
+		local shock = river and riverShocking()
 
-		if iceRoad ~= onIceRoad or ice ~= onIceHazard or swamp ~= inSwamp then
-			onIceRoad, onIceHazard, inSwamp = iceRoad, ice, swamp
+		if iceRoad ~= onIceRoad or ice ~= onIceHazard or swamp ~= inSwamp or river ~= inRiver or shock ~= riverShock then
+			onIceRoad, onIceHazard, inSwamp, inRiver, riverShock = iceRoad, ice, swamp, river, shock
 			applySpeed()
+		end
+
+		-- Storm Bridge: side gusts (a cloud on a leash catches extra wind)
+		if storm and not slipping then
+			local t = os.clock()
+			local gust = math.sin(t * 0.7) + 0.5 * math.sin(t * 1.9 + 1)
+			local strength = Config.WindStrength * (player:GetAttribute("Carrying") and 1.5 or 1)
+			-- bridges run along Z, so the wind blows along X (across the bridge)
+			root.CFrame += Vector3.xAxis * gust * strength * dt
 		end
 
 		updateIce(hum, root, dt)

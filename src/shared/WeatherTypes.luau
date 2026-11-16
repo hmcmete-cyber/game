@@ -136,6 +136,19 @@ WeatherTypes.Zones = {
 	[3] = { Name = "Cosmic Stratosphere", Chance = 5 },
 }
 
+-- Rarity label shown in the UI (by zone)
+WeatherTypes.Rarity = {
+	[1] = { Name = "Common", Color = Color3.fromRGB(220, 230, 240) },
+	[2] = { Name = "Rare", Color = Color3.fromRGB(110, 190, 255) },
+	[3] = { Name = "Epic", Color = Color3.fromRGB(210, 120, 255) },
+	[0] = { Name = "Mythic", Color = Color3.fromRGB(255, 90, 120) },
+}
+
+function WeatherTypes.RarityOf(typeName: string)
+	local def = WeatherTypes.Types[typeName]
+	return WeatherTypes.Rarity[def and def.Zone or 1]
+end
+
 -- Shiny variant: rare, golden, worth more. Never stronger.
 WeatherTypes.ShinyChance = 0.01
 WeatherTypes.ShinyMultiplier = 5

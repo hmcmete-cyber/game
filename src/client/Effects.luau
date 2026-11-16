@@ -4,6 +4,7 @@
 --   LightningCloud dark storm clouds crackle with small electric arcs
 --   RainbowCloud   cosmic clouds slowly cycle through rainbow colours
 --   AuroraCloud    aurora light ribbons under the cloud wave like northern lights
+--   CloudCore      every cloud "breathes": its inner light pulses softly
 
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
@@ -150,8 +151,16 @@ end
 -- Rainbow + aurora clouds
 ------------------------------------------------------------------------
 
+local breathers = {} -- [core] = { Light, Base, Phase }
 local rainbows = {} -- [core] = { Parts = {BasePart}, Light = PointLight?, Phase }
 local auroras = {} -- [core] = { Beams = {Beam}, Phase }
+
+local function addBreather(core: Instance)
+	local light = core:FindFirstChild("CloudLight")
+	if core:IsA("BasePart") and light then
+		breathers[core] = { Light = light, Base = core:GetAttribute("BaseBrightness") or light.Brightness, Phase = math.random() * 6 }
+	end
+end
 
 local function addRainbow(core: Instance)
 	if not core:IsA("BasePart") then
@@ -199,6 +208,9 @@ function Effects.Start()
 	watch("LightningCloud", addCloud, function(inst)
 		clouds[inst] = nil
 	end)
+	watch("CloudCore", addBreather, function(inst)
+		breathers[inst] = nil
+	end)
 	watch("RainbowCloud", addRainbow, function(inst)
 		rainbows[inst] = nil
 	end)
@@ -218,6 +230,14 @@ function Effects.Start()
 		end
 
 		local camPos = camera.CFrame.Position
+
+		for core, b in breathers do
+			if not core.Parent then
+				breathers[core] = nil
+			elseif not clouds[core] then -- storm clouds already flicker
+				b.Light.Brightness = b.Base * (0.75 + 0.35 * math.sin(t * 1.6 + b.Phase))
+			end
+		end
 
 		for core, r in rainbows do
 			if not core.Parent then

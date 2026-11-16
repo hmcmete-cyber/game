@@ -246,24 +246,75 @@ local function addLabel(part: BasePart, text: string, color: Color3, maxDistance
 	gui.Parent = part
 end
 
--- Weld a sphere above the player's head
-local function attachOverhead(part: BasePart, root: BasePart, height: number)
+-- Tie a sphere to the player's LEFT hand with a rope. It floats behind them
+-- like a balloon (AlignPosition), so the right hand stays free for items.
+-- Returns the attachments made on the character (removed when dropped).
+local function attachLeash(part: BasePart, player: Player, root: BasePart, color: Color3): { Instance }
 	CollectionService:RemoveTag(part, "FloatingIsland")
 	for _, child in part:GetChildren() do
 		if child:IsA("ProximityPrompt") or child.Name == "Label" then
 			child:Destroy()
 		end
 	end
+	local char = root.Parent
+	local hand = char:FindFirstChild("LeftHand") or char:FindFirstChild("Left Arm") or root
+	local grip = hand:FindFirstChild("LeftGripAttachment")
+
+	-- light, non-colliding balloon
+	local light = PhysicalProperties.new(0.05, 0.3, 0.5)
+	for _, d in part:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CustomPhysicalProperties = light
+		end
+	end
+	part.CustomPhysicalProperties = light
 	part.Anchored = false
-	part.Massless = true
+	part.Massless = false
 	part.CanCollide = false
-	part.CFrame = root.CFrame * CFrame.new(0, height, 0)
-	local weld = Instance.new("WeldConstraint")
-	weld.Name = "CarryWeld"
-	weld.Part0 = root
-	weld.Part1 = part
-	weld.Parent = part
-	part.Parent = root.Parent
+	part.CFrame = root.CFrame * CFrame.new(0, Config.LeashHeight, Config.LeashBack)
+
+	local handAtt = Instance.new("Attachment")
+	handAtt.Name = "LeashHand"
+	handAtt.CFrame = grip and grip.CFrame or CFrame.new()
+	handAtt.Parent = hand
+
+	local target = Instance.new("Attachment")
+	target.Name = "LeashTarget"
+	target.Position = Vector3.new(0, Config.LeashHeight, Config.LeashBack)
+	target.Parent = root
+
+	local knot = Instance.new("Attachment")
+	knot.Name = "LeashKnot"
+	knot.Position = Vector3.new(0, -part.Size.Y / 2, 0)
+	knot.Parent = part
+	local centerAtt = Instance.new("Attachment")
+	centerAtt.Name = "LeashCenter"
+	centerAtt.Parent = part
+
+	local rope = Instance.new("RopeConstraint")
+	rope.Name = "Leash"
+	rope.Attachment0 = handAtt
+	rope.Attachment1 = knot
+	rope.Length = Config.LeashLength
+	rope.Visible = true
+	rope.Thickness = 0.12
+	rope.Color = BrickColor.new(color)
+	rope.Parent = part
+
+	local align = Instance.new("AlignPosition")
+	align.Name = "Float"
+	align.Mode = Enum.PositionAlignmentMode.TwoAttachment
+	align.Attachment0 = centerAtt
+	align.Attachment1 = target
+	align.Responsiveness = Config.LeashResponsiveness
+	align.MaxForce = 6000
+	align.Parent = part
+
+	part.Parent = weatherFolder
+	pcall(function()
+		part:SetNetworkOwner(player) -- smooth on the carrier's screen
+	end)
+	return { handAtt, target }
 end
 
 local function addCoins(player: Player, amount: number)
@@ -402,10 +453,18 @@ local function refreshVaults(player: Player)
 	if not roof or not slots then
 		return
 	end
-	for i, vault in MapService.GetVaults(roof) do
+	local vaults = MapService.GetVaults(roof)
+	local filled = 0
+	for i, vault in vaults do
 		vault:SetAttribute("Slot", i)
 		renderVault(vault, slots[i], player)
+		if slots[i] then
+			filled += 1
+		end
 	end
+	-- for the status panel (top-right)
+	player:SetAttribute("VaultFilled", filled)
+	player:SetAttribute("VaultSize", #vaults)
 end
 
 local function clearVaultVisuals(player: Player)
@@ -466,8 +525,10 @@ end
 ------------------------------------------------------------------------
 
 local function startCarry(player: Player, root: BasePart, sphere: BasePart, typeName: string, shiny: boolean, victim: Player?)
-	attachOverhead(sphere, root, 4.5)
+	local ropeColor = victim and THIEF_COLOR or (shiny and Weather.ShinyColor or Weather.RarityOf(typeName).Color)
+	local attachments = attachLeash(sphere, player, root, ropeColor)
 	carriers[player] = {
+		Attachments = attachments,
 		Type = typeName,
 		Shiny = shiny,
 		Part = sphere,
@@ -504,6 +565,9 @@ local function clearCarry(player: Player, sendBack: boolean?)
 	setHighlight(player, nil)
 	if c.Part then
 		c.Part:Destroy()
+	end
+	for _, att in c.Attachments or {} do
+		att:Destroy()
 	end
 	setMovement(player, Config.WalkSpeed, false)
 	if sendBack and c.Victim and c.Victim.Parent then
@@ -631,9 +695,9 @@ onCharmPrompt = function(player: Player, owner: Player, vault: BasePart)
 	if not charmId then
 		return
 	end
-	if not InventoryService.Add(player, charmId) then
-		hint(player, `Inventory full ({Config.InventorySize} slots)!`, 2)
-		return
+	local replaced = InventoryService.SetCharm(player, charmId)
+	if replaced and replaced ~= charmId then
+		hint(player, `Your {Charms.Types[replaced].DisplayName} was replaced.`, 2)
 	end
 	slots[slot] = false
 	refreshVaults(owner)

@@ -52,6 +52,14 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - **Death** wipes the inventory and destroys the carried cloud (a stolen cloud does NOT go back).
 - **Hazards** (`Map/Hazards`, attribute `HazardType`): narrow **Ice Path** bridge between Breeze Zone and Altar 1 (low grip, random slips while carrying, fall = death); **Electric Swamp** across Thunder Canyon (slow + 8 dmg / 0.5 s, 14 while carrying).
 
+## Update 5 — Leash, single path, volumetric clouds, full HUD (director request)
+
+- **Leash**: carried clouds float behind you on a rope held in your **left hand** (RopeConstraint + AlignPosition, network-owned by the carrier). The right hand stays free → items usable any time.
+- **Inventory = 3 fixed slots**: 1 cloud charm (Q / passive), 2 **Nitro** charges (R, bought at the plaza Nitro Station, 25 coins, max 3), 3 reserved for ignite/fuel items (T). All lost on death.
+- **Single path, no shortcuts or detours**: Spawn Area → **Gate 1 Ice Path** → Breeze → **Gate 2 Electric River** (pulses calm 2.6 s / warn 0.6 s / shock 1.2 s — time your crossing) → Thunder Canyon (+Altar 1) → **Gate 3 Storm Bridge** (6 studs wide, lightning on red warning circles, side gusts) → Cosmic Stratosphere → Altar 2. Water-gap / lift-platform shortcuts removed from the placeholder (code still supports them in custom maps).
+- **Volumetric clouds**: puffs + 4 smoke layers (Fill, Wisps, Glow, Smoke) + breathing inner light.
+- **HUD**: top-center zone pill + alert panel (red thefts, amber gate warnings) + hints; top-right status (coins, leashed cloud + rarity, vault x/y); bottom-left item slots.
+
 ## Core loop
 
 1. **Hunt** weather creatures in the shared zone.

@@ -1,6 +1,9 @@
 -- Inventory items. Only these can live in the inventory — never carried clouds.
--- A charm is made at YOUR OWN vault from a stored cloud of type `From`
--- (the cloud leaves the vault). All charms are lost when you die.
+-- Slot 1 = one cloud charm, made at YOUR OWN vault from a stored cloud of type
+--          `From` (the cloud leaves the vault; a new charm replaces the old one).
+-- Slot 2 = Nitro charges (bought at the Nitro Station, key R).
+-- Slot 3 = reserved for the upcoming ignite/fuel items (key T).
+-- Everything is lost when you die.
 
 local Charms = {}
 

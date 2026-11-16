@@ -32,14 +32,14 @@ local PUFFS = {
 }
 
 local STYLE = {
-	Cumulus = { Tint = Color3.fromRGB(250, 252, 255), Smoke = Color3.fromRGB(255, 255, 255), Material = Enum.Material.SmoothPlastic, Alpha = 0.3 },
-	Rain = { Tint = Color3.fromRGB(185, 200, 225), Smoke = Color3.fromRGB(200, 215, 235), Material = Enum.Material.SmoothPlastic, Alpha = 0.3 },
-	Snow = { Tint = Color3.fromRGB(250, 252, 255), Smoke = Color3.fromRGB(240, 248, 255), Material = Enum.Material.SmoothPlastic, Alpha = 0.25 },
-	Tornado = { Tint = Color3.fromRGB(200, 195, 180), Smoke = Color3.fromRGB(190, 185, 165), Material = Enum.Material.SmoothPlastic, Alpha = 0.3 },
+	Cumulus = { Tint = Color3.fromRGB(250, 252, 255), Smoke = Color3.fromRGB(255, 255, 255), Material = Enum.Material.SmoothPlastic, Alpha = 0.4 },
+	Rain = { Tint = Color3.fromRGB(185, 200, 225), Smoke = Color3.fromRGB(200, 215, 235), Material = Enum.Material.SmoothPlastic, Alpha = 0.4 },
+	Snow = { Tint = Color3.fromRGB(250, 252, 255), Smoke = Color3.fromRGB(240, 248, 255), Material = Enum.Material.SmoothPlastic, Alpha = 0.35 },
+	Tornado = { Tint = Color3.fromRGB(200, 195, 180), Smoke = Color3.fromRGB(190, 185, 165), Material = Enum.Material.SmoothPlastic, Alpha = 0.4 },
 	Storm = { Tint = Color3.fromRGB(70, 72, 90), Smoke = Color3.fromRGB(45, 45, 60), Material = Enum.Material.Slate, Alpha = 0.1 },
-	Cosmic = { Tint = Color3.fromRGB(70, 35, 130), Smoke = Color3.fromRGB(120, 60, 200), Material = Enum.Material.SmoothPlastic, Alpha = 0.2 },
-	Aurora = { Tint = Color3.fromRGB(190, 255, 235), Smoke = Color3.fromRGB(160, 255, 210), Material = Enum.Material.SmoothPlastic, Alpha = 0.3 },
-	Chrono = { Tint = Color3.fromRGB(255, 235, 175), Smoke = Color3.fromRGB(255, 225, 150), Material = Enum.Material.SmoothPlastic, Alpha = 0.25 },
+	Cosmic = { Tint = Color3.fromRGB(70, 35, 130), Smoke = Color3.fromRGB(120, 60, 200), Material = Enum.Material.SmoothPlastic, Alpha = 0.3 },
+	Aurora = { Tint = Color3.fromRGB(190, 255, 235), Smoke = Color3.fromRGB(160, 255, 210), Material = Enum.Material.SmoothPlastic, Alpha = 0.4 },
+	Chrono = { Tint = Color3.fromRGB(255, 235, 175), Smoke = Color3.fromRGB(255, 225, 150), Material = Enum.Material.SmoothPlastic, Alpha = 0.35 },
 	Mythic = { Tint = Color3.fromRGB(45, 20, 70), Smoke = Color3.fromRGB(80, 30, 120), Material = Enum.Material.Slate, Alpha = 0.1 },
 }
 
@@ -140,6 +140,73 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 		LightInfluence = 0.8,
 		LightEmission = (visual == "Cosmic" or visual == "Mythic") and 0.4 or 0.05,
 		Acceleration = def.ParticleAcceleration * 0.05,
+	})
+
+	-- Volumetric layers:
+	--   Fill   dense, slow smoke packed in the middle (makes the cloud look solid)
+	--   Wisps  big, faint smoke drifting outwards (soft edges that move)
+	--   Glow   bright haze in the very center (inner light)
+	local smokeColor = shiny and Weather.ShinyColor or style.Smoke
+	emitter(center, {
+		Name = "Fill",
+		Texture = SMOKE,
+		Color = ColorSequence.new(smokeColor),
+		Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, d * 0.45),
+			NumberSequenceKeypoint.new(1, d * 0.6),
+		}),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.3, 0.25),
+			NumberSequenceKeypoint.new(0.7, 0.3),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Lifetime = NumberRange.new(2.5, 3.5),
+		Rate = 10,
+		Speed = NumberRange.new(0, 0.15),
+		SpreadAngle = Vector2.new(180, 180),
+		Rotation = NumberRange.new(0, 360),
+		RotSpeed = NumberRange.new(-12, 12),
+		LightInfluence = 0.7,
+		ZOffset = -0.5,
+	})
+	emitter(center, {
+		Name = "Wisps",
+		Texture = SMOKE,
+		Color = ColorSequence.new(smokeColor),
+		Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, d * 0.3),
+			NumberSequenceKeypoint.new(1, d * 1.1),
+		}),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.3, 0.7),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Lifetime = NumberRange.new(3, 4.5),
+		Rate = 3,
+		Speed = NumberRange.new(0.4, 1),
+		SpreadAngle = Vector2.new(180, 180),
+		Rotation = NumberRange.new(0, 360),
+		RotSpeed = NumberRange.new(-8, 8),
+		LightInfluence = 1,
+	})
+	emitter(center, {
+		Name = "Glow",
+		Texture = SMOKE,
+		Color = ColorSequence.new(shiny and Weather.ShinyColor or def.ParticleColor),
+		Size = NumberSequence.new(d * 0.35, d * 0.5),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.5, 0.6),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Lifetime = NumberRange.new(1, 1.6),
+		Rate = 6,
+		Speed = NumberRange.new(0, 0.1),
+		LightEmission = 0.8,
+		LightInfluence = 0,
+		ZOffset = 0.5,
 	})
 
 	local light = Instance.new("PointLight")
@@ -258,6 +325,9 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 		light.Brightness = 3
 	end
 
+	-- Clients make every cloud "breathe" (light + glow pulse), see Effects.luau
+	center:SetAttribute("BaseBrightness", light.Brightness)
+	CollectionService:AddTag(center, "CloudCore")
 	return center
 end
 

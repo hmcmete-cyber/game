@@ -29,19 +29,22 @@ alarmEvent.Parent = remotes
 local stolenEvent = Instance.new("RemoteEvent")
 stolenEvent.Name = "Stolen"
 stolenEvent.Parent = remotes
-local useCharmEvent = Instance.new("RemoteEvent") -- client -> server: use a charm (Q)
-useCharmEvent.Name = "UseCharm"
-useCharmEvent.Parent = remotes
+local useItemEvent = Instance.new("RemoteEvent") -- client -> server: use inventory slot (Q / R / T)
+useItemEvent.Name = "UseItem"
+useItemEvent.Parent = remotes
+local knockEvent = Instance.new("RemoteEvent") -- server -> client: lightning knockback
+knockEvent.Name = "Knock"
+knockEvent.Parent = remotes
 remotes.Parent = ReplicatedStorage
 
 LightingService.Apply()
 DataService.Start()
 MapService.Start()
-local remoteTable = { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent, UseCharm = useCharmEvent }
+local remoteTable = { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent, UseItem = useItemEvent, Knock = knockEvent }
 WeatherService.Start(MapService, DataService, remoteTable)
 BaseLockService.Start(MapService, remoteTable)
 InventoryService.Start(DataService, remoteTable)
-HazardService.Start(MapService)
+HazardService.Start(MapService, remoteTable)
 
 local function onPlayerAdded(player: Player)
 	DataService.Load(player)

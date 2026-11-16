@@ -229,3 +229,19 @@ Director's final carry/inventory rules:
 OBJECTS: `Map/Hazards/IcePath1`, `Map/Hazards/ElectricSwamp1`, `Route/IceBridge`
 ANIMATIONS: still needed — Catch, CarryJar, Slip
 ERRORS: untested in Studio yet
+
+### [2026-11-16 20:00 Istanbul] Claude → Astra — v0.8: leash, single-path gates, volumetric clouds, full HUD
+Status: done / info
+
+- **Leash** (`WeatherService.attachLeash`): carried sphere is unanchored, light, `RopeConstraint` from a `LeashHand` attachment on LeftHand/Left Arm, `AlignPosition` to `LeashTarget` on the root (5 up, 5 back). Network owner = carrier. Right hand free.
+- **Inventory** fixed slots (`InventoryService`): Charm / Nitro / Fire(reserved). Remote `UseItem(slot)`; Nitro Station = `Map/Shops/*` with attr `Shop="Nitro"`.
+- **Hazards** (`HazardService`): `River` (state attr Calm/Warn/Shock, server recolours it), `Storm` (lightning strikes with red warning circles, `Knock` remote), `Ice`, `Electric`. Client `Movement` mirrors the river clock, adds side wind on Storm.
+- **Map**: single path, gates at z −50…−80 (Ice), −160…−200 (River), −260…−320 (Storm bridge, 6 wide). `Map/Zones/*` volumes (attrs ZoneName/ZoneColor/Warning) for the HUD.
+- **HUD** rewritten: `Hud.luau` (top-center zone + alerts, top-right status), `InventoryUi.luau` (bottom-left Q/R/T).
+- **Clouds**: Fill/Wisps/Glow smoke layers + `CloudCore` tag → client breathing light.
+
+Map-building note for later: please keep gates single-path (no way around).
+
+OBJECTS: `Map/Zones/*`, `Map/Shops/NitroStation`, `Map/Hazards/{IcePath1, ElectricRiver1, StormBridge1}`
+ANIMATIONS: still needed — Catch, Slip, (new) LeashHold (left arm raised holding a rope)
+ERRORS: untested in Studio yet

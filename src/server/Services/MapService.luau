@@ -10,7 +10,9 @@
 --     (if Vaults is missing, spheres are created above Display/SlotN or around the Nest)
 --   HuntZone/WeatherSpawns/SpawnN (Part, attribute Zone = 1|2|3) -- Spawn1 = tutorial spot, always a Cumulus
 --   HuntZone/Altars/AltarN (Part)         -- Cloud Altars: rare clouds + 0.01% Mythic
---   Hazards/* (Part, attribute HazardType = "Ice" | "Electric", CanCollide off, CanQuery on)
+--   Hazards/* (Part, attribute HazardType = "Ice" | "River" | "Storm" | "Electric", CanCollide off, CanQuery on)
+--   Zones/* (Part volumes, attributes ZoneName, ZoneColor, Warning?) — for the HUD
+--   Shops/* (Part, attribute Shop = "Nitro")
 --   Route/LiftPlatforms/* (Part, placed in LOWERED position)
 --   Route/WaterGaps/* (Part, CanCollide off; Snow freezes them solid)
 --   CrateArena/CrateSpawns/CrateN (Part)
@@ -186,116 +188,123 @@ local function buildPlaceholder(): Instance
 	end
 
 	------------------------------------------------------------------
-	-- SKY PATH, Zone 1: Breeze Zone (z -50 … -180)
+	-- ONE path, no shortcuts. Every zone starts with a mandatory gate:
+	--   Gate 1 Ice Path → Zone 1 Breeze → Gate 2 Electric River →
+	--   Zone 2 Thunder Canyon (+ Altar1) → Gate 3 Storm Bridge →
+	--   Zone 3 Cosmic Stratosphere → Altar2
 	------------------------------------------------------------------
+	local hazards = getFolder(m, "Hazards")
+	local zones = getFolder(m, "Zones")
+	local shops = getFolder(m, "Shops")
+
+	-- Zone volumes: the client shows where you are (top-center panel)
+	local function zoneVolume(name: string, center: Vector3, size: Vector3, label: string, color: Color3, warning: string?)
+		local v = newPart(zones, name, size, CFrame.new(center), color, {
+			Transparency = 1,
+			CanCollide = false,
+			CanQuery = true,
+			CanTouch = false,
+			CastShadow = false,
+		})
+		v:SetAttribute("ZoneName", label)
+		v:SetAttribute("ZoneColor", color)
+		if warning then
+			v:SetAttribute("Warning", warning)
+		end
+	end
+	local function hazard(name: string, size: Vector3, cf: CFrame, kind: string, color: Color3, props)
+		local h = newPart(hazards, name, size, cf, color, props)
+		h.CanCollide = false
+		h.CanQuery = true
+		h.CanTouch = false
+		h.CastShadow = false
+		h:SetAttribute("HazardType", kind)
+		return h
+	end
+
+	zoneVolume("SpawnArea", Vector3.new(0, Y + 10, 0), Vector3.new(90, 40, 110), "🏠 Spawn Area", Color3.fromRGB(200, 230, 255))
+
+	-- Nitro Station in the plaza
+	local station = newPart(shops, "NitroStation", Vector3.new(4, 5, 4), CFrame.new(7, Y + 3.5, -38), Color3.fromRGB(255, 120, 60), {
+		Material = Enum.Material.Neon,
+	})
+	station:SetAttribute("Shop", "Nitro")
+	zoneSign(signs, "NitroSign", Vector3.new(7, Y + 9, -38), "🚀 NITRO", Color3.fromRGB(255, 150, 90))
+
+	-- GATE 1: Ice Path (z -50 … -80), narrow, no rails
+	local iceColor = Color3.fromRGB(200, 235, 255)
+	newPart(route, "IceBridge", Vector3.new(10, 2, 30), CFrame.new(0, Y, -65), Color3.fromRGB(190, 225, 255), { Material = Enum.Material.Ice })
+	hazard("IcePath1", Vector3.new(10, 0.2, 30), CFrame.new(0, Y + 1.1, -65), "Ice", Color3.fromRGB(215, 240, 255), {
+		Material = Enum.Material.Glacier,
+		Transparency = 0.2,
+	})
+	zoneVolume("Gate1", Vector3.new(0, Y + 10, -65), Vector3.new(40, 40, 30), "❄️ Gate 1 · Ice Path", iceColor,
+		"Slippery! You lose control — Ice Charm (Q) helps")
+	zoneSign(signs, "Gate1Sign", Vector3.new(0, Y + 10, -52), "❄️ GATE 1 · ICE PATH", iceColor)
+
+	-- ZONE 1: Breeze (z -80 … -160)
 	local breeze = Color3.fromRGB(190, 230, 255)
-	newPart(route, "Path1", Vector3.new(16, 2, 26), CFrame.new(0, Y, -62), cloudWhite)
-	newPart(route, "BreezeField", Vector3.new(60, 2, 80), CFrame.new(0, Y, -115), cloudWhite)
-	edgeLights(decor, Vector3.new(0, Y, -115), 60, 80, breeze)
-	zoneSign(signs, "Zone1Sign", Vector3.new(0, Y + 12, -60), "🌤️ BREEZE ZONE", breeze)
+	newPart(route, "BreezeField", Vector3.new(60, 2, 80), CFrame.new(0, Y, -120), cloudWhite)
+	edgeLights(decor, Vector3.new(0, Y, -120), 60, 80, breeze)
+	zoneVolume("Zone1", Vector3.new(0, Y + 10, -120), Vector3.new(70, 40, 80), "🌤️ Breeze Zone", breeze)
 	for _, pos in {
-		Vector3.new(-20, Y + 4, -90), Vector3.new(20, Y + 4, -95), Vector3.new(-15, Y + 4, -120),
-		Vector3.new(15, Y + 4, -125), Vector3.new(-22, Y + 4, -145), Vector3.new(22, Y + 4, -150),
+		Vector3.new(-20, Y + 4, -95), Vector3.new(20, Y + 4, -100), Vector3.new(-15, Y + 4, -122),
+		Vector3.new(15, Y + 4, -127), Vector3.new(-22, Y + 4, -147), Vector3.new(22, Y + 4, -150),
 	} do
 		spawnPoint(pos, 1)
 	end
 
-	-- HAZARD: narrow Ice Path bridge, no rails (z -155 … -180).
-	-- Ice Charm (Q) = Frost Skates. With a cloud on your head it's very risky.
-	local hazards = getFolder(m, "Hazards")
-	newPart(route, "IceBridge", Vector3.new(10, 2, 25), CFrame.new(0, Y, -167.5), Color3.fromRGB(190, 225, 255), {
-		Material = Enum.Material.Ice,
+	-- GATE 2: Electric River (z -160 … -200): banks + 24-stud river that pulses
+	local riverColor = Color3.fromRGB(170, 120, 255)
+	newPart(route, "RiverBankA", Vector3.new(16, 2, 8), CFrame.new(0, Y, -164), Color3.fromRGB(120, 110, 100), { Material = Enum.Material.Ground })
+	newPart(route, "RiverBed", Vector3.new(16, 2, 24), CFrame.new(0, Y - 0.6, -180), Color3.fromRGB(70, 80, 90), { Material = Enum.Material.Pebble })
+	newPart(route, "RiverBankB", Vector3.new(16, 2, 8), CFrame.new(0, Y, -196), Color3.fromRGB(120, 110, 100), { Material = Enum.Material.Ground })
+	hazard("ElectricRiver1", Vector3.new(16, 0.8, 24), CFrame.new(0, Y + 0.6, -180), "River", Color3.fromRGB(60, 140, 230), {
+		Material = Enum.Material.Glass,
+		Transparency = 0.3,
 	})
-	local ice = newPart(hazards, "IcePath1", Vector3.new(10, 0.2, 25), CFrame.new(0, Y + 1.1, -167.5), Color3.fromRGB(215, 240, 255), {
-		Material = Enum.Material.Glacier,
-		Transparency = 0.2,
-		CanCollide = false,
-		CanQuery = true, -- clients detect it with an overlap query
-		CanTouch = false,
-		CastShadow = false,
-	})
-	ice:SetAttribute("HazardType", "Ice")
-	zoneSign(signs, "IceSign", Vector3.new(0, Y + 9, -157), "❄️ ICE PATH — slippery!", Color3.fromRGB(200, 235, 255))
+	zoneVolume("Gate2", Vector3.new(0, Y + 10, -180), Vector3.new(40, 40, 40), "⚡ Gate 2 · Electric River", riverColor,
+		"Cross while the water is BLUE — yellow = shock incoming!")
+	zoneSign(signs, "Gate2Sign", Vector3.new(0, Y + 10, -162), "⚡ GATE 2 · ELECTRIC RIVER", riverColor)
 
-	-- Mid-map Cloud Altar
-	newPart(route, "AltarPad1", Vector3.new(24, 2, 24), CFrame.new(0, Y, -192), Color3.fromRGB(70, 55, 110), { Material = Enum.Material.Marble })
-	altar(decor, altars, "Altar1", Vector3.new(0, Y + 1, -192))
-
-	------------------------------------------------------------------
-	-- Zone 2: Thunder Canyon (z -204 … -345)
-	-- The straight way splits into two shortcut lanes:
-	--   left  = WaterGap (Snow Cloud freezes it)
-	--   right = LiftPlatform (Pocket Tornado lifts it)
-	-- and a longer detour that always works.
-	------------------------------------------------------------------
+	-- ZONE 2: Thunder Canyon (z -200 … -260) + Altar1 in the middle
 	local canyon = Color3.fromRGB(95, 90, 115)
 	local thunder = Color3.fromRGB(255, 230, 90)
-	newPart(route, "Path2A", Vector3.new(16, 2, 26), CFrame.new(0, Y, -217), canyon, { Material = Enum.Material.Slate })
-	newPart(gaps, "WaterGap1", Vector3.new(8, 1, 32), CFrame.new(-4, Y, -246), Color3.fromRGB(60, 140, 230), {
-		CanCollide = false,
-		Transparency = 0.35,
-	})
-	newPart(lifts, "LiftPlatform1", Vector3.new(8, 2, 32), CFrame.new(4, Y - 12, -246), Color3.fromRGB(240, 170, 80))
-	newPart(route, "DetourA", Vector3.new(30, 2, 10), CFrame.new(23, Y, -225), canyon, { Material = Enum.Material.Slate })
-	newPart(route, "DetourB", Vector3.new(10, 2, 52), CFrame.new(33, Y, -246), canyon, { Material = Enum.Material.Slate })
-	newPart(route, "DetourC", Vector3.new(30, 2, 10), CFrame.new(23, Y, -267), canyon, { Material = Enum.Material.Slate })
-	newPart(route, "Path2B", Vector3.new(16, 2, 38), CFrame.new(0, Y, -281), canyon, { Material = Enum.Material.Slate })
-	newPart(route, "CanyonField", Vector3.new(60, 2, 50), CFrame.new(0, Y, -320), canyon, { Material = Enum.Material.Slate })
-
-	-- HAZARD: Electric Swamp across the whole path (z -268 … -296). Slows and burns;
-	-- Storm Charm = immune.
-	local swamp = newPart(hazards, "ElectricSwamp1", Vector3.new(16, 0.3, 28), CFrame.new(0, Y + 1.15, -282), Color3.fromRGB(70, 95, 55), {
-		Material = Enum.Material.Mud,
-		Transparency = 0.1,
-		CanCollide = false,
-		CanQuery = true,
-		CanTouch = false,
-		CastShadow = false,
-	})
-	swamp:SetAttribute("HazardType", "Electric")
-	local zap = Instance.new("ParticleEmitter")
-	zap.Color = ColorSequence.new(Color3.fromRGB(170, 120, 255), Color3.fromRGB(120, 230, 255))
-	zap.LightEmission = 1
-	zap.Lifetime = NumberRange.new(0.1, 0.25)
-	zap.Rate = 40
-	zap.Speed = NumberRange.new(4, 8)
-	zap.SpreadAngle = Vector2.new(30, 30)
-	zap.EmissionDirection = Enum.NormalId.Top
-	zap.Size = NumberSequence.new(0.3, 0)
-	zap.Parent = swamp
-	local glow = Instance.new("PointLight")
-	glow.Color = Color3.fromRGB(160, 120, 255)
-	glow.Brightness = 2
-	glow.Range = 18
-	glow.Parent = swamp
-	zoneSign(signs, "SwampSign", Vector3.new(0, Y + 9, -266), "⚡ ELECTRIC SWAMP — it burns!", Color3.fromRGB(190, 150, 255))
-	edgeLights(decor, Vector3.new(0, Y, -320), 60, 50, thunder)
-	zoneSign(signs, "Zone2Sign", Vector3.new(0, Y + 12, -208), "⚡ THUNDER CANYON", thunder)
+	newPart(route, "CanyonField", Vector3.new(60, 2, 60), CFrame.new(0, Y, -230), canyon, { Material = Enum.Material.Slate })
+	edgeLights(decor, Vector3.new(0, Y, -230), 60, 60, thunder)
+	altar(decor, altars, "Altar1", Vector3.new(0, Y + 1, -230))
+	zoneVolume("Zone2", Vector3.new(0, Y + 10, -230), Vector3.new(70, 40, 60), "⛈️ Thunder Canyon", thunder)
 	for _, pos in {
-		Vector3.new(-20, Y + 4, -305), Vector3.new(20, Y + 4, -310), Vector3.new(0, Y + 4, -325),
-		Vector3.new(-22, Y + 4, -335), Vector3.new(22, Y + 4, -338),
+		Vector3.new(-22, Y + 4, -210), Vector3.new(22, Y + 4, -212), Vector3.new(-22, Y + 4, -248),
+		Vector3.new(22, Y + 4, -250), Vector3.new(-12, Y + 4, -255),
 	} do
 		spawnPoint(pos, 2)
 	end
 
-	------------------------------------------------------------------
-	-- Zone 3: Cosmic Stratosphere (z -345 … -484) + end Altar
-	------------------------------------------------------------------
+	-- GATE 3: Storm Bridge (z -260 … -320): 6 wide, 60 long, lightning + wind
+	local stormColor = Color3.fromRGB(255, 90, 90)
+	newPart(route, "StormBridge", Vector3.new(6, 2, 60), CFrame.new(0, Y, -290), Color3.fromRGB(80, 75, 95), { Material = Enum.Material.DiamondPlate })
+	hazard("StormBridge1", Vector3.new(6, 0.2, 60), CFrame.new(0, Y + 1.05, -290), "Storm", Color3.fromRGB(80, 75, 95), {
+		Transparency = 1,
+	})
+	zoneVolume("Gate3", Vector3.new(0, Y + 10, -290), Vector3.new(40, 40, 60), "🌩️ Gate 3 · Storm Bridge", stormColor,
+		"Lightning hits the RED circles — and the wind pushes you sideways!")
+	zoneSign(signs, "Gate3Sign", Vector3.new(0, Y + 10, -262), "🌩️ GATE 3 · STORM BRIDGE", stormColor)
+
+	-- ZONE 3: Cosmic Stratosphere (z -320 … -380) + Altar2 (z -380 … -404)
 	local cosmic = Color3.fromRGB(35, 28, 70)
 	local neon = Color3.fromRGB(255, 90, 230)
-	newPart(route, "Path3", Vector3.new(16, 2, 60), CFrame.new(0, Y, -375), cosmic, { Material = Enum.Material.Glass, Reflectance = 0.2 })
-	edgeLights(decor, Vector3.new(0, Y, -375), 16, 60, neon)
-	newPart(route, "CosmicField", Vector3.new(60, 2, 60), CFrame.new(0, Y, -430), cosmic, { Material = Enum.Material.Glass, Reflectance = 0.2 })
-	edgeLights(decor, Vector3.new(0, Y, -430), 60, 60, neon)
-	zoneSign(signs, "Zone3Sign", Vector3.new(0, Y + 12, -350), "🌌 COSMIC STRATOSPHERE", neon)
+	newPart(route, "CosmicField", Vector3.new(60, 2, 60), CFrame.new(0, Y, -350), cosmic, { Material = Enum.Material.Glass, Reflectance = 0.2 })
+	edgeLights(decor, Vector3.new(0, Y, -350), 60, 60, neon)
+	zoneVolume("Zone3", Vector3.new(0, Y + 10, -362), Vector3.new(70, 40, 84), "🌌 Cosmic Stratosphere", neon)
 	for _, pos in {
-		Vector3.new(-20, Y + 4, -415), Vector3.new(20, Y + 4, -420),
-		Vector3.new(-18, Y + 4, -445), Vector3.new(18, Y + 4, -448),
+		Vector3.new(-20, Y + 4, -335), Vector3.new(20, Y + 4, -340),
+		Vector3.new(-18, Y + 4, -365), Vector3.new(18, Y + 4, -368),
 	} do
 		spawnPoint(pos, 3)
 	end
-	newPart(route, "AltarPad2", Vector3.new(24, 2, 24), CFrame.new(0, Y, -472), Color3.fromRGB(70, 55, 110), { Material = Enum.Material.Marble })
-	altar(decor, altars, "Altar2", Vector3.new(0, Y + 1, -472))
+	newPart(route, "AltarPad2", Vector3.new(24, 2, 24), CFrame.new(0, Y, -392), Color3.fromRGB(70, 55, 110), { Material = Enum.Material.Marble })
+	altar(decor, altars, "Altar2", Vector3.new(0, Y + 1, -392))
 
 	------------------------------------------------------------------
 	-- Decorative floating islands along the path
@@ -339,7 +348,7 @@ local function buildPlaceholder(): Instance
 
 	-- Falling off = respawn
 	local abyss = getFolder(m, "Abyss")
-	newPart(abyss, "AbyssFloor", Vector3.new(800, 10, 1200), CFrame.new(0, Y - 25, -220), Color3.new(0, 0, 0), {
+	newPart(abyss, "AbyssFloor", Vector3.new(800, 10, 1000), CFrame.new(0, Y - 25, -180), Color3.new(0, 0, 0), {
 		Transparency = 1,
 		CanCollide = false,
 		CanQuery = false,
@@ -378,6 +387,7 @@ function MapService.Start()
 	getFolder(getFolder(map, "HuntZone"), "WeatherSpawns")
 	getFolder(map.HuntZone, "Altars")
 	getFolder(map, "Hazards")
+	getFolder(map, "Zones")
 	local route = getFolder(map, "Route")
 	getFolder(route, "LiftPlatforms")
 	getFolder(route, "WaterGaps")

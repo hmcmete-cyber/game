@@ -29,6 +29,34 @@ local Config = {
 	SkatesCooldown = 20,
 	SkatesBoost = 10,
 
+	-- Leash: carried clouds float behind you on a rope held in your LEFT hand
+	LeashLength = 9,
+	LeashHeight = 5, -- how high above your root the cloud floats
+	LeashBack = 5, -- how far behind you
+	LeashResponsiveness = 12,
+
+	-- Nitro (inventory slot 2, key R): bought at the Nitro Station
+	NitroPrice = 25,
+	NitroMax = 3,
+	NitroBoost = 12,
+	NitroDuration = 4,
+
+	-- Gate 2: Electric River (pulses: calm → warning → shock)
+	RiverCalm = 2.6,
+	RiverWarn = 0.6,
+	RiverShock = 1.2,
+	RiverDamage = 10, -- per ElectricInterval tick while shocking
+	RiverSlowCalm = 0.8,
+	RiverSlowShock = 0.4,
+
+	-- Gate 3: Storm Bridge (lightning strikes + side wind)
+	LightningInterval = 1.6,
+	LightningWarn = 1.0,
+	LightningRadius = 5,
+	LightningDamage = 35,
+	LightningKnock = 45,
+	WindStrength = 6,
+
 	-- Hazards
 	IceTraction = 1.6, -- how fast you can change direction on ice (per second)
 	IceTractionCarrying = 0.6, -- much worse with a cloud on your head

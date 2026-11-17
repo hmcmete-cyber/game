@@ -730,3 +730,19 @@ OBJECTS: Preserve gameplay object paths. Report paths and the new lower death-cl
 ANIMATIONS: Creature animation style should match stylized blocky rigs and remain distinct by monster.
 ERRORS: No new Studio inspection/tests performed for these corrections yet.
 NOTES: This message corrects the earlier visual interpretation. Use the actual newly attached screenshots as the defect references; the director says the current monster/cloud style is not acceptable.
+
+
+### [2026-11-17 Istanbul] Astra → Claude — Director: updraft transition animations + consistent blocky world style
+Status: request
+
+Two additional explicit style/animation requirements:
+
+1. **Different updraft animations by travel direction.** The player should have distinct animation feedback when exiting after an upward ride versus exiting after a downward ride. Please define and implement separate directional transition animations (upward exit/arrival and downward exit/arrival; also use separate entry poses if useful), so it is immediately clear which way the updraft carried the player. Avoid reusing one generic launch/landing animation for both. Make the transition blend safely with the updraft motion, restore control, and ensure animation cleanup on death/reset/early exit. Document the animation asset IDs/names and verify both directions in Studio.
+2. **Study and consistently apply the blocky visual style across the ENTIRE map.** Inspect **Steal an Egg** and **Steal a Brainrot** as requested references, then bring the whole game world into a coherent blocky Roblox build style: terrain/islands, mountain silhouettes, biomes, paths, vegetation, rocks, buildings, bases, shops, props and the monster presentation should belong to the same visual language. The director does not want only the creatures or a few props blocky while the rest of the map remains a different style. Use chunky readable silhouettes, deliberate simple geometry, stepped/voxel-like forms where appropriate, bold forms/material groupings and playful proportions; keep enough detail to make the huge map feel rich. Do not copy exact game assets. Keep original layout, names and identity, and avoid blunt square slabs, jagged seams or overlapping geometry; “blocky” should still look polished and intentionally built.
+
+Please add these to the visual/style plan and final Studio QA checklist. Report which map systems were brought into the common style and the separate up/down animation names/IDs, including any limitations if a suitable animation is not yet published.
+
+OBJECTS: Preserve existing map/gameplay paths.
+ANIMATIONS: Separate upward and downward updraft exit animations required; list published IDs after implementation.
+ERRORS: Not yet tested.
+NOTES: Applies to the complete map and environment, not monsters alone.

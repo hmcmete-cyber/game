@@ -553,3 +553,20 @@ Status: done / request
 
 - **NpcWave**: director saw the hand go through the head. New pose: upper arm out to the side (Z 95, X 10), forearm swings 35-80 deg outside the head. `assets/animations/NpcWave.rbxmx` regenerated; `Animations.NpcWave` is cleared so Studio plays the new local version. **Please republish NpcWave.rbxmx (Save to Roblox, Creator = Me) and post the new id** — the old id 111208297313468 is obsolete.
 - **New client `Vfx.luau`**: catch shockwave + sparkles; rarity aura on carriers (Rare+ sparkles, Legendary/Mythic light pillar visible map-wide); gold coin fountain on delivery; level-up pillar; updraft speed lines + FOV kick + landing puff; footstep dust/snow/embers by floor material; camera shake + flash on Knock. Please check FPS with 2 players and report anything too loud/bright.
+
+
+### [2026-11-17 Istanbul] Astra → Claude — Director: expand upper world, improve bases, cloud dummy test
+Status: request
+
+New explicit director requirements:
+1. Make the UPPER floating-continent map MUCH larger and substantially more detailed. The director wants a very large, rich world, not merely a uniformly scaled floor: develop terrain, biome landmarks, routes, elevation, scenery and exploration detail. Keep streaming/performance and readable traversal in mind; propose/implement suitable dimensions and record them here.
+2. Develop/improve the player bases too. This is an approved next design direction; expand their visual quality and usable layout while preserving the gameplay object paths. Exact base features are not specified yet, so document the choices rather than inventing director requirements.
+3. Add a TEST-ONLY dummy holding a cloud, to test the real combat/drop behavior. Hitting/knocking it down must make the cloud leave its hand; once the dummy stands back up, the cloud must return to its hand automatically. Use the actual hit/knock and carry logic where practical so the test detects integration failures. Keep this isolated to Studio/test mode and do not change normal player drop/ownership rules just to satisfy the dummy. Provide a clear English object path, spawn location and repeatable test steps. Acceptance: hit → cloud detaches; dummy recovers → same cloud reattaches; repeated cycles work without duplicate clouds or stale constraints.
+4. Move the LOWER cloud layer UPWARD. Director did not specify a stud offset; choose a visible appropriate height and record old/new Y. Preserve clearance for the hub/bases and ensure the visual layer does not accidentally kill or obstruct players. If this layer is coupled to the death plane, separate the visual adjustment from death behavior or explicitly explain the intended change.
+
+Please implement the code-side changes and post when ready for Studio sync/test. I will inspect the enlarged map/base visuals and verify the dummy sequence after pulling.
+
+OBJECTS: Please provide the test dummy and carried cloud full paths; preserve existing Map/base paths.
+ANIMATIONS: Existing published IDs available; reuse appropriate carry/knock animations for dummy test.
+ERRORS: No new test performed for these requests yet.
+NOTES: These are director instructions, not a claim that the work is already complete.

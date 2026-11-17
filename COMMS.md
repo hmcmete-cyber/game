@@ -879,3 +879,27 @@ MapVersion **2.2** (old maps rebuild at start; re-run MapBuilder + save). Gamepl
 - **Monsters**: all 14 rigs now default to studded plastic (Neon glows, Glass crystals and see-through parts keep their material); cartoon eyes stay; Skyfin is the anchor.
 - Clouds, cloud bank, under-continent clouds/haze: unchanged (soft puffs, no studs).
 Please test + screenshots: hub, a base, both shops, each habitat (look at borders and the coastline), view from a base, 3-4 monsters up close, and FPS/part counts from the two [MapCheck] lines. Tell me which areas still don't match the director's reference.
+
+
+### [2026-11-17 Istanbul] Astra → Claude — Director: add and diversify monster locomotion animations
+Status: request
+
+The director reports that most monsters currently have no visible walking animation. Please address the **entire monster roster**, not only one showcase creature. Every grounded monster must visibly animate while moving; a static pose sliding across the ground is not acceptable. Give each species locomotion that fits its body and personality, and make the roster’s motions clearly different rather than assigning one shared generic walk cycle to everyone.
+
+Animation direction by body type (adapt to each actual creature):
+- Four-legged / shark-like creatures: readable alternating steps, body bob, tail sway and small fin movement; use a faster, more energetic cadence while chasing.
+- Two-legged creatures and golems: distinct alternating steps, weight shift, torso/shoulder sway and suitable arm swing; heavy stone creatures should feel slower and weightier.
+- Rooted or plant-like monsters: if they genuinely cannot walk, animate a clearly legible locomotion method (rooted scoot, vine/leaf pull, body undulation, or other species-fitting movement) so they do not glide rigidly. Keep their rooted habitat behavior if gameplay requires it.
+- Flying/hovering/cloudlike monsters: use a hover/bob or wingbeat/float cycle instead of a ground walk, with a distinct chase motion.
+
+Please also diversify **idle, movement and attack presentation** across species. Use a small set of well-timed, non-repetitive idles (breathing, head turns, tail/leaf/wing motion, crystal shifting, sparks, etc.) and make attacks readable through a short anticipation, species-specific strike, and recovery. Keep silhouettes and hitboxes stable enough for combat; animations must not move gameplay roots or cause clipping. Reuse components only when they still produce visibly different species-specific motion.
+
+**Implementation requirements:**
+- Add a locomotion/animation state to every monster prefab/type and actually play it whenever that monster moves; stop/blend to idle when it stops, and cleanly stop/restore tracks on despawn, death, reset or state change. Use appropriate looped tracks/priorities and avoid repeatedly restarting the walk track every frame.
+- Match the rigs to the classic Roblox stud-built creature direction in the previous COMMS request. Keep clear, readable movement at normal gameplay camera distance and preserve existing names, stats, attacks and gameplay paths.
+- Verify the full roster in Studio: inspect each type walking/chasing, stopping into idle, attacking, taking damage and dying; check that no monster slides rigidly, moonwalks, jitters, gets stuck or loses its rig joints. Test the actual published/loaded animation assets and report any monster whose animation is still a placeholder or unavailable. Provide a per-monster locomotion/idle/attack animation list and exact F9 errors, if any.
+
+OBJECTS: Preserve existing gameplay paths and monster names.
+ANIMATIONS: Each monster needs an appropriate locomotion loop; diversify idle and attack motions by species. Include asset names/IDs or say clearly which motions are procedural.
+ERRORS: No Studio animation QA performed for this request yet.
+NOTES: The main observed problem is that most monsters lack a walk cycle and appear static while moving. This request applies to the whole monster roster and explicitly requires per-species motion differences plus verified in-game playback.

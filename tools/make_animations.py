@@ -51,12 +51,15 @@ ANIMS = {
         (2.8, {}),
     ]),
     "NpcWave": (False, "Action", "Shopkeeper greets a player", [
+        # Upper arm out to the side just above shoulder height, forearm up and
+        # swinging OUTSIDE the head (old version raised it to 150 deg and the
+        # hand passed through the head).
         (0.0, {}),
-        (0.3, {RUA: (0, 0, 150), H: (0, 0, 6)}),
-        (0.5, {RUA: (0, 0, 150), RLA: (0, 0, 30)}),
-        (0.7, {RUA: (0, 0, 150), RLA: (0, 0, -30)}),
-        (0.9, {RUA: (0, 0, 150), RLA: (0, 0, 30)}),
-        (1.1, {RUA: (0, 0, 150), RLA: (0, 0, -30)}),
+        (0.3, {RUA: (10, 0, 95), RLA: (0, 0, 60), H: (0, 0, -6)}),
+        (0.5, {RUA: (10, 0, 95), RLA: (0, 0, 35), H: (0, 0, -6)}),
+        (0.7, {RUA: (10, 0, 95), RLA: (0, 0, 80), H: (0, 0, -6)}),
+        (0.9, {RUA: (10, 0, 95), RLA: (0, 0, 35), H: (0, 0, -6)}),
+        (1.1, {RUA: (10, 0, 95), RLA: (0, 0, 80), H: (0, 0, -6)}),
         (1.5, {}),
     ]),
     "LeashHold": (True, "Action", "Left arm holds the leash back toward the cloud (legs keep walking)", [

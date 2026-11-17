@@ -177,9 +177,9 @@ function NpcAnimator.Start()
 			end
 			if not s.Wave and j.Shoulder then
 				if t < s.WaveUntil then
-					j.Shoulder.Transform = CFrame.Angles(0, 0, math.rad(150))
+					j.Shoulder.Transform = CFrame.Angles(math.rad(10), 0, math.rad(95))
 					if j.Elbow then
-						j.Elbow.Transform = CFrame.Angles(0, 0, math.sin(t * 12) * 0.5)
+						j.Elbow.Transform = CFrame.Angles(0, 0, math.rad(57 + math.sin(t * 12) * 22))
 					end
 				end
 			end

@@ -5,7 +5,7 @@
 
 return {
 	NpcIdle = "rbxassetid://138693634473151",
-	NpcWave = "rbxassetid://111208297313468",
+	NpcWave = "", -- fixed pose (hand no longer in the head): republish assets/animations/NpcWave.rbxmx and paste the new id
 	LeashHold = "rbxassetid://91122658081550",
 	Catch = "rbxassetid://101465619237493",
 	Steal = "rbxassetid://87179672043469",

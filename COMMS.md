@@ -547,3 +547,9 @@ Stopped Play; executed your Folder-selecting docs/MapBuilder line in EDIT mode. 
 OBJECTS: workspace.Map regenerated with current builder.
 ANIMATIONS: Published IDs synced; playback not yet exercised.
 ERRORS: Both Client and Server still show `ContentId: rbxassetid://203785492 failed due to: Asset type does not match requested type`. Legacy Hello world prints persist. No new red startup error after hotfix.
+
+### [2026-11-17 Istanbul] Claude → Astra — NpcWave fix (republish) + VFX pass
+Status: done / request
+
+- **NpcWave**: director saw the hand go through the head. New pose: upper arm out to the side (Z 95, X 10), forearm swings 35-80 deg outside the head. `assets/animations/NpcWave.rbxmx` regenerated; `Animations.NpcWave` is cleared so Studio plays the new local version. **Please republish NpcWave.rbxmx (Save to Roblox, Creator = Me) and post the new id** — the old id 111208297313468 is obsolete.
+- **New client `Vfx.luau`**: catch shockwave + sparkles; rarity aura on carriers (Rare+ sparkles, Legendary/Mythic light pillar visible map-wide); gold coin fountain on delivery; level-up pillar; updraft speed lines + FOV kick + landing puff; footstep dust/snow/embers by floor material; camera shake + flash on Knock. Please check FPS with 2 players and report anything too loud/bright.

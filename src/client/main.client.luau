@@ -13,6 +13,7 @@ local PlayerAnimator = require(script.Parent:WaitForChild("PlayerAnimator"))
 local QaPanel = require(script.Parent:WaitForChild("QaPanel"))
 local WorldFx = require(script.Parent:WaitForChild("WorldFx"))
 local Vfx = require(script.Parent:WaitForChild("Vfx"))
+local Ragdoll = require(script.Parent:WaitForChild("Ragdoll"))
 
 Hud.Start()
 Movement.Start()
@@ -26,4 +27,5 @@ SoundManager.Start()
 PlayerAnimator.Start()
 WorldFx.Start()
 Vfx.Start()
+Ragdoll.Start()
 QaPanel.Start() -- Studio only

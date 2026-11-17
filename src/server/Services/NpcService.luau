@@ -74,7 +74,9 @@ local function decorate(model: Model, look)
 		local gui = Instance.new("BillboardGui")
 		gui.Name = "NameTag"
 		gui.Size = UDim2.fromOffset(200, 50)
-		gui.StudsOffset = Vector3.new(0, 3.2, 0)
+		gui.StudsOffset = Vector3.new(0, 2.2, 0) -- stays under the stall canopy
+		gui.AlwaysOnTop = true -- never clipped by the roof
+		gui.LightInfluence = 0
 		gui.MaxDistance = 45
 		local name = Instance.new("TextLabel")
 		name.Size = UDim2.new(1, 0, 0.6, 0)

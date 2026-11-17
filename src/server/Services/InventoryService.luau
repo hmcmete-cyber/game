@@ -211,6 +211,7 @@ local function quake(player: Player, root: BasePart)
 				local dir = flat.Magnitude > 0.1 and flat.Unit or Vector3.new(1, 0, 0)
 				local resist = other:GetAttribute("BlastResist") and 0.5 or 1
 				Remotes.Knock:FireClient(other, (dir * Config.QuakeKnock + Vector3.new(0, 35, 0)) * resist)
+				other:SetAttribute("RagdollUntil", workspace:GetServerTimeNow() + Config.RagdollTime)
 			end
 		end
 	end
@@ -389,6 +390,7 @@ local function fireLaser(player: Player, root: BasePart, aim: unknown): boolean
 		return true
 	end
 	target:SetAttribute("LaserSlowUntil", now + Config.LaserSlowTime)
+	target:SetAttribute("RagdollUntil", now + Config.RagdollTime) -- brief ragdoll (client: Ragdoll.luau)
 	local hum = model:FindFirstChildOfClass("Humanoid")
 	if hum then
 		hum:TakeDamage(Config.LaserDamage * (1 - (target:GetAttribute("DamageResist") or 0)))

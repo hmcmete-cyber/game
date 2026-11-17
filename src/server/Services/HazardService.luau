@@ -158,6 +158,7 @@ local function strike(bridge: BasePart)
 				p.Hum:TakeDamage((carrying and Config.LightningDamage * 1.3 or Config.LightningDamage) * resist * (1 - (p.Player:GetAttribute("DamageResist") or 0)))
 				local dir = flat.Magnitude > 0.1 and flat.Unit or Vector3.xAxis
 				Remotes.Knock:FireClient(p.Player, (dir * Config.LightningKnock + Vector3.new(0, 30, 0)) * resist)
+				p.Player:SetAttribute("RagdollUntil", workspace:GetServerTimeNow() + Config.RagdollTime)
 			end
 		end
 	end)

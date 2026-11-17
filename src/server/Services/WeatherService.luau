@@ -60,6 +60,21 @@ local function hint(player: Player, text: string, duration: number?)
 	Remotes.Hint:FireClient(player, text, duration or 4)
 end
 
+-- Global "rare cloud" news: only Config.AnnounceTier+ (Legendary/Mythic), and at
+-- most one per Config.AnnounceCooldown s (Mythic always gets through).
+local lastAnnounce = -math.huge
+local function announceRare(text: string, duration: number, tier: number)
+	if tier < Config.AnnounceTier then
+		return
+	end
+	local now = os.clock()
+	if tier < 5 and now - lastAnnounce < Config.AnnounceCooldown then
+		return
+	end
+	lastAnnounce = now
+	Remotes.Hint:FireAllClients(text, duration)
+end
+
 local function hintAll(text: string, duration: number?)
 	Remotes.Hint:FireAllClients(text, duration or 5)
 end
@@ -668,11 +683,11 @@ local function catch(player: Player, sphere: BasePart)
 	hint(player, `You caught a {def.DisplayName}! Bring it to your base — follow the beam`, 5)
 	if info.Type == "Mythic" then
 		hintAll(`{player.DisplayName} CAUGHT THE MYTHIC STORM CLOUD!`, 8)
-	elseif def.Tier >= 3 then
-		hintAll(`{player.DisplayName} has a {string.upper(def.DisplayName)}!`, 4)
+	else
+		announceRare(`{player.DisplayName} has a {string.upper(def.DisplayName)}!`, 4, def.Tier)
 	end
 	if info.Shiny then
-		hintAll(`* {player.DisplayName} caught a SHINY {def.DisplayName}! *`, 6)
+		announceRare(`* {player.DisplayName} caught a SHINY {def.DisplayName}! *`, 5, math.max(def.Tier, Config.AnnounceTier))
 	end
 end
 
@@ -975,9 +990,7 @@ local function spawnLoop()
 				if typeName then
 					spawnWild(spot, typeName, math.random() < Weather.ShinyChance)
 					local def = Weather.Types[typeName]
-					if def.Tier >= 4 then
-						hintAll(`A {string.upper(def.Rarity)} {def.DisplayName} appeared in the {spot:GetAttribute("Biome") or "sky"}!`, 5)
-					end
+					announceRare(`A {string.upper(def.Rarity)} {def.DisplayName} appeared in the {spot:GetAttribute("Biome") or "sky"}!`, 5, def.Tier)
 				end
 			end
 		end
@@ -1003,7 +1016,7 @@ local function altarLoop()
 			if mythic then
 				hintAll("A MYTHIC STORM CLOUD has appeared at a Cloud Altar!", 10)
 			else
-				hintAll(`* A {Weather.Types[typeName].DisplayName} rose from a Cloud Altar!`, 5)
+				announceRare(`* A {Weather.Types[typeName].DisplayName} rose from a Cloud Altar!`, 5, Weather.Types[typeName].Tier)
 			end
 		end
 	end

@@ -204,9 +204,13 @@ local function deathTest()
 	if not hum then
 		return
 	end
-	-- Crystal Canyons pit 2 (v1.6): angles 245-255 deg, r ~307-352 studs, no bridge
-	local a = math.rad(250)
-	teleport(Vector3.new(math.cos(a) * 330, 205, math.sin(a) * 330))
+	-- the map marks a canyon pit for us (Map/Decor/PitMarker, v1.7+)
+	local marker = map() and map():FindFirstChild("PitMarker", true)
+	if not marker then
+		log("DEATH TEST: FAIL - no Map/Decor/PitMarker (rebuild the map)")
+		return
+	end
+	teleport(marker.Position)
 	log("Death test: dropped above a canyon pit, waiting up to 12 s ...")
 	local diedAt
 	local c1 = hum.Died:Connect(function()

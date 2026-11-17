@@ -48,7 +48,12 @@ local function bubble(model: Model, message: string)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Bubble"
 	gui.Size = UDim2.fromOffset(240, 50)
-	gui.StudsOffset = Vector3.new(0, 5.2, 0)
+	-- v1.7: the stall canopy sits ~4.5 studs above the head, so the bubble
+	-- floats IN FRONT of the vendor (toward the customer), just above head
+	-- height, and is drawn on top so the roof can never cut it.
+	gui.StudsOffsetWorldSpace = (head :: BasePart).CFrame.LookVector * 4.5 + Vector3.new(0, 1.6, 0)
+	gui.AlwaysOnTop = true
+	gui.LightInfluence = 0
 	gui.MaxDistance = 40
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.fromScale(1, 1)

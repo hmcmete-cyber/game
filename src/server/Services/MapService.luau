@@ -249,7 +249,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "1.6"
+local MAP_VERSION = "1.7"
 local DEATH_Y = 0 -- top of the death cloud floor (v1.6: raised from -20)
 
 local function buildPlaceholder(): Instance
@@ -428,9 +428,13 @@ local function buildPlaceholder(): Instance
 	-- big puffy cloud lumps on top of the sea (decor only)
 	local sea = getFolder(decor, "CloudSea")
 	-- puffs stay below Y ~17 so they never touch the hub (rock ends ~Y 23) or bases
-	for i = 1, 180 do
-		local pos = Vector3.new(rng:NextNumber(-900, 900), DEATH + rng:NextNumber(-2, 6), rng:NextNumber(-900, 900))
-		local w = rng:NextNumber(30, 90)
+	-- v1.7: a jittered 130-stud grid (width <= 90, jitter <= 15) so puffs never intersect
+	local i = 0
+	for gx = -910, 910, 130 do
+		for gz = -910, 910, 130 do
+			i += 1
+		local pos = Vector3.new(gx + rng:NextNumber(-15, 15), DEATH + rng:NextNumber(-2, 4), gz + rng:NextNumber(-15, 15))
+		local w = rng:NextNumber(50, 90)
 		local puff = newPart(sea, "Puff" .. i, Vector3.new(w, math.min(20, w * rng:NextNumber(0.2, 0.25)), w * rng:NextNumber(0.7, 1.1)), CFrame.new(pos),
 			Color3.fromRGB(245, 247, 252):Lerp(Color3.fromRGB(200, 205, 225), rng:NextNumber()), {
 				Material = Enum.Material.SmoothPlastic,
@@ -439,18 +443,20 @@ local function buildPlaceholder(): Instance
 				CanTouch = false,
 				CastShadow = false,
 			})
-		local mesh = Instance.new("SpecialMesh")
-		mesh.MeshType = Enum.MeshType.Sphere
-		mesh.Parent = puff
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = puff
+		end
 	end
 
 	------------------------------------------------------------------
 	-- Decorative floating islands (outside everything)
 	------------------------------------------------------------------
 	local islandSpots = {
-		{ Vector3.new(-260, Y + 30, 120), 28 }, { Vector3.new(270, Y + 60, -80), 32 },
-		{ Vector3.new(-380, UP - 20, -240), 26 }, { Vector3.new(330, UP + 30, 300), 30 },
-		{ Vector3.new(60, UP + 70, -420), 24 }, { Vector3.new(-120, Y - 5, 260), 26 },
+		-- hub-level islands stay below the continent's keel (Y ~96); sky islands sit beyond its coast (r > 820)
+		{ Vector3.new(-260, Y + 22, 120), 28 }, { Vector3.new(270, Y + 25, -80), 32 },
+		{ Vector3.new(-760, UP - 20, -480), 26 }, { Vector3.new(700, UP + 30, 640), 30 },
+		{ Vector3.new(120, UP + 70, -900), 24 }, { Vector3.new(-120, Y - 5, 260), 26 },
 	}
 	for i, spot in islandSpots do
 		local pos, size = spot[1], spot[2]
@@ -473,6 +479,14 @@ local function buildPlaceholder(): Instance
 
 	m.Parent = workspace
 	m:SetAttribute("MapVersion", MAP_VERSION)
+	ContinentBuilder.FixSpawns(m, UP)
+	local count = 0
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			count += 1
+		end
+	end
+	print(`[MapCheck] Map v{MAP_VERSION}: {count} parts`)
 	return m
 end
 

@@ -168,4 +168,11 @@ Config.FogStealHold = 0.7 -- steal hold during the Fog event (normal = StealHold
 Config.MeteorClouds = 4 -- clouds a meteor shower drops
 Config.MeteorTiers = { Epic = 60, Legendary = 32, Mythic = 8 }
 
+-- v1.7 notifications: only these tiers are announced to everyone
+Config.AnnounceTier = 4 -- 4 = Legendary, 5 = Mythic (Common/Rare/Epic stay silent)
+Config.AnnounceCooldown = 15 -- seconds between global rare-cloud messages (Mythic ignores it)
+
+-- v1.7 combat feedback
+Config.RagdollTime = 1.2 -- seconds a hit player ragdolls before getting up
+
 return Config

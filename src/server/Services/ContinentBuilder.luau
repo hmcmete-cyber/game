@@ -20,7 +20,7 @@
 
 local ContinentBuilder = {}
 
-local SEG = 96 -- slices per ring (3.75° each)
+local SEG = 120 -- slices per ring (3° each)
 
 function ContinentBuilder.Build(ctx)
 	local newPart, MARKER, polar = ctx.newPart, ctx.MARKER, ctx.polar
@@ -51,24 +51,60 @@ function ContinentBuilder.Build(ctx)
 		return p
 	end
 
-	-- v1.6: the layout below is authored in the v1.4 radii (heart 16-70,
-	-- biomes 70-262, coast 262-314) and stretched to the big continent
-	-- (heart 16-90, biomes 90-450, coast 450-520) by R().
+	-- v1.7: the layout is authored in v1.4 units (heart 16-70, biomes 70-262,
+	-- coast 262-314). R() stretches it to studs (heart 16-110, biomes 110-590,
+	-- coast 590-680) and Wr() bends the outline by angle so the island has an
+	-- irregular, map-like coastline (about 555-805 studs from the center).
 	local function R(r: number): number
 		if r <= 70 then
-			return 16 + (r - 16) * (74 / 54)
+			return 16 + (r - 16) * (94 / 54)
 		elseif r <= 262 then
-			return 90 + (r - 70) * (360 / 192)
+			return 110 + (r - 70) * (480 / 192)
 		end
-		return 450 + (r - 262) * (70 / 52)
+		return 590 + (r - 262) * (90 / 52)
+	end
+	local function warp(deg: number): number
+		local t = math.rad(deg)
+		return 1 + 0.09 * math.sin(3 * t + 0.7) + 0.05 * math.sin(5 * t + 2.1) + 0.03 * math.sin(9 * t + 4.0) + 0.015 * math.sin(17 * t + 1.3)
+	end
+	-- studs -> warped studs (the heart stays round, the bend grows outward)
+	local function Wr(r: number, deg: number): number
+		local k = math.clamp((r - 110) / 480, 0, 1)
+		return r * (1 + (warp(deg) - 1) * k)
 	end
 	local function A(r: number, deg: number, y: number): Vector3
-		return polar(R(r), deg, y)
+		return polar(Wr(R(r), deg), deg, y)
+	end
+
+	-- Footprint registry so random props never intersect landmarks or each other
+	local used: { { Vector2 | number } } = {}
+	local function reserve(pos: Vector3, radius: number)
+		table.insert(used, { Vector2.new(pos.X, pos.Z), radius })
+	end
+	local function isFree(pos: Vector3, radius: number): boolean
+		local p2 = Vector2.new(pos.X, pos.Z)
+		for _, u in used do
+			if (p2 - (u[1] :: Vector2)).Magnitude < radius + (u[2] :: number) then
+				return false
+			end
+		end
+		return true
+	end
+	-- try up to 14 random positions from gen() (nil = rejected roll); returns a free one (reserved) or nil
+	local function place(gen: () -> Vector3?, radius: number): Vector3?
+		for _ = 1, 14 do
+			local pos = gen()
+			if pos and isFree(pos, radius) then
+				reserve(pos, radius)
+				return pos
+			end
+		end
+		return nil
 	end
 
 	-- one slice of a ring (radii in authoring units, see R)
 	local function ring(name: string, deg: number, r0: number, r1: number, top: number, thick: number, color: Color3, material: Enum.Material, z)
-		r0, r1 = R(r0), R(r1)
+		r0, r1 = Wr(R(r0), deg), Wr(R(r1), deg)
 		local theta = math.rad(deg)
 		local dir = Vector3.new(math.cos(theta), 0, math.sin(theta))
 		local mid = dir * ((r0 + r1) / 2) + Vector3.new(0, top - thick / 2, 0)
@@ -103,6 +139,7 @@ function ContinentBuilder.Build(ctx)
 	end
 
 	local function sector(deg: number): string
+		deg %= 360
 		if deg >= 330 or deg < 30 then
 			return "Plateau"
 		elseif deg < 90 then
@@ -115,6 +152,16 @@ function ContinentBuilder.Build(ctx)
 			return "Canyon"
 		end
 		return "Volcanic"
+	end
+
+	-- Habitat borders wander with distance from the center (no straight lines)
+	local function wobble(deg: number, rOld: number): number
+		return (deg + 11 * math.sin(rOld / 19 + 1.7) + 6 * math.sin(rOld / 7.3 + deg * 0.05)) % 360
+	end
+	-- degrees from the wobbled angle to the nearest habitat border (30, 90, ...)
+	local function borderDist(d2: number): number
+		local m = (d2 - 30) % 60
+		return math.min(m, 60 - m)
 	end
 
 	local grass = Color3.fromRGB(125, 195, 120)
@@ -137,55 +184,111 @@ function ContinentBuilder.Build(ctx)
 	end
 
 	------------------------------------------------------------------
-	-- GROUND RINGS
+	-- GROUND (v1.7): 8 radial bands per slice, each band takes the habitat at
+	-- its wobbled angle; equal neighbours merge into one part. Near a border
+	-- the colour blends toward the neighbour and transition props appear.
 	------------------------------------------------------------------
+	local LOOK = {
+		Plateau = { grass, Enum.Material.Grass, 0 },
+		Mountains = { rock, Enum.Material.Rock, 0 },
+		Mushroom = { moss, Enum.Material.Grass, 0 },
+		Marsh = { mud, Enum.Material.Mud, -3 },
+		Volcanic = { basalt, Enum.Material.Basalt, 0 },
+		Canyon = { canyonC, Enum.Material.Sandstone, 0 },
+	}
+	local EDGES = { 70, 90, 110, 138, 166, 194, 222, 238, 262 }
+	local function canyonTop(r0: number): number
+		if r0 < 90 or r0 >= 238 then
+			return UP - 4
+		elseif r0 < 110 or r0 >= 222 then
+			return UP - 8
+		end
+		return UP - 12
+	end
+	local transitions = {}
 	for k = 0, SEG - 1 do
 		local deg = (k + 0.5) * 360 / SEG
 		ring("Heart" .. k, deg, 16, 70, UP, 4, Color3.fromRGB(235, 238, 248), Enum.Material.Marble, Z.Heart)
 
-		local s = sector(deg)
-		if s == "Plateau" then
-			ring("Meadow" .. k, deg, 70, 262, UP, 4, grass, Enum.Material.Grass, Z.Plateau)
-		elseif s == "Mountains" then
-			ring("MountainBase" .. k, deg, 70, 262, UP, 4, rock, Enum.Material.Rock, Z.Mountains)
-		elseif s == "Mushroom" then
-			ring("MushroomFloor" .. k, deg, 70, 262, UP, 4, moss, Enum.Material.Grass, Z.Mushroom)
-		elseif s == "Marsh" then
-			ring("Marsh" .. k, deg, 70, 262, UP - 3, 4, mud, Enum.Material.Mud, Z.Marsh)
-		elseif s == "Canyon" then
-			ring("CanyonA" .. k, deg, 70, 90, UP - 4, 4, canyonC, Enum.Material.Sandstone, Z.Canyon)
-			ring("CanyonB" .. k, deg, 90, 110, UP - 8, 4, canyonC, Enum.Material.Sandstone, Z.Canyon)
-			-- floor r 110-222 in 4 bands so pits can cut holes
-			for b = 0, 3 do
-				local r0, r1 = 110 + b * 28, 138 + b * 28
-				if not inPit(deg, r0, r1) then
-					ring("CanyonFloor" .. k .. "_" .. b, deg, r0, r1, UP - 12, 4, canyonC:Lerp(Color3.new(0, 0, 0), 0.15), Enum.Material.Sandstone, Z.Canyon)
-				end
+		local run = nil -- current merged run { r0, r1, top, color, material, zone, name }
+		local function flush()
+			if run then
+				ring(run.Name .. k .. "_" .. run.R0, deg, run.R0, run.R1, run.Top, 4, run.Color, run.Material, run.Zone)
+				run = nil
 			end
-			ring("CanyonC" .. k, deg, 222, 238, UP - 8, 4, canyonC, Enum.Material.Sandstone, Z.Canyon)
-			ring("CanyonD" .. k, deg, 238, 262, UP - 4, 4, canyonC, Enum.Material.Sandstone, Z.Canyon)
-			-- cave roofs near the 270° wall: walk under for shelter, or on top
-			if deg >= 258 then
-				ring("CaveRoof" .. k, deg, 120, 205, UP, 4, Color3.fromRGB(120, 95, 120), Enum.Material.Slate, Z.Canyon)
-			end
-		else -- Volcanic
-			ring("Basalt" .. k, deg, 70, 262, UP, 4, basalt, Enum.Material.Basalt, Z.Volcanic)
 		end
+		for b = 1, #EDGES - 1 do
+			local r0, r1 = EDGES[b], EDGES[b + 1]
+			local d2 = wobble(deg, (r0 + r1) / 2)
+			local s = sector(d2)
+			local look = LOOK[s]
+			local top = s == "Canyon" and canyonTop(r0) or UP + look[3]
+			local color = look[1]
+			local bd = borderDist(d2)
+			if bd < 5 then
+				local other = sector(d2 + 6) ~= s and sector(d2 + 6) or sector(d2 - 6)
+				color = color:Lerp(LOOK[other][1], 0.38 * (1 - bd / 5))
+				table.insert(transitions, { r = (r0 + r1) / 2, deg = deg, top = top, a = s, b = other })
+			end
+			local hole = s == "Canyon" and inPit(deg, r0, r1)
+			if hole then
+				flush()
+			elseif run and run.Top == top and run.Color == color and run.Zone == Z[s] then
+				run.R1 = r1
+			else
+				flush()
+				run = { R0 = r0, R1 = r1, Top = top, Color = color, Material = look[2], Zone = Z[s], Name = s }
+			end
+			-- cave roofs over the canyon floor near its east wall
+			if s == "Canyon" and d2 >= 258 and d2 < 270 and r0 >= 110 and r1 <= 222 then
+				ring("CaveRoof" .. k .. "_" .. r0, deg, r0, r1, UP, 4, Color3.fromRGB(120, 95, 120), Enum.Material.Slate, Z.Canyon)
+			end
+		end
+		flush()
 
 		ring("Coast" .. k, deg, 262, 300, UP - 0.5, 4, sand, Enum.Material.Sand, Z.Coast)
 		ring("Shallows" .. k, deg, 300, 314, UP - 1.5, 4, Color3.fromRGB(120, 200, 230), Enum.Material.Glass, Z.Coast)
 	end
 
-	-- Rocky underside (boulders, center left free for the updraft)
-	for i = 1, 60 do
-		local deg = i * 6 + rng:NextNumber(-3, 3)
-		local r = rng:NextNumber(70, 270)
-		local size = rng:NextNumber(70, 130)
-		local p = newPart(continent, "Underside" .. i, Vector3.new(size, size * 0.6, size), CFrame.new(A(r, deg, UP - 14 - size * 0.3)),
-			Color3.fromRGB(120, 100, 90), { Material = Enum.Material.Slate, CastShadow = false })
-		local mesh = Instance.new("SpecialMesh")
-		mesh.MeshType = Enum.MeshType.Sphere
-		mesh.Parent = p
+	------------------------------------------------------------------
+	-- Reserve every landmark footprint first (random props avoid them)
+	------------------------------------------------------------------
+	local function habitatAt(deg: number, rOld: number): string
+		return sector(wobble(deg % 360, rOld))
+	end
+	-- random point in a habitat: returns nil when the roll landed elsewhere
+	local function habGen(rMin: number, rMax: number, dMin: number, dMax: number, hab: string, y: number): () -> Vector3?
+		return function()
+			local deg, r = rng:NextNumber(dMin, dMax) % 360, rng:NextNumber(rMin, rMax)
+			if habitatAt(deg, r) ~= hab then
+				return nil
+			end
+			return A(r, deg, y)
+		end
+	end
+	for _, c in {
+		{ 175, 60, 82 }, { 115, 42, 44 }, { 225, 78, 52 }, { 130, 84, 35 }, { 235, 38, 38 }, { 160, 35, 30 }, -- peaks
+		{ 130, 105, 36 }, { 205, 128, 36 }, { 150, 142, 36 }, { 100, 140, 36 }, { 240, 100, 36 }, { 185, 95, 36 }, -- shroom stairs
+		{ 205, 110, 42 }, { 200, 12, 52 }, { 258, 66, 26 }, { 225, 192, 14 }, -- elder, mesa, lake, tower
+		{ 180, 300, 74 }, { 115, 285, 40 }, { 130, 220, 9 }, { 150, 238, 22 }, { 200, 222, 22 }, { 120, 255, 22 }, -- volcanoes, canyon
+		{ 292, 90, 9 }, { 282, 180, 10 }, { 240, 326, 10 }, -- lighthouse, altars
+	} do
+		reserve(A(c[1], c[2], UP), c[3])
+	end
+	-- roads, boardwalk and lava river: { angle, from studs, to studs }
+	local ROAD_END = {
+		[0] = Wr(R(230), 0),
+		[120] = Wr(R(230), 120),
+		[300] = Wr(R(180), 300) - 76,
+		[60] = Wr(R(175), 60) - 86,
+	}
+	for _, line in {
+		{ 0, R(70), ROAD_END[0] }, { 120, R(70), ROAD_END[120] }, { 300, R(70), ROAD_END[300] }, { 60, R(70), ROAD_END[60] },
+		{ 180, R(70), Wr(R(250), 180) }, { 315, Wr(R(150), 315), Wr(R(250), 315) },
+	} do
+		for r = line[2], line[3], 18 do
+			reserve(polar(r, line[1], UP), 9)
+		end
 	end
 
 	-- Sky Heart: glowing ring around the updraft hole + beacon
@@ -204,13 +307,17 @@ function ContinentBuilder.Build(ctx)
 	-- PLATEAU MEADOWS (330-30): rolling hills + trees
 	------------------------------------------------------------------
 	for i = 1, 14 do
-		local deg = (330 + rng:NextNumber(5, 55)) % 360
-		local c = A(rng:NextNumber(100, 240), deg, UP)
-		disc(continent, "Hill" .. i, c, rng:NextNumber(20, 40), 3.5, UP + 3.5, grass, Enum.Material.Grass, Z.Plateau)
+		local rad = rng:NextNumber(20, 40)
+		local c = place(habGen(100, 240, 330, 390, "Plateau", UP), rad)
+		if c then
+			disc(continent, "Hill" .. i, c, rad, 3.5, UP + 3.5, grass, Enum.Material.Grass, Z.Plateau)
+		end
 	end
 	for i = 1, 30 do
-		local deg = (330 + rng:NextNumber(2, 58)) % 360
-		local c = A(rng:NextNumber(85, 250), deg, UP)
+		local c = place(habGen(85, 250, 330, 390, "Plateau", UP), 7)
+		if not c then
+			continue
+		end
 		local h = rng:NextNumber(10, 16)
 		newPart(decor, "TreeTrunk" .. i, Vector3.new(2, h, 2), CFrame.new(c + Vector3.new(0, h / 2, 0)), Color3.fromRGB(120, 85, 60), {
 			Material = Enum.Material.Wood, CastShadow = false,
@@ -284,7 +391,7 @@ function ContinentBuilder.Build(ctx)
 		cap:SetAttribute("Shelter", true)
 		return cap
 	end
-	local clusters = { A(130, 105, UP), A(205, 128, UP), A(150, 142, UP), A(95, 125, UP), A(240, 100, UP), A(185, 95, UP) }
+	local clusters = { A(130, 105, UP), A(205, 128, UP), A(150, 142, UP), A(100, 140, UP), A(240, 100, UP), A(185, 95, UP) }
 	for c, center in clusters do
 		local steps = 9
 		for i = 1, steps do
@@ -307,8 +414,11 @@ function ContinentBuilder.Build(ctx)
 		end
 	end
 	for i = 1, 18 do
-		local pos = A(rng:NextNumber(90, 250), rng:NextNumber(93, 147), UP)
-		mushroom("GiantShroom" .. i, pos, rng:NextNumber(14, 22), rng:NextNumber(10, 16), capColors[i % #capColors + 1])
+		local capR = rng:NextNumber(10, 16)
+		local pos = place(habGen(90, 250, 93, 147, "Mushroom", UP), capR + 2)
+		if pos then
+			mushroom("GiantShroom" .. i, pos, rng:NextNumber(14, 22), capR, capColors[i % #capColors + 1])
+		end
 	end
 	for _ = 1, 10 do
 		spawnPoint(A(rng:NextNumber(85, 255), rng:NextNumber(92, 148), UP + 3), "Mushroom")
@@ -332,7 +442,10 @@ function ContinentBuilder.Build(ctx)
 		hazardFlag(field, "Storm")
 	end
 	for i = 1, 32 do
-		local c = A(rng:NextNumber(80, 255), rng:NextNumber(153, 207), UP - 3)
+		local c = place(habGen(80, 255, 153, 207, "Marsh", UP - 3), 3)
+		if not c then
+			continue
+		end
 		local h = rng:NextNumber(6, 12)
 		newPart(decor, "DeadTree" .. i, Vector3.new(1.4, h, 1.4), CFrame.new(c + Vector3.new(0, h / 2, 0)) * CFrame.Angles(math.rad(rng:NextNumber(-12, 12)), 0, math.rad(rng:NextNumber(-12, 12))),
 			Color3.fromRGB(70, 60, 55), { Material = Enum.Material.Wood, CanCollide = false, CastShadow = false })
@@ -356,11 +469,16 @@ function ContinentBuilder.Build(ctx)
 	------------------------------------------------------------------
 	local crystalC = { Color3.fromRGB(255, 140, 230), Color3.fromRGB(130, 230, 255), Color3.fromRGB(190, 150, 255) }
 	for i = 1, 48 do
-		local deg, r
-		repeat
-			deg, r = rng:NextNumber(213, 267), rng:NextNumber(112, 220)
-		until not inPit(deg, r - 6, r + 6)
-		local base = A(r, deg, UP - 12)
+		local base = place(function()
+			local deg, r = rng:NextNumber(213, 267), rng:NextNumber(112, 220)
+			if inPit(deg, r - 6, r + 6) or habitatAt(deg, r) ~= "Canyon" then
+				return nil
+			end
+			return A(r, deg, UP - 12)
+		end, 3)
+		if not base then
+			continue
+		end
 		local h = rng:NextNumber(4, 11)
 		local crystal = newPart(decor, "Crystal" .. i, Vector3.new(h * 0.35, h, h * 0.35),
 			CFrame.new(base + Vector3.new(0, h / 2, 0)) * CFrame.Angles(math.rad(rng:NextNumber(-20, 20)), rng:NextNumber(0, 6), math.rad(rng:NextNumber(-20, 20))),
@@ -432,14 +550,14 @@ function ContinentBuilder.Build(ctx)
 	end
 	lava("LavaLake", Vector3.new(calderaC.X, lakeTop + 0.1, calderaC.Z), Vector3.new(26, 0.4, 26))
 	for i = 1, 12 do
-		local pos = A(rng:NextNumber(90, 250), rng:NextNumber(275, 325), UP + 0.1)
-		if (pos - calderaC).Magnitude > calR + 8 then
+		local pos = place(habGen(90, 250, 275, 325, "Volcanic", UP + 0.1), 9)
+		if pos then
 			lava("LavaPool" .. i, pos, Vector3.new(rng:NextNumber(8, 14), 0.4, rng:NextNumber(8, 14)))
 		end
 	end
 	for i = 1, 22 do
-		local pos = A(rng:NextNumber(85, 255), rng:NextNumber(273, 327), UP)
-		if (pos - calderaC).Magnitude > calR + 4 then
+		local pos = place(habGen(85, 255, 273, 327, "Volcanic", UP), 4)
+		if pos then
 			local h = rng:NextNumber(10, 24)
 			newPart(continent, "Spire" .. i, Vector3.new(4, h, 4), CFrame.new(pos + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, 3), math.rad(rng:NextNumber(-8, 8))),
 				Color3.fromRGB(30, 25, 35), { Material = Enum.Material.Glass, Reflectance = 0.1, CastShadow = false })
@@ -507,10 +625,10 @@ function ContinentBuilder.Build(ctx)
 	-- Roads from the Sky Heart into the flat biomes (+ lamps); a boardwalk into the marsh
 	local ROADS = {
 		-- { angle, zone, colour, top, end radius in studs (stops at landmarks) }
-		{ 0, Z.Plateau, Color3.fromRGB(205, 200, 185), UP, 390 },
-		{ 120, Z.Mushroom, Color3.fromRGB(190, 170, 200), UP, 390 },
-		{ 300, Z.Volcanic, Color3.fromRGB(90, 80, 80), UP, 215 },
-		{ 60, Z.Mountains, Color3.fromRGB(190, 190, 195), UP, 195 },
+		{ 0, Z.Plateau, Color3.fromRGB(205, 200, 185), UP, ROAD_END[0] },
+		{ 120, Z.Mushroom, Color3.fromRGB(190, 170, 200), UP, ROAD_END[120] },
+		{ 300, Z.Volcanic, Color3.fromRGB(90, 80, 80), UP, ROAD_END[300] },
+		{ 60, Z.Mountains, Color3.fromRGB(190, 190, 195), UP, ROAD_END[60] },
 	}
 	for i, road in ROADS do
 		local deg, z, color, top = road[1], road[2], road[3], road[4]
@@ -522,7 +640,7 @@ function ContinentBuilder.Build(ctx)
 		end
 	end
 	do
-		local r0, r1 = R(70), R(250)
+		local r0, r1 = R(70), Wr(R(250), 180)
 		local mid = polar((r0 + r1) / 2, 180, UP - 2.3)
 		block(continent, "Boardwalk", Vector3.new(8, 0.6, r1 - r0), CFrame.lookAt(mid, mid + polar(1, 180, 0)), Color3.fromRGB(130, 95, 65), Enum.Material.WoodPlanks, Z.Marsh)
 		for r = r0 + 30, r1, 70 do
@@ -587,7 +705,10 @@ function ContinentBuilder.Build(ctx)
 	truss.Parent = continent
 	spawnPoint(towerC + Vector3.new(0, 34, 0), "Marsh")
 	for i = 1, 10 do
-		local pad = A(rng:NextNumber(120, 240), rng:NextNumber(158, 202), UP - 2.2)
+		local pad = place(habGen(120, 240, 158, 202, "Marsh", UP - 2.2), 5)
+		if not pad then
+			continue
+		end
 		disc(continent, "LilyPad" .. i, pad, rng:NextNumber(3, 5), 0.4, UP - 2.6, Color3.fromRGB(80, 160, 90), Enum.Material.Grass, Z.Marsh)
 	end
 
@@ -625,7 +746,7 @@ function ContinentBuilder.Build(ctx)
 	lava("AshLava", Vector3.new(ashC.X, UP + 24.1, ashC.Z), Vector3.new(10, 0.4, 10))
 	spawnPoint(ashC + Vector3.new(9, 23, 0), "Volcanic")
 	local riverMid = A(200, 315, UP + 0.1)
-	local rr0, rr1 = R(150), R(250)
+	local rr0, rr1 = Wr(R(150), 315), Wr(R(250), 315)
 	newPart(decor, "LavaRiver", Vector3.new(10, 0.4, rr1 - rr0), CFrame.lookAt(riverMid, riverMid + polar(1, 315, 0)), Color3.fromRGB(255, 100, 30), {
 		Material = Enum.Material.Neon, CanCollide = false, CastShadow = false,
 	})
@@ -656,14 +777,19 @@ function ContinentBuilder.Build(ctx)
 	bl.Color = beacon.Color
 	bl.Parent = beacon
 	for i, deg in { 20, 75, 140, 200, 250, 330 } do
-		local r0, r1 = R(300), R(314) + 40
+		local r0, r1 = Wr(R(300), deg), Wr(R(314), deg) + 40
 		local mid = polar((r0 + r1) / 2, deg, UP - 0.2)
 		block(route, "Pier" .. i, Vector3.new(7, 0.6, r1 - r0), CFrame.lookAt(mid, mid + polar(1, deg, 0)), Color3.fromRGB(150, 110, 75), Enum.Material.WoodPlanks, Z.Coast)
 		lamp(polar(r1 - 3, deg + 0.6, UP - 0.5), Color3.fromRGB(255, 220, 170))
 		spawnPoint(polar(r1 - 6, deg, UP + 2.5), "Coast")
 	end
 	for i = 1, 22 do
-		local base = A(rng:NextNumber(266, 298), rng:NextNumber(0, 360), UP - 0.5)
+		local base = place(function()
+			return A(rng:NextNumber(266, 298), rng:NextNumber(0, 360), UP - 0.5)
+		end, 5)
+		if not base then
+			continue
+		end
 		local lean = CFrame.Angles(math.rad(rng:NextNumber(-12, 12)), 0, math.rad(rng:NextNumber(-12, 12)))
 		local trunkCF = CFrame.new(base) * lean * CFrame.new(0, 7, 0)
 		block(decor, "PalmTrunk" .. i, Vector3.new(1.4, 14, 1.4), trunkCF, Color3.fromRGB(150, 115, 80), Enum.Material.Wood, nil, { CanCollide = false })
@@ -675,11 +801,224 @@ function ContinentBuilder.Build(ctx)
 		end
 	end
 
+	------------------------------------------------------------------
+	-- HABITAT TRANSITIONS: mossy boulders / shrubs scattered along borders
+	------------------------------------------------------------------
+	local transitionCount = 0
+	for _, t in transitions do
+		if rng:NextNumber() < 0.3 then
+			local pos = A(t.r + rng:NextNumber(-8, 8), t.deg + rng:NextNumber(-1, 1), t.top)
+			if isFree(pos, 5) then
+				reserve(pos, 5)
+				transitionCount += 1
+				local mix = LOOK[t.a][1]:Lerp(LOOK[t.b][1], 0.5)
+				local size = rng:NextNumber(3, 7)
+				local boulder = newPart(continent, "Transition" .. transitionCount, Vector3.new(size * 1.3, size * 0.8, size),
+					CFrame.new(pos + Vector3.new(0, size * 0.3, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6), 0), mix:Lerp(rock, 0.4), {
+						Material = Enum.Material.Rock, CastShadow = false,
+					})
+				local mesh = Instance.new("SpecialMesh")
+				mesh.MeshType = Enum.MeshType.Sphere
+				mesh.Parent = boulder
+				newPart(decor, "TransitionShrub" .. transitionCount, Vector3.new(size, size * 0.6, size),
+					CFrame.new(pos + Vector3.new(size * 0.7, size * 0.25, 0)), LOOK[t.b][1]:Lerp(grass, 0.5), {
+						Shape = Enum.PartType.Ball, Material = Enum.Material.Grass, CanCollide = false, CastShadow = false,
+					})
+			end
+		end
+	end
+
+	------------------------------------------------------------------
+	-- UNDERSIDE (seen from the bases below): a stepped, inverted rock cone
+	-- that follows the coastline, hanging spikes, glowing crystal veins,
+	-- waterfalls off the coast and cloud wisps hugging the rock.
+	--   layer      top..bottom (Y)        radius (share of the local edge)
+	--   Skirt      UP-4 .. UP-20          0.70 - 0.99
+	--   Shelf      UP-20 .. UP-44         0.48 - 0.86
+	--   Root       UP-44 .. UP-74         0.28 - 0.68
+	--   Keel       UP-74 .. UP-104        0.06 - 0.47   (inner 30 studs open for the updraft)
+	------------------------------------------------------------------
+	local underside = Instance.new("Folder")
+	underside.Name = "Underside"
+	underside.Parent = continent
+	local LAYERS = {
+		{ "Skirt", 4, 20, 0.70, 0.99, Color3.fromRGB(120, 98, 80), Enum.Material.Rock },
+		{ "Shelf", 20, 44, 0.48, 0.86, Color3.fromRGB(104, 88, 78), Enum.Material.Rock },
+		{ "Root", 44, 74, 0.28, 0.68, Color3.fromRGB(86, 76, 74), Enum.Material.Slate },
+		{ "Keel", 74, 104, 0.06, 0.47, Color3.fromRGB(66, 60, 64), Enum.Material.Slate },
+	}
+	local USEG = 72 -- 5° slices: the canyon pits (225-235, 245-255) line up with slice edges
+	local function pitAngle(deg: number): boolean
+		for _, pit in PITS do
+			if deg >= pit[1] and deg < pit[2] then
+				return true
+			end
+		end
+		return false
+	end
+	local function edgeAt(deg: number): number
+		return Wr(R(314), deg)
+	end
+	for k = 0, USEG - 1 do
+		local deg = (k + 0.5) * 360 / USEG
+		local edge = edgeAt(deg)
+		local theta = math.rad(deg)
+		local dir = Vector3.new(math.cos(theta), 0, math.sin(theta))
+		-- under a pit the rock is split open: a chasm straight down to the death clouds
+		for li, L in pitAngle(deg) and {} or LAYERS do
+			local r0 = math.max(30, edge * L[4])
+			local r1 = edge * L[5]
+			local jitter = rng:NextNumber(-4, 4)
+			local top, bottom = UP - L[2], UP - L[3] + jitter
+			local mid = dir * ((r0 + r1) / 2) + Vector3.new(0, (top + bottom) / 2, 0)
+			local width = 2 * r1 * math.sin(math.pi / USEG) * 1.12
+			newPart(underside, L[1] .. k, Vector3.new(width, top - bottom, r1 - r0), CFrame.lookAt(mid, mid + dir),
+				L[6]:Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.08)), { Material = L[7], CastShadow = false, CanQuery = li > 1 })
+		end
+	end
+	-- the bottom of the stack at a radius (for hanging details)
+	local function undersideBottom(r: number, deg: number): number
+		local f = r / edgeAt(deg)
+		if f > 0.86 then
+			return UP - 20
+		elseif f > 0.68 then
+			return UP - 44
+		elseif f > 0.47 then
+			return UP - 74
+		end
+		return UP - 104
+	end
+	-- hanging rock spikes (3 tapering pieces each)
+	for i = 1, 40 do
+		local deg = i * 9 + rng:NextNumber(-3, 3)
+		local r = edgeAt(deg) * rng:NextNumber(0.15, 0.92)
+		if r < 40 or pitAngle(deg % 360) then
+			continue
+		end
+		local y = undersideBottom(r, deg)
+		local len = rng:NextNumber(18, 46)
+		local base = polar(r, deg, y)
+		for p = 0, 2 do
+			local w = (1 - p * 0.3) * rng:NextNumber(7, 11)
+			local segLen = len / 3
+			newPart(underside, `Spike{i}_{p}`, Vector3.new(w, segLen, w), CFrame.new(base - Vector3.new(0, segLen * (p + 0.5), 0)) * CFrame.Angles(0, rng:NextNumber(0, 1.5), 0),
+				Color3.fromRGB(95, 82, 76):Lerp(Color3.fromRGB(60, 55, 60), p / 2), { Material = Enum.Material.Slate, CastShadow = false, CanQuery = false })
+		end
+	end
+	-- glowing crystal veins (lights only on every other one)
+	local veinColors = { Color3.fromRGB(130, 230, 255), Color3.fromRGB(255, 150, 230), Color3.fromRGB(170, 140, 255) }
+	for i = 1, 18 do
+		local deg = i * 20 + rng:NextNumber(-6, 6)
+		local r = edgeAt(deg) * rng:NextNumber(0.3, 0.9)
+		if pitAngle(deg % 360) then
+			continue
+		end
+		local y = undersideBottom(r, deg)
+		local vein = newPart(underside, "CrystalVein" .. i, Vector3.new(3, rng:NextNumber(8, 14), 3),
+			CFrame.new(polar(r, deg, y - 3)) * CFrame.Angles(math.rad(rng:NextNumber(150, 210)), rng:NextNumber(0, 6), 0),
+			veinColors[i % #veinColors + 1], { Material = Enum.Material.Neon, CanCollide = false, CanQuery = false, CastShadow = false })
+		if i % 2 == 0 then
+			local light = Instance.new("PointLight")
+			light.Range = 40
+			light.Brightness = 1.5
+			light.Color = vein.Color
+			light.Parent = vein
+		end
+	end
+	-- waterfalls pouring off the coast (seen from the bases), with mist
+	for i, deg in { 25, 95, 160, 215, 280, 340 } do
+		local edge = Wr(R(314), deg)
+		local fall = 130
+		local pos = polar(edge + 2, deg, UP - 2 - fall / 2)
+		local sheet = newPart(underside, "Waterfall" .. i, Vector3.new(14, fall, 1.2), CFrame.lookAt(pos, pos + polar(1, deg, 0)),
+			Color3.fromRGB(170, 220, 255), { Material = Enum.Material.Glass, Transparency = 0.45, CanCollide = false, CanQuery = false, CastShadow = false })
+		local mist = Instance.new("ParticleEmitter")
+		mist.Texture = "rbxasset://textures/particles/smoke_main.dds"
+		mist.Color = ColorSequence.new(Color3.fromRGB(235, 245, 255))
+		mist.Size = NumberSequence.new(8, 18)
+		mist.Transparency = NumberSequence.new(0.6, 1)
+		mist.Lifetime = NumberRange.new(3, 5)
+		mist.Rate = 6
+		mist.Speed = NumberRange.new(2, 5)
+		mist.EmissionDirection = Enum.NormalId.Bottom
+		mist.Parent = sheet
+	end
+	-- soft cloud wisps hugging the rock (evenly spaced: they never overlap)
+	for i = 0, 23 do
+		local deg = i * 15 + 7
+		local r = edgeAt(deg) * 0.78
+		local puff = newPart(underside, "Wisp" .. i, Vector3.new(70, 16, 40), CFrame.lookAt(polar(r, deg, UP - 52), polar(r, deg, UP - 52) + polar(1, deg + 90, 0)),
+			Color3.fromRGB(245, 247, 252), { Material = Enum.Material.SmoothPlastic, Transparency = 0.35, CanCollide = false, CanQuery = false, CastShadow = false })
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = puff
+	end
+
+	-- QA marker: centre of the canyon pit used by the QA "Death test"
+	local pitMarker = newPart(decor, "PitMarker", Vector3.one, CFrame.new(A(198, 250, UP + 5)), Color3.new(1, 0, 0), MARKER)
+	pitMarker:SetAttribute("QaPit", true)
+
 	-- Biome signs
 	for key, deg in { Plateau = 0, Mountains = 60, Mushroom = 120, Marsh = 180, Canyon = 240, Volcanic = 300 } do
 		local z = Z[key]
 		ctx.zoneSign(signs, key .. "Sign", A(76, deg, UP + 14), string.upper(z.ZoneName), z.ZoneColor)
 	end
+end
+
+-- After the map is in workspace: drop every continent spawn onto the real
+-- ground below it (habitat borders wander, so authored heights can be off),
+-- take the Biome from that ground, and remove spawns over holes or closer
+-- than MIN_GAP to another spawn (no overlapping clouds). Prints a summary.
+function ContinentBuilder.FixSpawns(map: Instance, upY: number)
+	local MIN_GAP = 9
+	local folder = map:FindFirstChild("HuntZone") and map.HuntZone:FindFirstChild("WeatherSpawns")
+	if not folder then
+		return
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { map:FindFirstChild("Continent"), map:FindFirstChild("Route") }
+	local kept, moved, noGround, tooClose = {}, 0, 0, 0
+	for _, sp in folder:GetChildren() do
+		if not sp:IsA("BasePart") or sp.Position.Y < upY - 60 then
+			continue -- not a continent spawn
+		end
+		local hit = workspace:Raycast(sp.Position + Vector3.new(0, 20, 0), Vector3.new(0, -60, 0), params)
+		if not hit then
+			noGround += 1
+			sp:Destroy()
+			continue
+		end
+		local pos = hit.Position + Vector3.new(0, 3, 0)
+		local close = false
+		for _, other in kept do
+			if (other - pos).Magnitude < MIN_GAP then
+				close = true
+				break
+			end
+		end
+		if close then
+			tooClose += 1
+			sp:Destroy()
+			continue
+		end
+		if (pos - sp.Position).Magnitude > 0.5 then
+			moved += 1
+		end
+		sp.CFrame = CFrame.new(pos)
+		local p: Instance? = hit.Instance
+		while p and p ~= map do
+			local b = p:GetAttribute("Biome")
+			if b then
+				sp:SetAttribute("Biome", b)
+				break
+			end
+			p = p.Parent
+		end
+		table.insert(kept, pos)
+	end
+	print(string.format("[MapCheck] continent spawns kept=%d moved=%d removed(no ground)=%d removed(<%d studs apart)=%d",
+		#kept, moved, noGround, MIN_GAP, tooClose))
 end
 
 return ContinentBuilder

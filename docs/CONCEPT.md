@@ -107,6 +107,16 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - **Death cloud layer** raised from Y -20 to Y 0 (kill below Y 2); puffs kept under Y ~17, hub/base undersides end ~Y 23.
 - **Studio test dummy** holding a cloud (DummyService).
 
+## Update 12 — Organic continent, finished underside, distinct cloud shapes, ragdoll (director request)
+
+- **Continent** base radius 680 with an irregular coastline (Wr() bends it by angle, ~555-805 studs), ~1.45M studs² (~1.7x v1.6). MapVersion 1.7.
+- **Habitat borders wander** with distance (no straight sector lines); border bands blend colours and get mossy boulders + shrubs. Ground bands merge when equal (part count control).
+- **Underside**: 4 stepped rock layers following the coastline (Skirt/Shelf/Root/Keel, bottom ~Y 96), 40 hanging spikes, 18 glowing crystal veins, 6 waterfalls, 24 cloud wisps; chasms open under the canyon pits.
+- **No intersections**: random props use a footprint registry around landmarks; cloud-sea puffs on a jittered grid; spawns snapped to real ground and >= 9 studs apart; vendor name tags/speech bubbles drawn on top and moved clear of the stall roof.
+- **Cloud silhouettes**: 14 shape families (heap, sheet, tiers, funnel, anvil, ring, ribbon, hourglass, wings, crown, sun, spiral, coin stack, lumpy) + halo for Legendary/Mythic.
+- **Ragdoll** 1.2 s on laser / Quake / lightning hits, then guaranteed get-up. Carried clouds stay leashed.
+- **Notifications**: only Legendary+ spawns/catches/shinies, max one every 15 s (Mythic always).
+
 ## CURRENT RULES (authoritative — overrides anything above)
 
 The "Update" sections above are history. If they conflict with this section, this section wins.

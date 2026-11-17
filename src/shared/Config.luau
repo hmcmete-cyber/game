@@ -11,7 +11,7 @@ local Config = {
 
 	-- Wild weather spawning
 	SpawnInterval = 1, -- seconds between spawns
-	MaxWild = 60, -- max wild clouds in the world (huge continent)
+	MaxWild = 90, -- max wild clouds in the world (huge continent, ~150 spawn points)
 
 	-- Cloud Altars (rare spawner)
 	AltarInterval = 45, -- seconds between altar spawns

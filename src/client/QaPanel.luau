@@ -204,9 +204,9 @@ local function deathTest()
 	if not hum then
 		return
 	end
-	-- Crystal Canyons pit 2: angles 245-255 deg, r 166-222 (no bridge there)
+	-- Crystal Canyons pit 2 (v1.6): angles 245-255 deg, r ~307-352 studs, no bridge
 	local a = math.rad(250)
-	teleport(Vector3.new(math.cos(a) * 198, 205, math.sin(a) * 198))
+	teleport(Vector3.new(math.cos(a) * 330, 205, math.sin(a) * 330))
 	log("Death test: dropped above a canyon pit, waiting up to 12 s ...")
 	local diedAt
 	local c1 = hum.Died:Connect(function()

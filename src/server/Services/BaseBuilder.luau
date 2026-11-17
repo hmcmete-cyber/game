@@ -208,6 +208,71 @@ function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent:
 	ring(rings, "RingA", topCF * CFrame.new(0, 1.2, 0), R + 2.5, 28, Color3.fromRGB(120, 220, 255), 0.35)
 	ring(rings, "RingB", topCF * CFrame.new(0, 4.5, 0) * CFrame.Angles(math.rad(10), 0, math.rad(6)), R + 1, 24, accent, -0.55)
 
+	-- v1.6 DECOR (gameplay paths above are unchanged). Local frame: -Z faces
+	-- the hub/bridge (front edge 270 deg), the expansion link sits at the -X
+	-- corner (180 deg). Railings only on the back/right edges so both
+	-- entrances stay open.
+	local decor = folder(base, "Decor")
+	for _, edgeDeg in { 30, 90, 330 } do
+		local theta = math.rad(edgeDeg)
+		local cf = topCF * CFrame.new(math.cos(theta) * (apothem - 0.4), 1.6, math.sin(theta) * (apothem - 0.4)) * CFrame.Angles(0, -theta, 0)
+		part(decor, "RailGlass" .. edgeDeg, Vector3.new(0.2, 3, R - 1), cf, Color3.fromRGB(190, 225, 255), {
+			Material = Enum.Material.Glass, Transparency = 0.55, CastShadow = false,
+		})
+		part(decor, "RailTop" .. edgeDeg, Vector3.new(0.35, 0.3, R - 1), cf * CFrame.new(0, 1.6, 0), accent, {
+			Material = Enum.Material.Neon, CanCollide = false, CanQuery = false, CastShadow = false,
+		})
+	end
+	-- corner lamps (skip the two entrance corners)
+	for _, cornerDeg in { 60, 120, 240, 300 } do
+		local a = math.rad(cornerDeg)
+		local pos = topCF * CFrame.new(math.cos(a) * (R - 1.2), 0, math.sin(a) * (R - 1.2))
+		part(decor, "LampPost" .. cornerDeg, Vector3.new(0.5, 6, 0.5), pos * CFrame.new(0, 3, 0), Color3.fromRGB(70, 75, 90), {
+			Material = Enum.Material.Metal, CastShadow = false,
+		})
+		local bulb = part(decor, "LampBulb" .. cornerDeg, Vector3.new(1.2, 1.2, 1.2), pos * CFrame.new(0, 6.4, 0), accent, {
+			Shape = Enum.PartType.Ball, Material = Enum.Material.Neon, CanCollide = false, CanQuery = false, CastShadow = false,
+		})
+		local light = Instance.new("PointLight")
+		light.Range = 14
+		light.Brightness = 1
+		light.Color = accent
+		light.Parent = bulb
+	end
+	-- entrance arch over the bridge side
+	local front = topCF * CFrame.new(0, 0, -(apothem - 0.6))
+	for _, x in { -4.2, 4.2 } do
+		part(decor, "ArchPillar", Vector3.new(0.9, 8, 0.9), front * CFrame.new(x, 4, 0), Color3.fromRGB(235, 238, 248), {
+			Material = Enum.Material.Marble, CastShadow = false,
+		})
+	end
+	part(decor, "ArchBeam", Vector3.new(9.6, 0.8, 1), front * CFrame.new(0, 8.3, 0), Color3.fromRGB(235, 238, 248), {
+		Material = Enum.Material.Marble, CastShadow = false,
+	})
+	part(decor, "ArchGlow", Vector3.new(8.4, 0.25, 1.1), front * CFrame.new(0, 7.75, 0), accent, {
+		Material = Enum.Material.Neon, CanCollide = false, CanQuery = false, CastShadow = false,
+	})
+	-- flag in the base colour on the back edge (spot your base from far away)
+	local back = topCF * CFrame.new(0, 0, apothem - 1)
+	part(decor, "FlagPole", Vector3.new(0.35, 16, 0.35), back * CFrame.new(0, 8, 0), Color3.fromRGB(220, 225, 235), {
+		Material = Enum.Material.Metal, CanCollide = false, CastShadow = false,
+	})
+	part(decor, "Flag", Vector3.new(0.12, 3, 5), back * CFrame.new(0, 14, 2.6), accent, {
+		Material = Enum.Material.Fabric, CanCollide = false, CanQuery = false, CastShadow = false,
+	})
+	-- two planters with bushes beside the flag
+	for _, x in { -3.2, 3.2 } do
+		local cf = topCF * CFrame.new(x, 0.5, apothem - 1.6)
+		part(decor, "Planter", Vector3.new(2.4, 1, 1.4), cf, Color3.fromRGB(120, 90, 70), { Material = Enum.Material.WoodPlanks, CastShadow = false })
+		part(decor, "Bush", Vector3.new(2.2, 1.6, 1.4), cf * CFrame.new(0, 1.1, 0), Color3.fromRGB(110, 185, 110), {
+			Shape = Enum.PartType.Ball, Material = Enum.Material.Grass, CanCollide = false, CanQuery = false, CastShadow = false,
+		})
+	end
+	-- glowing ring around the vaults marks the "vault zone"
+	part(decor, "VaultRing", Vector3.new(0.1, 17, 17), topCF * CFrame.new(0, 0.13, 0) * CFrame.Angles(0, 0, math.pi / 2), accent, {
+		Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, Transparency = 0.75, CanCollide = false, CanQuery = false, CastShadow = false,
+	})
+
 	base.PrimaryPart = deck
 	base.Parent = parent
 	return base

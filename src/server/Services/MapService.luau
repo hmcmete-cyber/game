@@ -249,8 +249,8 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "1.5"
-local DEATH_Y = -20 -- top of the death cloud floor
+local MAP_VERSION = "1.6"
+local DEATH_Y = 0 -- top of the death cloud floor (v1.6: raised from -20)
 
 local function buildPlaceholder(): Instance
 	local m = Instance.new("Folder")
@@ -258,7 +258,7 @@ local function buildPlaceholder(): Instance
 
 	local Y = 40 -- hub level
 	local UP = 200 -- top of the floating continent
-	local DEATH = -20 -- death cloud floor
+	local DEATH = DEATH_Y -- death cloud floor (Y 0; hub/base undersides end around Y 23)
 	local hubR = 60
 	local hubColor = Color3.fromRGB(235, 238, 248)
 	local rng = Random.new(2026)
@@ -427,10 +427,11 @@ local function buildPlaceholder(): Instance
 	fog.Parent = slab
 	-- big puffy cloud lumps on top of the sea (decor only)
 	local sea = getFolder(decor, "CloudSea")
-	for i = 1, 140 do
-		local pos = Vector3.new(rng:NextNumber(-700, 700), DEATH + rng:NextNumber(-2, 10), rng:NextNumber(-700, 700))
+	-- puffs stay below Y ~17 so they never touch the hub (rock ends ~Y 23) or bases
+	for i = 1, 180 do
+		local pos = Vector3.new(rng:NextNumber(-900, 900), DEATH + rng:NextNumber(-2, 6), rng:NextNumber(-900, 900))
 		local w = rng:NextNumber(30, 90)
-		local puff = newPart(sea, "Puff" .. i, Vector3.new(w, w * rng:NextNumber(0.3, 0.5), w * rng:NextNumber(0.7, 1.1)), CFrame.new(pos),
+		local puff = newPart(sea, "Puff" .. i, Vector3.new(w, math.min(20, w * rng:NextNumber(0.2, 0.25)), w * rng:NextNumber(0.7, 1.1)), CFrame.new(pos),
 			Color3.fromRGB(245, 247, 252):Lerp(Color3.fromRGB(200, 205, 225), rng:NextNumber()), {
 				Material = Enum.Material.SmoothPlastic,
 				CanCollide = false,

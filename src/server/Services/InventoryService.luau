@@ -13,6 +13,7 @@
 --   PerkSpeed, PerkJump, NoSlip, IceGrip, WindImmune, ElectricImmune, LightningImmune
 --   SpeedUntil/SpeedMult, JumpUntil/JumpMult, NitroUntil (server time)
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
@@ -25,6 +26,7 @@ local InventoryService = {}
 
 -- Hooks filled in by other services (avoids require loops):
 --   LaserHit(shooter, target) -> boolean   WeatherService: thief drops shooter's cloud?
+--   ModelHit(shooter, model, dir)          a non-player model was hit (DummyService)
 --   OnOwnBase(player) -> boolean           near your own Nest?
 --   ForceLock(player, seconds)             BaseLockService: raise your base shield now
 InventoryService.Hooks = {} :: { [string]: any }
@@ -212,6 +214,14 @@ local function quake(player: Player, root: BasePart)
 			end
 		end
 	end
+	if InventoryService.Hooks.ModelHit then
+		for _, dummy in CollectionService:GetTagged("TestDummy") do
+			local r = dummy:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if r and (r.Position - root.Position).Magnitude <= Config.QuakeRadius then
+				InventoryService.Hooks.ModelHit(player, dummy, (r.Position - root.Position).Unit)
+			end
+		end
+	end
 	Remotes.Dazzle:FireClient(player, 0.15)
 end
 
@@ -363,6 +373,9 @@ local function fireLaser(player: Player, root: BasePart, aim: unknown): boolean
 
 	local model = hit and hit.Instance:FindFirstAncestorOfClass("Model")
 	local target = model and Players:GetPlayerFromCharacter(model)
+	if not target and model and InventoryService.Hooks.ModelHit then
+		InventoryService.Hooks.ModelHit(player, model, dir) -- e.g. the Studio test dummy
+	end
 	if not target or target == player then
 		return true
 	end

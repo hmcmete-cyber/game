@@ -17,6 +17,7 @@ local HazardService = require(Services.HazardService)
 local NpcService = require(Services.NpcService)
 local UpgradeService = require(Services.UpgradeService)
 local EventService = require(Services.EventService)
+local DummyService = require(Services.DummyService)
 
 -- Remotes (server -> client messages)
 local remotes = Instance.new("Folder")
@@ -73,6 +74,7 @@ HazardService.Start(MapService, remoteTable)
 UpgradeService.Start(DataService, remoteTable)
 NpcService.Start(remoteTable)
 EventService.Start(MapService, WeatherService, remoteTable)
+DummyService.Start(WeatherService, InventoryService) -- Studio only
 
 local function onPlayerAdded(player: Player)
 	DataService.Load(player)

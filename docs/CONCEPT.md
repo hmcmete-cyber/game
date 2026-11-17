@@ -99,6 +99,14 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - **Performance**: StreamingEnabled (set in `default.project.json`), persistent updraft/base models, client LOD for decor particles and lights.
 - **Updraft**: Lift 140, one arc into the Sky Heart.
 
+## Update 11 — Giant continent, landmarks, better bases, test dummy (director request)
+
+- **Continent radius 520** (was 314; ~2.7x area), MapVersion 1.6: Sky Heart r16-90, biome sectors r90-450, Coast r450-520. Bigger peaks (main Snowpeak 80 studs tall), 6 mushroom staircases, ~150 spawn points, MaxWild 90.
+- **Landmarks/routes**: floating Heart Crystal, cobblestone roads with lamps (Plateau, Mushroom, Mountains, Volcanic), marsh boardwalk, Grand Mesa ruins, frozen lake, Elder Shroom (climbable shelves to a 65-stud cap), marsh watchtower with ladder + lily pads, canyon stone arches + crystal spire, Ash Cone volcano, lava river with obsidian bridge, lighthouse, 6 piers, palm trees.
+- **Bases**: railings (back/right edges), corner lamps, entrance arch over the bridge, base-colour flag, planters, vault-zone glow. Gameplay object paths unchanged.
+- **Death cloud layer** raised from Y -20 to Y 0 (kill below Y 2); puffs kept under Y ~17, hub/base undersides end ~Y 23.
+- **Studio test dummy** holding a cloud (DummyService).
+
 ## CURRENT RULES (authoritative — overrides anything above)
 
 The "Update" sections above are history. If they conflict with this section, this section wins.

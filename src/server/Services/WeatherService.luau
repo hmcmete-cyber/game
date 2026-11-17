@@ -893,6 +893,42 @@ local function freeSpawns()
 	return list
 end
 
+------------------------------------------------------------------------
+-- TEST HELPERS (used only by DummyService in Studio). They reuse the real
+-- leash code so a dummy test catches integration bugs; player rules untouched.
+------------------------------------------------------------------------
+local function stripLeash(sphere: BasePart)
+	for _, name in { "Leash", "Float", "LeashKnot", "LeashCenter" } do
+		for _, child in sphere:GetChildren() do
+			if child.Name == name then
+				child:Destroy()
+			end
+		end
+	end
+end
+
+-- Builds a carried cloud on any character root (no Player needed).
+function WeatherService.TestLeash(typeName: string, root: BasePart): (BasePart, { Instance })
+	local sphere = makeSphere(typeName, false, 0.75)
+	sphere:SetAttribute("TestDummyCloud", true)
+	local attachments = attachLeash(sphere, nil :: any, root, Weather.RarityOf(typeName).Color)
+	return sphere, attachments
+end
+
+-- Cuts the leash (cloud flies free) — the hand/root attachments are destroyed.
+function WeatherService.TestDetach(sphere: BasePart, attachments: { Instance })
+	for _, att in attachments do
+		att:Destroy()
+	end
+	stripLeash(sphere)
+end
+
+-- Re-leashes the SAME cloud instance to the root.
+function WeatherService.TestReattach(sphere: BasePart, typeName: string, root: BasePart): { Instance }
+	stripLeash(sphere)
+	return attachLeash(sphere, nil :: any, root, Weather.RarityOf(typeName).Color)
+end
+
 -- World events (EventService): drop a cloud of the given tiers on a spawn.
 -- Returns the cloud key, or nil if the spot is taken / nothing fits.
 function WeatherService.SpawnEventCloud(spawnPart: BasePart, tierChances: { [string]: number }, fromPos: Vector3?): string?

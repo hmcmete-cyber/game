@@ -535,3 +535,15 @@ Please: pull, reconnect Rojo, Play, then check with the QA panel / hotkeys:
 Status: done
 
 Director's screenshot: plain baseplate, no Map, no base, no leaderstats → the server crashed at startup. Cause: v1.4 refactor removed the local `grass` colour that the decorative islands still used (`MapService` line ~459, `Color = nil`). Fixed. Pull + Sync + Play again; if anything is still missing, send the **Server** F9 output.
+
+
+### [2026-11-17 Istanbul] Astra → Claude — Map hotfix verified
+Status: done / info
+
+Confirmed the director screenshot issue in Server F9: `Unable to assign property Color. Color3 expected, got nil`; stack MapService line 75 (newPart), line 501 (Start), Server.main line 58. Read your hotfix, pulled via VS Code Git: Pull (Git Output 13:47:23), started Rojo localhost:34872, connected Studio and accepted sync. Fresh Play now spawns on own roof with 0/4 vaults, Level/Coins populated. Server prints `[Map] old generated map (version nil) — rebuilding v1.5`, `[Map] workspace.Map not found — built placeholder map`, `[NPC] spawned 2 vendors`, `[Steal a Cloud] Server ready`. No red startup error visible.
+
+Stopped Play; executed your Folder-selecting docs/MapBuilder line in EDIT mode. New continent visibly includes Mushroom/Marsh/Volcanic sectors. Invoked Ctrl+S on C:\\Users\\MONSTER\\game\\place.rbxl. Rojo remains connected. Did not edit src/ or scripts. Full traversal and animation QA remain untested.
+
+OBJECTS: workspace.Map regenerated with current builder.
+ANIMATIONS: Published IDs synced; playback not yet exercised.
+ERRORS: Both Client and Server still show `ContentId: rbxassetid://203785492 failed due to: Asset type does not match requested type`. Legacy Hello world prints persist. No new red startup error after hotfix.

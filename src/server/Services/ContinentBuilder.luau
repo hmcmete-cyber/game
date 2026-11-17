@@ -946,26 +946,47 @@ function ContinentBuilder.Build(ctx)
 		end
 		return true
 	end
+	-- v2.3 CLOUD CANOPY: the director's camera from the bases still saw the
+	-- plate between the rings. Now a CONTINUOUS canopy covers the whole
+	-- underside: hanging cloud masses (flat bright top tucked against the
+	-- plate, round lobes bulging DOWN toward the viewer) on a 92-stud grid,
+	-- each 108-138 wide so neighbours overlap into one soft ceiling. It runs
+	-- 4 % past the coastline to soften the edge and leaves only the updraft
+	-- hole (r < 34) open. Centres at UP-44 (Y ~156): > 95 studs above the bases.
+	local function hangingMass(name: string, center: Vector3, w: number)
+		local model = Instance.new("Model")
+		model.Name = name
+		local yaw = CFrame.new(center) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+		local top, belly = Color3.fromRGB(248, 250, 255), Color3.fromRGB(214, 222, 240)
+		lobe(model, "Top", Vector3.new(w, w * 0.3, w * 0.8), yaw, top, 0.04)
+		local n = rng:NextInteger(3, 4)
+		for i = 1, n do
+			local t = (i - (n + 1) / 2) / n
+			local size = w * rng:NextNumber(0.4, 0.52)
+			local off = Vector3.new(t * w * 0.62, -w * rng:NextNumber(0.1, 0.16), rng:NextNumber(-0.18, 0.18) * w)
+			lobe(model, "Bulge" .. i, Vector3.new(size, size * 0.8, size * 0.9), yaw * CFrame.new(off), belly:Lerp(top, 0.45), 0.05)
+		end
+		model.Parent = underClouds
+	end
 	local masses = 0
-	for _, ringDef in { -- v2.0: three denser rings so the terrain plate is screened from below
-		{ 0.62, 0.98, UP - 62, 46, 70, 110 }, { 0.28, 0.64, UP - 74, 34, 60, 95 }, { 0.08, 0.32, UP - 84, 14, 50, 80 },
-	} do
-		local f0, f1, y, count, wMin, wMax = ringDef[1], ringDef[2], ringDef[3], ringDef[4], ringDef[5], ringDef[6]
-		for i = 1, count do
-			for _ = 1, 8 do
-				local deg = (i / count) * 360 + rng:NextNumber(-6, 6)
-				local r = edgeAt(deg) * rng:NextNumber(f0, f1)
-				local w = rng:NextNumber(wMin, wMax)
-				local c = polar(r, deg, y + rng:NextNumber(-4, 0)) -- tops stay below the terrain (UP-24)
-				if r - w / 2 > 40 and massFree(c, w * 0.42) then
-					table.insert(massSpots, { Vector2.new(c.X, c.Z), w * 0.42 })
-					masses += 1
-					cloudMass("CloudMass" .. masses, c, w)
-					break
-				end
+	for gx = -800, 800, 92 do
+		for gz = -800, 800, 92 do
+			local c = Vector3.new(gx + rng:NextNumber(-14, 14), UP - 44 + rng:NextNumber(-5, 3), gz + rng:NextNumber(-14, 14))
+			local r = Vector2.new(c.X, c.Z).Magnitude
+			local deg = math.deg(math.atan2(c.Z, c.X)) % 360
+			if r > 34 + 50 and r < edgeAt(deg) * 1.04 then
+				masses += 1
+				hangingMass("CloudMass" .. masses, c, rng:NextNumber(108, 138))
 			end
 		end
 	end
+	-- small masses ringing the updraft hole (kept 34 studs clear of its axis)
+	for i = 0, 7 do
+		local a2 = i * 45 + 22.5
+		masses += 1
+		hangingMass("CloudMass" .. masses, polar(62, a2, UP - 46), 56)
+	end
+
 	-- haze: big, very faint, flat-ish veils + slow drifting fog particles
 	for i = 0, 23 do
 		local deg = i * 15 + rng:NextNumber(-4, 4)

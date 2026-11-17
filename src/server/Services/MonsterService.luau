@@ -30,6 +30,7 @@ local MonsterService = {}
 local MapService, DataService, Remotes
 local root: Folder
 local monsters = {} -- [Model] = info
+local reported = {} -- [typeName] = true once its track count was printed
 
 local function now(): number
 	return workspace:GetServerTimeNow()
@@ -219,6 +220,14 @@ spawnMonster = function(typeName: string, at: Vector3?, life: number?, target: P
 	end
 	monsters[model] = info
 	info.Tracks = MonsterAnims.Load(typeName, model)
+	if not reported[typeName] then
+		reported[typeName] = true
+		local n = 0
+		for _ in info.Tracks do
+			n += 1
+		end
+		print(`[Monsters] {typeName}: {n}/6 animation tracks loaded (gait {def.Gait or "?"})`)
+	end
 	play(info, "Idle")
 	healthBar(info)
 	table.insert(info.Conns, hum.Died:Connect(function()
@@ -321,6 +330,35 @@ local function hazardTick(info)
 	end
 end
 
+-- v2.3 locomotion state (runs every 0.1 s, separate from the brain):
+-- moving = real ground speed (not MoveDirection, which stayed 0 for most
+-- server-driven monsters -> they slid in their idle pose). The Walk loop
+-- starts/stops only on state CHANGES (no restarting every frame) and its
+-- cadence follows the actual speed, so chasing looks faster than roaming.
+local function animTick(info)
+	local walk, idle = info.Tracks.Walk, info.Tracks.Idle
+	if idle and not idle.IsPlaying then
+		idle:Play(0.3)
+	end
+	if not walk or info.Def.Rooted then
+		return
+	end
+	local v = info.Root.AssemblyLinearVelocity
+	local speed = Vector2.new(v.X, v.Z).Magnitude
+	local moving = speed > 1.5
+	if moving ~= info.Moving then
+		info.Moving = moving
+		if moving then
+			walk:Play(0.15)
+		else
+			walk:Stop(0.25)
+		end
+	end
+	if moving then
+		walk:AdjustSpeed(math.clamp(speed / math.max(info.Def.Speed, 1), 0.6, 1.6))
+	end
+end
+
 local function makeCtx(info, target: Player, targetRoot: BasePart)
 	return {
 		Model = info.Model, Root = info.Root, Hum = info.Hum, Target = target, TargetRoot = targetRoot,
@@ -363,18 +401,6 @@ local function think(info)
 	hazardTick(info)
 	if not info.Alive or info.Busy then
 		return
-	end
-
-	-- animation: walk while moving
-	local moving = info.Hum.MoveDirection.Magnitude > 0.1
-	local walk, idle = info.Tracks.Walk, info.Tracks.Idle
-	if walk and moving and not walk.IsPlaying then
-		walk:Play(0.2)
-	elseif walk and not moving and walk.IsPlaying then
-		walk:Stop(0.2)
-	end
-	if idle and not idle.IsPlaying then
-		idle:Play(0.3)
 	end
 
 	-- tether: never leave the habitat / stray too far from home
@@ -464,6 +490,20 @@ function MonsterService.Start(mapService, dataService, remotes)
 		print(`[Monsters] spawned {n} monsters`)
 	end)
 
+	local animAcc = 0
+	RunService.Heartbeat:Connect(function(dt)
+		animAcc += dt
+		if animAcc < 0.1 then
+			return
+		end
+		animAcc = 0
+		for _, info in monsters do
+			if info.Alive and info.Awake then
+				pcall(animTick, info)
+			end
+		end
+	end)
+
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
 		acc += dt
@@ -472,7 +512,8 @@ function MonsterService.Start(mapService, dataService, remotes)
 		end
 		acc = 0
 		for _, info in monsters do
-			if info.Alive and (info.Busy or anyoneNear(info.Root.Position)) then
+			info.Awake = info.Alive and (info.Busy or anyoneNear(info.Root.Position))
+			if info.Awake then
 				local ok, err = pcall(think, info)
 				if not ok then
 					warn(`[Monsters] {info.Type} brain error: {err}`)

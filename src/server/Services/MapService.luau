@@ -249,7 +249,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.2"
+local MAP_VERSION = "2.3"
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
 -- v2.2 CLASSIC STUDDED STYLE PASS over the whole generated map: every solid
@@ -474,7 +474,23 @@ local function buildPlaceholder(): Instance
 	for gx = -1040, 1040, 160 do
 		for gz = -1040, 1040, 160 do
 			local c = Vector3.new(gx + rng:NextNumber(-25, 25), DEATH + rng:NextNumber(4, 10), gz + rng:NextNumber(-25, 25))
-			local clear = Vector2.new(c.X, c.Z).Magnitude > 230
+			local rr = Vector2.new(c.X, c.Z).Magnitude
+			local clear = true
+			if rr <= 230 then
+				-- v2.3 inner fill under the hub + bases (the gray Baseplate used to
+				-- show here): sunk lower (tops stay < Y ~31) and kept away from the
+				-- hub rock and every base's rock underside
+				c = Vector3.new(c.X, DEATH - 9, c.Z)
+				if rr < 85 then
+					clear = false
+				end
+				for b = 1, 12 do
+					local a = math.rad((b - 1) * 30 + 15)
+					if (Vector2.new(c.X, c.Z) - Vector2.new(math.cos(a) * 140, math.sin(a) * 140)).Magnitude < 45 then
+						clear = false
+					end
+				end
+			end
 			for _, isl in { Vector2.new(-260, 120), Vector2.new(270, -80), Vector2.new(-120, 260) } do -- hub-level decor islands
 				if (Vector2.new(c.X, c.Z) - isl).Magnitude < 90 then
 					clear = false
@@ -482,7 +498,7 @@ local function buildPlaceholder(): Instance
 			end
 			if clear then
 				i += 1
-				local w = rng:NextNumber(70, 105) -- <= 105 wide on a 160 grid with 25 jitter: masses never touch
+				local w = rr <= 230 and rng:NextNumber(55, 70) or rng:NextNumber(70, 105) -- <= 105 wide on a 160 grid with 25 jitter: masses never touch
 				local mass = Instance.new("Model")
 				mass.Name = "Bank" .. i
 				local yaw = CFrame.new(c) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
@@ -539,6 +555,21 @@ local function buildPlaceholder(): Instance
 	return m
 end
 
+-- The Roblox template's gray checkerboard "Baseplate" sits under the hub and
+-- ruins the lower view (director). The generated world never stands on it
+-- (the death floor is above it), so it is removed whenever the generated map
+-- is used. A hand-made map (attribute Custom) keeps whatever it has.
+local function removeTemplateBaseplate(map: Instance?)
+	if map and map:GetAttribute("Custom") then
+		return
+	end
+	local bp = workspace:FindFirstChild("Baseplate")
+	if bp and bp:IsA("BasePart") then
+		print("[Map] removed the template workspace.Baseplate (gray checkerboard)")
+		bp:Destroy()
+	end
+end
+
 -- Also used from the Studio Command Bar (docs/MapBuilder.luau) to save the
 -- placeholder into the place. Does nothing if workspace.Map already exists.
 function MapService.BuildPlaceholder(): Instance
@@ -551,6 +582,7 @@ function MapService.BuildPlaceholder(): Instance
 	end
 	local m = buildPlaceholder()
 	m.Parent = workspace
+	removeTemplateBaseplate(m)
 	return m
 end
 
@@ -565,6 +597,8 @@ function MapService.Start()
 		map = buildPlaceholder()
 		print("[Map] workspace.Map not found — built placeholder map")
 	end
+
+	removeTemplateBaseplate(map)
 
 	-- Make sure all expected folders exist so other code never errors
 	getFolder(map, "Rooftops")

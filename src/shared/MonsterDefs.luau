@@ -13,6 +13,8 @@
 --   Abilities   two entries { Id, Name, Cooldown, Range, ...params }
 --               (implemented in Services/MonsterAbilities.luau)
 --   Rig         rig builder in Services/MonsterRigs.luau
+--   Gait        locomotion style (MonsterAnims GAITS): Trot Plod Prowl Stride Stomp
+--               Knuckle Waddle Hop Hover Swim Rooted -> species-specific Idle/Walk/attack
 
 local M = {}
 
@@ -23,7 +25,7 @@ M.Order = {
 
 M.Types = {
 	Prismaw = {
-		Title = "Crystal Stalker", Habitat = "Canyon", Count = 2, Respawn = 90,
+		Title = "Crystal Stalker", Gait = "Trot", Habitat = "Canyon", Count = 2, Respawn = 90,
 		HP = 160, Speed = 17, Scale = 1, XP = 60, Aggro = 60,
 		Melee = { Damage = 10, Range = 7, Cooldown = 1.4 },
 		Abilities = {
@@ -32,7 +34,7 @@ M.Types = {
 		},
 	},
 	Frostback = {
-		Title = "Glacier Tortoise", Habitat = "Mountains", Count = 1, Respawn = 120,
+		Title = "Glacier Tortoise", Gait = "Plod", Habitat = "Mountains", Count = 1, Respawn = 120,
 		HP = 300, Speed = 10, Scale = 1.3, XP = 110, Aggro = 55,
 		Melee = { Damage = 16, Range = 9, Cooldown = 2 },
 		Abilities = {
@@ -41,7 +43,7 @@ M.Types = {
 		},
 	},
 	Voltwraith = {
-		Title = "Storm Wraith", Habitat = "Marsh", Count = 1, Respawn = 110,
+		Title = "Storm Wraith", Gait = "Hover", Habitat = "Marsh", Count = 1, Respawn = 110,
 		HP = 210, Speed = 18, Scale = 1.1, XP = 85, Aggro = 65, Hover = 3,
 		Melee = { Damage = 12, Range = 7, Cooldown = 1.5 },
 		Abilities = {
@@ -50,7 +52,7 @@ M.Types = {
 		},
 	},
 	Cyclonox = {
-		Title = "Living Twister", Habitat = "Plateau", Count = 1, Respawn = 130,
+		Title = "Living Twister", Gait = "Hover", Habitat = "Plateau", Count = 1, Respawn = 130,
 		HP = 300, Speed = 15, Scale = 1.4, XP = 120, Aggro = 70, Hover = 2,
 		Melee = { Damage = 14, Range = 9, Cooldown = 1.8 },
 		Abilities = {
@@ -59,7 +61,7 @@ M.Types = {
 		},
 	},
 	Cindermaw = {
-		Title = "Magma Tyrant", Habitat = "Volcanic", Count = 1, Respawn = 140,
+		Title = "Magma Tyrant", Gait = "Stomp", Habitat = "Volcanic", Count = 1, Respawn = 140,
 		HP = 360, Speed = 12, Scale = 1.4, XP = 140, Aggro = 60,
 		Melee = { Damage = 18, Range = 10, Cooldown = 2 },
 		Abilities = {
@@ -68,7 +70,7 @@ M.Types = {
 		},
 	},
 	Smoldlet = {
-		Title = "Ember Blob", Habitat = "Volcanic", Count = 3, Respawn = 60,
+		Title = "Ember Blob", Gait = "Hop", Habitat = "Volcanic", Count = 3, Respawn = 60,
 		HP = 60, Speed = 19, Scale = 0.8, XP = 25, Aggro = 50,
 		Melee = { Damage = 6, Range = 5, Cooldown = 1.2 },
 		Abilities = {
@@ -77,7 +79,7 @@ M.Types = {
 		},
 	},
 	Capstride = {
-		Title = "Toadstool Strider", Habitat = "Mushroom", Count = 2, Respawn = 100,
+		Title = "Toadstool Strider", Gait = "Stride", Habitat = "Mushroom", Count = 2, Respawn = 100,
 		HP = 170, Speed = 14, Scale = 1.2, XP = 70, Aggro = 55,
 		Melee = { Damage = 10, Range = 8, Cooldown = 1.6 },
 		Abilities = {
@@ -86,7 +88,7 @@ M.Types = {
 		},
 	},
 	Sporeback = {
-		Title = "Fungal Brute", Habitat = "Mushroom", Count = 1, Respawn = 110,
+		Title = "Fungal Brute", Gait = "Prowl", Habitat = "Mushroom", Count = 1, Respawn = 110,
 		HP = 190, Speed = 15, Scale = 1.15, XP = 75, Aggro = 55,
 		Melee = { Damage = 12, Range = 8, Cooldown = 1.6 },
 		Abilities = {
@@ -95,7 +97,7 @@ M.Types = {
 		},
 	},
 	Rubbleye = {
-		Title = "Watching Rubble", Habitat = "Mountains", Count = 2, Respawn = 100,
+		Title = "Watching Rubble", Gait = "Hover", Habitat = "Mountains", Count = 2, Respawn = 100,
 		HP = 200, Speed = 13, Scale = 1.1, XP = 80, Aggro = 60, Hover = 4,
 		Melee = { Damage = 12, Range = 8, Cooldown = 1.6 },
 		Abilities = {
@@ -104,7 +106,7 @@ M.Types = {
 		},
 	},
 	Bristlehulk = {
-		Title = "Bramble Brute", Habitat = "Plateau", Count = 2, Respawn = 100,
+		Title = "Bramble Brute", Gait = "Knuckle", Habitat = "Plateau", Count = 2, Respawn = 100,
 		HP = 180, Speed = 15, Scale = 1.2, XP = 65, Aggro = 55,
 		Melee = { Damage = 12, Range = 8, Cooldown = 1.5 },
 		Abilities = {
@@ -113,7 +115,7 @@ M.Types = {
 		},
 	},
 	Gulpvine = {
-		Title = "Storm Snapper", Habitat = "Marsh", Count = 3, Respawn = 70,
+		Title = "Storm Snapper", Gait = "Rooted", Habitat = "Marsh", Count = 3, Respawn = 70,
 		HP = 110, Speed = 0, Scale = 1, XP = 40, Aggro = 30, Rooted = true,
 		Melee = { Damage = 8, Range = 9, Cooldown = 1.4 },
 		Abilities = {
@@ -122,7 +124,7 @@ M.Types = {
 		},
 	},
 	Mossgrave = {
-		Title = "Mossy Golem", Habitat = "Canyon", Count = 1, Respawn = 120,
+		Title = "Mossy Golem", Gait = "Stomp", Habitat = "Canyon", Count = 1, Respawn = 120,
 		HP = 260, Speed = 11, Scale = 1.35, XP = 95, Aggro = 60,
 		Melee = { Damage = 16, Range = 10, Cooldown = 2 },
 		Abilities = {
@@ -131,7 +133,7 @@ M.Types = {
 		},
 	},
 	Gnashgut = {
-		Title = "Fanged Glutton", Habitat = "Marsh", Count = 1, Respawn = 100,
+		Title = "Fanged Glutton", Gait = "Waddle", Habitat = "Marsh", Count = 1, Respawn = 100,
 		HP = 180, Speed = 16, Scale = 1.2, XP = 70, Aggro = 55,
 		Melee = { Damage = 10, Range = 8, Cooldown = 1.5 },
 		Abilities = {
@@ -141,7 +143,7 @@ M.Types = {
 	},
 	-- v2.1 style anchor (director's blue shark reference) — the Coast's monster
 	Skyfin = {
-		Title = "Sky Shark", Habitat = "Coast", Count = 2, Respawn = 100,
+		Title = "Sky Shark", Gait = "Swim", Habitat = "Coast", Count = 2, Respawn = 100,
 		HP = 220, Speed = 18, Scale = 1.15, XP = 90, Aggro = 60,
 		Melee = { Damage = 12, Range = 8, Cooldown = 1.4 },
 		Abilities = {
@@ -151,7 +153,7 @@ M.Types = {
 	},
 	-- summoned by Capstride's Sprout Squad (not part of the habitat population)
 	Shroomling = {
-		Title = "Sprout", Habitat = "Mushroom", Count = 0, Respawn = 0, Summon = true,
+		Title = "Sprout", Gait = "Hop", Habitat = "Mushroom", Count = 0, Respawn = 0, Summon = true,
 		HP = 30, Speed = 20, Scale = 0.6, XP = 5, Aggro = 60,
 		Melee = { Damage = 4, Range = 5, Cooldown = 1.2, Trip = true },
 		Abilities = {},

@@ -746,3 +746,14 @@ OBJECTS: Preserve existing map/gameplay paths.
 ANIMATIONS: Separate upward and downward updraft exit animations required; list published IDs after implementation.
 ERRORS: Not yet tested.
 NOTES: Applies to the complete map and environment, not monsters alone.
+
+
+### [2026-11-17 Istanbul] Astra → Claude — Director: strengthen upward updraft exit launch
+Status: request
+
+The director reports that the upward ride speed inside the updraft feels good and should stay as-is. The problem is the launch/flick applied at the TOP exit: it is too weak, so the player can lose height and fall back down instead of clearing/reaching the upper landing. Increase/tune the upward exit launch velocity/impulse (and any required carry time/trajectory) so the character reliably clears the upper lip and reaches a safe landing. Keep the existing in-column ascent speed unchanged. Test with repeated exits from realistic entry positions and varied character states; confirm no midair stall/fall-back, no excessive launch into hazards, and correct recovery/control. Report the chosen exit impulse/velocity and the verified landing result.
+
+OBJECTS: Existing updraft paths unchanged.
+ANIMATIONS: Preserve separate direction animations from previous request.
+ERRORS: Not tested yet.
+NOTES: Only the upward EXIT launch is too weak; the upward speed while inside the updraft already feels right.

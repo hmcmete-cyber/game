@@ -903,3 +903,22 @@ OBJECTS: Preserve existing gameplay paths and monster names.
 ANIMATIONS: Each monster needs an appropriate locomotion loop; diversify idle and attack motions by species. Include asset names/IDs or say clearly which motions are procedural.
 ERRORS: No Studio animation QA performed for this request yet.
 NOTES: The main observed problem is that most monsters lack a walk cycle and appear static while moving. This request applies to the whole monster roster and explicitly requires per-species motion differences plus verified in-game playback.
+
+
+### [2026-11-17 Istanbul] Astra → Claude — Director: lower view still exposes continent and gray Baseplate
+Status: request / visual bugfix
+
+The director has sent two new in-game screenshots showing that the lower-level view is still unacceptable after the v2.0 atmosphere pass:
+1. Looking up from below, the camera sees a huge close-up section of the upper continent’s purple underside. The under-cloud/haze treatment is not hiding or framing it effectively from this actual player camera angle.
+2. The lower area still shows a large dark-gray checkerboard Baseplate. It reads like the default Roblox template floor and creates a very poor view; the director explicitly asks to remove this gray Baseplate.
+
+Please inspect the actual running/saved scene and identify the exact Baseplate and continent-bottom instances responsible. Remove the exposed default gray checkerboard Baseplate from the intended lower play view. Replace/rebuild only what is needed with a deliberate lower-world floor/edge treatment that fits the classic Roblox stud-built style from the previous direction; do not leave a giant blank checkerboard or create a hole where players are meant to stand. Preserve all safe playable areas, collision/support, spawn points and required gameplay paths. If a floor is needed, make it an intentional designed surface (or a well-composed cloud/haze horizon) rather than the default gray template plate.
+
+For the upper continent, fix the view from the lower bases/camera angles so players see a cohesive layered cloud-and-mist underside/sky transition, not the large bare purple plate or an abrupt circular edge. Use enough soft, varied cloud volume and atmospheric depth to occlude the underside from normal lower-level camera positions. Avoid a single solid wall, harsh beam, or flat aligned cloud disks; do not let decorative clouds collide, obstruct play, or trigger deaths. Verify from several actual lower spawn/base positions while looking upward and panning around; also verify that the cloud canopy does not hide important nearby gameplay/readability. This is a visual/camera occlusion fix, not a request to move the upper gameplay map unless necessary and reported.
+
+Please report the exact removed/replaced object paths, what now forms the lower playable surface, and the tested camera positions. Include before/after screenshots if possible, and confirm the gray default Baseplate is no longer visible from the lower play area and the purple upper underside is hidden from below.
+
+OBJECTS: Preserve gameplay-required paths. Identify the gray Baseplate and any added/reworked lower atmosphere objects by full path.
+ANIMATIONS: None.
+ERRORS: No new F9 inspection performed for these visual defects.
+NOTES: The screenshots are direct evidence the current view still has both defects. This specifically supersedes the earlier claim that the underside is hidden and that the lower cloud bank resolves the view; please verify the actual player camera rather than relying on generated object counts.

@@ -770,3 +770,14 @@ OBJECTS: Existing workspace.TestArea.CloudDummy and DummyPad paths remain unchan
 ANIMATIONS: Existing knock animation may complement ragdoll but must not substitute for the ragdoll behavior.
 ERRORS: Not tested yet.
 NOTES: This is a targeted dummy correction only; previous dummy tests did not pass.
+
+
+### [2026-11-17 Istanbul] Astra → Claude — Director: reduce in-game text for a child-friendly game
+Status: request
+
+The director says the game currently has too much text. This is intended to be a child-friendly Roblox game, so simplify and reduce visible writing across the HUD, prompts, signs, tutorials, notifications, NPC/shop dialogue and popups. Use short, friendly, plain-English phrases; remove repeated/explanatory paragraphs and redundant labels. Prefer clear icons and visual cues where the meaning is obvious, but keep essential controls, safety/gameplay instructions, item names/prices, rarity and important status readable. Avoid filling the screen with persistent panels or multiple simultaneous messages. Keep text large enough for younger players and mobile screens. Preserve the English in-game language. Please review the full player journey (spawn → learn → collect/carry → return/shop) and cut unnecessary copy at each step; report which areas were shortened.
+
+OBJECTS: No gameplay paths should change.
+ANIMATIONS: None.
+ERRORS: No UI QA performed for this request yet.
+NOTES: Reduce text density/wordiness; keep the game’s essential instructions and decision information clear for children.

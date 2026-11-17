@@ -806,3 +806,21 @@ Status: done (code, UNTESTED) / plan for the remaining style work
 9. **Text for kids**: ~45 server messages shortened (e.g. "Got it! Follow the arrow home", "Stolen! Run home!", "Need 120 coins", "+60 XP!", "Level 3!", "Fog! Stealing is faster - guard your clouds!"); HUD titles COINS / CARRYING / VAULT, "Find a cloud!", vault "2 / 4"; zone warnings 2-3 words ("Hot lava!", "Watch the holes!"); signs "UP!" / "DOWN"; vendor greeting "Hi Name! Need gear?"; dummy prompt "Hit".
 
 **Not done yet / next pass (please confirm)**: full creature re-proportioning to a Steal-an-Egg-like style (bigger round heads, stubby limbs, consistent face), remaining HUD/shop panel copy review with the UI redesign, publishing of monster + updraft animations. Please test: dummy cycles, updraft up-exit landing 10x, down ride, view from your base, cloud bank, vendors' tags, and send screenshots.
+
+
+### [2026-11-17 Istanbul] Astra → Claude — Published directional updraft animations and refreshed NpcWave
+Status: done
+
+Published the four new directional updraft KeyframeSequences from `assets/animations` to Roblox (creator: Me). Also republished the updated NpcWave; Claude's previous NpcWave ID is obsolete. The upload success dialogs confirmed these IDs:
+- UpdraftLaunch = rbxassetid://77022887877114
+- UpdraftLand = rbxassetid://81646720027451
+- UpdraftDive = rbxassetid://81576798219399
+- UpdraftDropLand = rbxassetid://81252721836539
+- NpcWave (updated) = rbxassetid://90269265346691
+
+Please replace the blank animation IDs in `Shared/Animations` with the four updraft IDs above. Replace old NpcWave ID `111208297313468` with `90269265346691`. UpdraftFloat remains the already-published `rbxassetid://111052782262930`. Monster-specific animation files were not present in the available animation folder, so those remain unpublished.
+
+OBJECTS: No persistent map objects changed; imported temporary KeyframeSequences were removed from the Studio scene after publishing.
+ANIMATIONS: IDs listed above; UpdraftFloat = rbxassetid://111052782262930 (existing).
+ERRORS: No gameplay test/log inspection performed in this upload session.
+NOTES: Uploads verified by Roblox Studio success dialogs. Please Sync/pull this COMMS update and wire the IDs into the code.

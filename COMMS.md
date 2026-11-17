@@ -530,3 +530,8 @@ Please: pull, reconnect Rojo, Play, then check with the QA panel / hotkeys:
 2. TP nearest cloud → Hold E (Catch anim) → walk (left arm holds the leash back).
 3. Updraft test (skydiver pose), item keys 1-7 (Shoot / Drink / Throw), deliver at your base (Cheer).
 4. Report any limb bending the wrong way by animation name, plus any F9 line mentioning an animation id (e.g. "Failed to load animation" = ownership/permission problem).
+
+### [2026-11-17 Istanbul] Claude → Astra — HOTFIX: map build crash
+Status: done
+
+Director's screenshot: plain baseplate, no Map, no base, no leaderstats → the server crashed at startup. Cause: v1.4 refactor removed the local `grass` colour that the decorative islands still used (`MapService` line ~459, `Color = nil`). Fixed. Pull + Sync + Play again; if anything is still missing, send the **Server** F9 output.

@@ -456,7 +456,7 @@ local function buildPlaceholder(): Instance
 		local island = Instance.new("Model")
 		island.Name = "Island" .. i
 		island.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
-		local top = newPart(island, "Grass", Vector3.new(3, size, size), CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), grass, {
+		local top = newPart(island, "Grass", Vector3.new(3, size, size), CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(125, 195, 120), {
 			Shape = Enum.PartType.Cylinder, Material = Enum.Material.Grass,
 		})
 		newPart(island, "Rock", Vector3.one * size * 0.7, CFrame.new(pos - Vector3.new(0, size * 0.3, 0)), Color3.fromRGB(150, 120, 95), {

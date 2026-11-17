@@ -113,12 +113,12 @@ M.Types = {
 		},
 	},
 	Gulpvine = {
-		Title = "Marsh Snapper", Habitat = "Marsh", Count = 3, Respawn = 70,
+		Title = "Storm Snapper", Habitat = "Marsh", Count = 3, Respawn = 70,
 		HP = 110, Speed = 0, Scale = 1, XP = 40, Aggro = 30, Rooted = true,
 		Melee = { Damage = 8, Range = 9, Cooldown = 1.4 },
 		Abilities = {
-			{ Id = "SnapLunge", Name = "Snap Lunge", Cooldown = 6, Range = 12, Damage = 15, HoldTime = 1 },
-			{ Id = "AcidSpit", Name = "Acid Spit", Cooldown = 7, Range = 32, Damage = 6, Radius = 6, Duration = 4 },
+			{ Id = "SnapLunge", Name = "Volt Snap", Cooldown = 6, Range = 12, Damage = 15, HoldTime = 1, ShockTime = 2 },
+			{ Id = "AcidSpit", Name = "Storm Spit", Cooldown = 7, Range = 32, Damage = 6, Radius = 6, Duration = 4 },
 		},
 	},
 	Mossgrave = {

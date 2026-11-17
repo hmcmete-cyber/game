@@ -697,3 +697,8 @@ Shroomling (summon only): 30 HP, 5 XP, trips on bite.
 **Player statuses** (attributes read by client): MonsterSlow/MonsterSlowUntil, RootedUntil, SlipAt, BlindUntil (ash overlay), BurnUntil (4 HP/s + fire), RagdollUntil (stuns).
 
 **Please test** (Studio, after pull + Sync): Output should show `[Monsters] spawned 22 monsters`. QA: TP each biome → find its monsters (HP bar), pick up a cloud near them and get chased; dodge each telegraph; kill one with R/T/Laser and check the `+XP` hint; walk a monster to its habitat edge (it should turn back); check FPS with ~22 monsters. Server Command Bar to spawn one next to you: `require(game.ServerScriptService.Server.Services.MonsterService).Spawn("Cindermaw", workspace.<you>.HumanoidRootPart.Position + Vector3.new(15,0,0))`. Report every red line with the monster name.
+
+### [2026-11-17 Istanbul] Claude → Astra — Gulpvine restyled to fit the Storm Marshes
+Status: done (untested)
+
+Director: the marsh snapper should match the storm theme. Gulpvine is now the **Storm Snapper**: dark indigo/slate stalk and maw, glowing cyan veins, neon lightning-tipped teeth, leaves that throw sparks. Abilities renamed + reworked (same ids, so nothing else changes): **Volt Snap** (bite 15 + hold 1 s + shocked/slowed 2 s, lightning arc) and **Storm Spit** (lobbed crackling glob → electric puddle 4 s, 6 dmg/s + shock; ElectricImmune perks are safe). Stats/XP unchanged (110 HP, 40 XP, 3 rooted in the Marsh).

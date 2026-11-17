@@ -569,7 +569,9 @@ F.BrambleWall = function(ctx, a)
 	end
 end
 
--- Gulpvine --------------------------------------------------------------
+-- Gulpvine (storm snapper) ---------------------------------------------
+local VOLT = Color3.fromRGB(110, 240, 255)
+-- Volt Snap: a charged bite — holds you 1 s and leaves you shocked (slowed)
 F.SnapLunge = function(ctx, a)
 	face(ctx, ctx.TargetRoot.Position)
 	ctx.Play("Ability1")
@@ -577,21 +579,29 @@ F.SnapLunge = function(ctx, a)
 	if ctx.Alive() and (ctx.TargetRoot.Position - ctx.Root.Position).Magnitude <= a.Range then
 		hurt(ctx.Target, a.Damage)
 		rootIn(ctx.Target, a.HoldTime)
-		burst(ctx.TargetRoot.Position, Color3.fromRGB(200, 40, 70), 12)
+		if not ctx.Target:GetAttribute("ElectricImmune") then
+			ctx.Target:SetAttribute("ShockedUntil", now() + a.ShockTime)
+		end
+		bolt(ctx.Root.Position + Vector3.new(0, 3, 0), ctx.TargetRoot.Position)
+		burst(ctx.TargetRoot.Position, VOLT, 14)
 	end
 end
+-- Storm Spit: lobs a crackling glob; it leaves an electric puddle that
+-- zaps and slows anyone inside (Electric-immune perks are safe)
 F.AcidSpit = function(ctx, a)
 	face(ctx, ctx.TargetRoot.Position)
 	ctx.Play("Ability2")
-	lob(ctx.Root.Position + Vector3.new(0, 4, 0), ctx.TargetRoot.Position, 1, Color3.fromRGB(170, 255, 80), 1.5, function(g)
+	lob(ctx.Root.Position + Vector3.new(0, 4, 0), ctx.TargetRoot.Position, 1, VOLT, 1.5, function(g)
 		fx(Vector3.new(0.2, a.Radius * 2, a.Radius * 2), CFrame.new(g + Vector3.new(0, 0.15, 0)) * CFrame.Angles(0, 0, math.pi / 2),
-			Color3.fromRGB(160, 240, 70), { Shape = Enum.PartType.Cylinder, Transparency = 0.3 }, a.Duration)
+			Color3.fromRGB(60, 140, 200), { Shape = Enum.PartType.Cylinder, Transparency = 0.35 }, a.Duration)
 		local t0 = os.clock()
 		task.spawn(function()
 			while os.clock() - t0 < a.Duration do
+				burst(g + Vector3.new(0, 0.5, 0), VOLT, 6)
 				for _, h in near(g, a.Radius) do
-					if not h[1]:GetAttribute("PoisonImmune") then
+					if not h[1]:GetAttribute("ElectricImmune") then
 						hurt(h[1], a.Damage)
+						h[1]:SetAttribute("ShockedUntil", now() + 1.2)
 					end
 				end
 				task.wait(1)

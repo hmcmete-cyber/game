@@ -302,23 +302,40 @@ BUILD.Bristlehulk = function(s)
 	return r
 end
 
--- (k) Gulpvine: low carnivorous plant with a toothed snapping maw
+-- (k) Gulpvine: storm-charged snapping plant of the Storm Marshes —
+-- dark indigo stalk, slate-blue maw lined with glowing cyan veins and
+-- lightning-tipped teeth, leaves that crackle with static
 BUILD.Gulpvine = function(s)
 	local r = rig("Gulpvine", s, 0.6)
-	local stalk, maw, tooth = RGB(70, 130, 60), RGB(160, 40, 70), RGB(250, 245, 230)
-	add(r, "Body", "HumanoidRootPart", V(4, 1, 4), V(0, -0.2, 0), V(0, 0, 0), RGB(60, 90, 45), { Role = "body", Material = M.Grass })
-	add(r, "Stem", "Body", V(1.2, 3, 1.2), V(0, 0.4, 0), V(0, -1.5, 0), stalk, { Role = "tail" })
-	add(r, "Head", "Stem", V(3.4, 1.2, 3.4), V(0, 1.6, 0), V(0, -0.6, 1.2), maw, { Role = "jawTop" })
-	add(r, "Jaw", "Stem", V(3.2, 1, 3.2), V(0, 1.4, 0), V(0, 0.5, 1.1), RGB(120, 30, 55), { Role = "jawBot" })
+	local stalk, maw, jaw = RGB(40, 50, 75), RGB(55, 70, 105), RGB(35, 42, 65)
+	local volt, tooth = RGB(110, 240, 255), RGB(220, 245, 255)
+	add(r, "Body", "HumanoidRootPart", V(4, 1, 4), V(0, -0.2, 0), V(0, 0, 0), RGB(35, 45, 60), { Role = "body", Material = M.Slate })
+	add(r, "Stem", "Body", V(1.2, 3, 1.2), V(0, 0.4, 0), V(0, -1.5, 0), stalk, { Role = "tail", Material = M.Slate })
+	add(r, "StemVein", "Stem", V(0.2, 2.8, 0.2), V(0, 0, -0.62), V(0, 0, 0), volt, { Material = M.Neon })
+	add(r, "Head", "Stem", V(3.4, 1.2, 3.4), V(0, 1.6, 0), V(0, -0.6, 1.2), maw, { Role = "jawTop", Material = M.Slate })
+	add(r, "Jaw", "Stem", V(3.2, 1, 3.2), V(0, 1.4, 0), V(0, 0.5, 1.1), jaw, { Role = "jawBot", Material = M.Slate })
+	add(r, "MawVeinT", "Head", V(3, 0.15, 0.2), V(0, 0.62, -0.6), V(0, 0, 0), volt, { Material = M.Neon })
+	add(r, "MawVeinB", "Jaw", V(2.8, 0.15, 0.2), V(0, -0.52, -0.6), V(0, 0, 0), volt, { Material = M.Neon, Glow = volt })
 	for i = 1, 4 do
-		add(r, "ToothT" .. i, "Head", V(0.4, 0.7, 0.4), V(-1.2 + i * 0.6, -0.8, -1.4), V(0, 0, 0), tooth, { Class = "WedgePart", Rot = A(rad(180), 0, 0) })
-		add(r, "ToothB" .. i, "Jaw", V(0.4, 0.7, 0.4), V(-1.5 + i * 0.6, 0.7, -1.3), V(0, 0, 0), tooth, { Class = "WedgePart" })
+		add(r, "ToothT" .. i, "Head", V(0.4, 0.7, 0.4), V(-1.2 + i * 0.6, -0.8, -1.4), V(0, 0, 0), tooth, { Class = "WedgePart", Material = M.Neon, Rot = A(rad(180), 0, 0) })
+		add(r, "ToothB" .. i, "Jaw", V(0.4, 0.7, 0.4), V(-1.5 + i * 0.6, 0.7, -1.3), V(0, 0, 0), tooth, { Class = "WedgePart", Material = M.Neon })
 	end
 	for i = 1, 4 do
 		local a = i * 1.57 + 0.4
-		add(r, "Leaf" .. i, "Body", V(1.4, 0.25, 3), V(math.cos(a) * 1.8, 0.5, math.sin(a) * 1.8), V(0, 0, -1.3), stalk, {
-			Material = M.Grass, Rot = A(rad(-15), -a + math.pi / 2, 0), Role = "wing",
+		local leaf = add(r, "Leaf" .. i, "Body", V(1.4, 0.25, 3), V(math.cos(a) * 1.8, 0.5, math.sin(a) * 1.8), V(0, 0, -1.3), stalk, {
+			Material = M.Slate, Rot = A(rad(-15), -a + math.pi / 2, 0), Role = "wing",
 		})
+		if i % 2 == 0 then
+			local sparks = Instance.new("ParticleEmitter")
+			sparks.Color = ColorSequence.new(volt)
+			sparks.LightEmission = 1
+			sparks.Size = NumberSequence.new(0.25, 0)
+			sparks.Lifetime = NumberRange.new(0.15, 0.3)
+			sparks.Rate = 6
+			sparks.Speed = NumberRange.new(4, 8)
+			sparks.SpreadAngle = Vector2.new(180, 180)
+			sparks.Parent = leaf
+		end
 	end
 	return r
 end

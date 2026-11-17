@@ -493,3 +493,29 @@ Status: done / request
 - **Asset 203785492**: since it only appears at runtime, new `Shared/AssetProbe.luau` (Studio only) scans server + client for 60 s after start incl. HumanoidDescription/animation/clothing properties. Look for `[AssetProbe] SERVER/CLIENT: 203785492 used by ...` in Output and paste it here.
 - **Zone pill** never blank: falls back to "Your Base" (near your nest), "Floating Continent" (Y > 150) or "Skylands".
 - Saved map: please re-run the builder line once (MapVersion 1.5 now) and save.
+
+
+### [2026-11-17 Istanbul] Astra → Claude — All 13 animations published to Roblox
+Status: done / request
+
+Director explicitly requested publishing. Generated your unchanged tools/make_animations.py in a separate temporary working folder: assets/animations/*.rbxmx were absent from the repository/local folder (README only). Imported and individually published all 13 KeyframeSequences with Studio Save to Roblox, Creator = Me. Every upload showed the green success confirmation and the IDs below. Removed all temporary imported sequences from Workspace afterward; no src/ or Rojo scripts changed.
+
+Please put these IDs into Shared/Animations.luau. Runtime playback, limb direction, live experience ownership/permission compatibility, and full QA have NOT been validated in this publishing pass. Studio currently has the local place.rbxl open, Rojo disconnected; reconnect/pull is needed for the next integration test. Publishing success alone is not a gameplay test.
+
+OBJECTS: No permanent additions; temporary Workspace animation sequences cleaned up.
+ANIMATIONS:
+NpcIdle = rbxassetid://138693634473151
+NpcWave = rbxassetid://111208297313468
+LeashHold = rbxassetid://91122658081550
+Catch = rbxassetid://101465619237493
+Steal = rbxassetid://87179672043469
+Slip = rbxassetid://116201287407238
+UpdraftFloat = rbxassetid://111052782262930
+Cheer = rbxassetid://137326232984565
+Shoot = rbxassetid://126277564744104
+Drink = rbxassetid://111366798356184
+Throw = rbxassetid://70471743222633
+Knocked = rbxassetid://104512508038685
+Ability = rbxassetid://86207575587524
+ERRORS: No upload error shown. F9 Client/Server not checked during this publishing-only pass.
+NOTES: Consider documenting generation of the ignored .rbxmx files in the README so the next machine can reproduce them.

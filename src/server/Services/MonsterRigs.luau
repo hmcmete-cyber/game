@@ -45,6 +45,12 @@ local function add(r, name: string, parent: string, size: Vector3, joint: Vector
 		(p :: Part).Shape = Enum.PartType[opts.Shape]
 	end
 	p.Transparency = opts.Transparency or 0
+	if opts.Studs then
+		-- classic Roblox studded plastic (v2.1 style): studs on top, inlets below
+		p.Material = M.Plastic
+		p.TopSurface = Enum.SurfaceType.Studs
+		p.BottomSurface = Enum.SurfaceType.Inlet
+	end
 	p.CanCollide = false
 	p.CanTouch = false
 	p.CanQuery = true -- lasers / punches can hit it
@@ -374,6 +380,44 @@ BUILD.Gnashgut = function(s)
 	add(r, "EyeL", "Body", V(0.9, 0.9, 0.4), V(-1.2, 2, -2), V(0, 0, 0), RGB(255, 240, 120), { Shape = "Ball", Material = M.Neon })
 	add(r, "EyeR", "Body", V(0.7, 0.7, 0.4), V(1.3, 2.1, -2), V(0, 0, 0), RGB(255, 240, 120), { Shape = "Ball", Material = M.Neon })
 	biped(r, "Body", -2, 1.6, V(1.8, 2, 1.8), 0.6, 3.2, V(1.4, 3, 1.4), RGB(70, 130, 60), skin, M.SmoothPlastic)
+	return r
+end
+
+-- (n) Skyfin: sky shark of the Coast — v2.1 STYLE ANCHOR (director's blue
+-- shark reference): light-blue studded body, pale belly, pointed snout,
+-- small dark eyes, tall dorsal fin, side fins, short legs, crescent tail.
+-- Built only from Roblox parts (blocks, wedges, balls) with visible studs.
+BUILD.Skyfin = function(s)
+	local r = rig("Skyfin", s, 2)
+	local blue, deep, pale = RGB(110, 175, 235), RGB(70, 130, 200), RGB(235, 242, 250)
+	local ST = { Studs = true }
+	local function o(t)
+		for k, v in ST do
+			t[k] = v
+		end
+		return t
+	end
+	add(r, "Body", "HumanoidRootPart", V(4, 3.4, 6.4), V(0, 0.8, 0.4), V(0, 0, 0), blue, o({ Role = "body" }))
+	add(r, "Belly", "Body", V(3.4, 1, 5.8), V(0, -1.5, 0), V(0, 0, 0), pale, o({}))
+	add(r, "Head", "Body", V(3.6, 3, 2.6), V(0, -0.1, -3.2), V(0, 0, 1.3), blue, o({ Role = "head" }))
+	add(r, "Snout", "Head", V(3.6, 2, 2.4), V(0, 0.5, -1.3), V(0, 0, 1.2), blue, o({ Class = "WedgePart" }))
+	add(r, "Jaw", "Head", V(3.2, 0.8, 2.6), V(0, -1.3, -0.2), V(0, 0.2, 1.1), pale, o({ Role = "jawBot" }))
+	for i = 1, 3 do
+		add(r, "Tooth" .. i, "Jaw", V(0.45, 0.6, 0.45), V(-0.9 + (i - 1) * 0.9, 0.6, -1.1), V(0, 0, 0), RGB(255, 255, 255), { Class = "WedgePart" })
+	end
+	add(r, "DotEyeL", "Head", V(0.45, 0.5, 0.2), V(-1.82, 0.5, -0.4), V(0, 0, 0), RGB(25, 30, 45), { Rot = CFrame.Angles(0, math.rad(90), 0) })
+	add(r, "DotEyeR", "Head", V(0.45, 0.5, 0.2), V(1.82, 0.5, -0.4), V(0, 0, 0), RGB(25, 30, 45), { Rot = CFrame.Angles(0, math.rad(-90), 0) })
+	add(r, "Dorsal", "Body", V(0.7, 3, 2.8), V(0, 1.7, 0.6), V(0, -1.5, 0), deep, o({ Class = "WedgePart", Role = "wing", Rot = CFrame.Angles(0, math.pi, 0) }))
+	add(r, "FinL", "Body", V(0.4, 1.6, 2.2), V(-2, -0.6, -1.2), V(0, 0.8, 0), deep, o({ Class = "WedgePart", Role = "armL", Rot = CFrame.Angles(0, math.pi, math.rad(-60)) }))
+	add(r, "FinR", "Body", V(0.4, 1.6, 2.2), V(2, -0.6, -1.2), V(0, 0.8, 0), deep, o({ Class = "WedgePart", Role = "armR", Rot = CFrame.Angles(0, math.pi, math.rad(60)) }))
+	for i, spec in { { -1.1, -1.4 }, { 1.1, -1.4 }, { -1.1, 1.8 }, { 1.1, 1.8 } } do
+		add(r, "Leg" .. i, "Body", V(1.1, 1.6, 1.1), V(spec[1], -1.8, spec[2]), V(0, 0.8, 0), pale, o({ Role = (i == 1 or i == 4) and "legA" or "legB" }))
+	end
+	add(r, "Gill", "Body", V(0.15, 1.2, 0.2), V(-2.02, 0.2, -2.2), V(0, 0, 0), deep, {})
+	add(r, "Gill2", "Body", V(0.15, 1.2, 0.2), V(2.02, 0.2, -2.2), V(0, 0, 0), deep, {})
+	add(r, "Tail", "Body", V(2.2, 2.2, 2.6), V(0, 0.2, 3.2), V(0, 0, -1.3), blue, o({ Role = "tail" }))
+	add(r, "TailFinTop", "Tail", V(0.6, 2.8, 2), V(0, 0.8, 1.3), V(0, -1.4, -0.6), deep, o({ Class = "WedgePart", Rot = CFrame.Angles(math.rad(-35), 0, 0) }))
+	add(r, "TailFinLow", "Tail", V(0.6, 2, 1.6), V(0, -0.6, 1.3), V(0, 1, -0.5), deep, o({ Class = "WedgePart", Rot = CFrame.Angles(math.rad(215), 0, 0) }))
 	return r
 end
 

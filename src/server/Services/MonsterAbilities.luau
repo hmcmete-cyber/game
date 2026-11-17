@@ -663,6 +663,56 @@ F.GroundPound = function(ctx, a)
 	end
 end
 
+-- Skyfin ----------------------------------------------------------------
+-- Fin Dive: sinks so only its fin cuts through the sand toward a carrier,
+-- a circle warns where it will burst out, then it leaps up under them
+F.FinDive = function(ctx, a)
+	ctx.Play("Ability2")
+	local start = ctx.Root.CFrame
+	local down = start - Vector3.new(0, 3.5, 0)
+	ctx.Model:PivotTo(down)
+	local target = ctx.TargetRoot.Position
+	local steps = 12
+	for i = 1, steps do
+		if not ctx.Alive() then
+			return
+		end
+		local p = down.Position:Lerp(Vector3.new(target.X, down.Position.Y, target.Z), i / steps)
+		ctx.Model:PivotTo(CFrame.lookAt(p, Vector3.new(target.X, p.Y, target.Z)))
+		burst(Vector3.new(p.X, start.Position.Y - 1, p.Z), Color3.fromRGB(240, 225, 180), 3)
+		task.wait(0.05)
+	end
+	local c = circle(target, a.Radius, RED, a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	ctx.Model:PivotTo(CFrame.new(c + Vector3.new(0, 4, 0)))
+	ctx.Play("Ability1")
+	burst(c, Color3.fromRGB(150, 210, 255), 30)
+	for _, h in near(c, a.Radius) do
+		hurt(h[1], a.Damage)
+		knock(h[1], Vector3.new(0, 55, 0) + flatDir(c, h[2].Position) * 20)
+	end
+end
+-- Tail Spin: winds up, then spins and swats everyone around it away
+F.TailSpin = function(ctx, a)
+	ctx.Play("Ability2")
+	local c = circle(ctx.Root.Position, a.Radius, ORANGE, a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	local base = ctx.Root.CFrame
+	for i = 1, 8 do
+		ctx.Model:PivotTo(base * CFrame.Angles(0, i * math.pi / 4, 0))
+		task.wait(0.03)
+	end
+	ring(c, a.Radius, Color3.fromRGB(150, 210, 255))
+	for _, h in near(c, a.Radius) do
+		hurt(h[1], a.Damage)
+		knock(h[1], flatDir(c, h[2].Position) * a.Knock + Vector3.new(0, 25, 0))
+	end
+end
+
 Abilities.F = F
 Abilities.Burst = burst
 

@@ -18,7 +18,7 @@ local M = {}
 
 M.Order = {
 	"Prismaw", "Frostback", "Voltwraith", "Cyclonox", "Cindermaw", "Smoldlet", "Capstride",
-	"Sporeback", "Rubbleye", "Bristlehulk", "Gulpvine", "Mossgrave", "Gnashgut",
+	"Sporeback", "Rubbleye", "Bristlehulk", "Gulpvine", "Mossgrave", "Gnashgut", "Skyfin",
 }
 
 M.Types = {
@@ -137,6 +137,16 @@ M.Types = {
 		Abilities = {
 			{ Id = "FrenzyBite", Name = "Frenzy Bite", Cooldown = 7, Range = 8, Damage = 8, Bites = 3 },
 			{ Id = "GroundPound", Name = "Ground Pound", Cooldown = 10, Range = 12, Radius = 12, Damage = 12, Stun = 0.8, Windup = 0.7 },
+		},
+	},
+	-- v2.1 style anchor (director's blue shark reference) — the Coast's monster
+	Skyfin = {
+		Title = "Sky Shark", Habitat = "Coast", Count = 2, Respawn = 100,
+		HP = 220, Speed = 18, Scale = 1.15, XP = 90, Aggro = 60,
+		Melee = { Damage = 12, Range = 8, Cooldown = 1.4 },
+		Abilities = {
+			{ Id = "FinDive", Name = "Fin Dive", Cooldown = 10, Range = 45, Damage = 18, Radius = 8, Windup = 0.9 },
+			{ Id = "TailSpin", Name = "Tail Spin", Cooldown = 8, Range = 12, Damage = 12, Radius = 12, Knock = 60, Windup = 0.6 },
 		},
 	},
 	-- summoned by Capstride's Sprout Squad (not part of the habitat population)

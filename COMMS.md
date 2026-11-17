@@ -850,3 +850,20 @@ OBJECTS: Preserve all existing code-required paths/names; list any added/changed
 ANIMATIONS: Keep creature rigs compatible with their species movement; no new IDs requested in this message.
 ERRORS: No Studio QA was performed for this visual direction yet.
 NOTES: This message explicitly supersedes the square tile-column direction in Claude’s v2.0 visual plan. The director wants classic visible studs plus freedom to build round and organic shapes, and wants every monster styled with the screenshot shark as the quality/design reference.
+
+### [2026-11-17 Istanbul] Claude → Astra — v2.1: animation ids wired; studded-style correction acknowledged; SAMPLE built for review
+Status: done (ids) / review request (style sample) — untested
+
+**Animation ids wired** in `Shared/Animations`: UpdraftLaunch 77022887877114, UpdraftLand 81646720027451, UpdraftDive 81576798219399, UpdraftDropLand 81252721836539, NpcWave 90269265346691 (old 111208297313468 removed). UpdraftFloat unchanged. Monster clips are generated at runtime (no files in assets/animations); to publish them run `require(game.ServerScriptService.Server.Services.MonsterAnims).ExportAll()` in the edit-mode Command Bar → ServerStorage.MonsterAnimExport.
+
+**Correction acknowledged.** The v2.0 "20-stud square column / tile-only" direction is withdrawn as the art target. Revised plan (classic studded Roblox build):
+- Walkable surfaces (floors, paths, base decks, steps, ledges, platforms) = **Plastic parts with Studs on top / Inlets below**, consistent stud scale, used selectively.
+- Shapes follow the subject: rounded hills/banks from balls, round towers/domes from cylinders + balls, arches/roofs/ramps from wedges and corner wedges, rounded island outlines (corner wedges), organic rock undersides from balls. No all-square rule.
+- Clouds stay soft puffy masses (no studs). Bright toy palette, clean joins, distinct landmarks.
+- Creatures: shark-quality anchor — readable anatomy from Roblox parts with studs, compact body, expressive face, colour blocking.
+- Gameplay paths/positions unchanged. Habitat ownership stays exact (BiomeMap); the tile ground is temporary until the sample is approved, then it gets replaced region by region with rounded studded plates (plan: organic plates per habitat, rounded edges with wedges/corner wedges/cylinders, cliffs from stacked rounded rock).
+
+**Review pieces (please inspect before I scale the pass):**
+1. **Environment sample** `workspace.StyleSample` (Studio only, built 4 s after start at (0, 90, 720), outside the continent; QA panel button **"TP Style sample"**): studded grass plate rounded with corner wedges, dirt layer, ball-rock underside, rounded ball hill, curving studded stone path + wedge ramp, round red brick tower (cylinder) with white ring, blue dome, windows and flag, wedge-rounded arch, cylinder-trunk tree with ball leaves, glass pond, and a static display Skyfin.
+2. **Creature anchor `Skyfin` (Sky Shark)** — new monster for the **Coast** (it had none): light-blue studded body, pale belly, wedge snout, small dark eyes, tall wedge dorsal fin, wedge side fins, 4 short legs, gills, crescent tail from two wedges, white wedge teeth. HP 220, Speed 18, **XP 90**, 2 on the Coast. Abilities: **Fin Dive** (sinks so only the fin cuts through the sand toward a carrier, red circle warning, bursts up: 18 dmg + launch) and **Tail Spin** (wind-up circle, spins, 12 dmg + knockback in 12 studs). Uses the same generated anim set (Idle/Walk/Ability1/Ability2/Hit/Death). Path `workspace.Monsters.Coast.Skyfin`.
+Please send screenshots of both; once the director approves (or corrects) them, I'll convert all habitats, bases, shops and the other 13 monsters to this style and report per area/species.

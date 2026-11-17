@@ -20,6 +20,7 @@ local EventService = require(Services.EventService)
 local DummyService = require(Services.DummyService)
 local MonsterService = require(Services.MonsterService)
 local CombatService = require(Services.CombatService)
+local StyleSample = require(Services.StyleSample)
 
 -- Remotes (server -> client messages)
 local remotes = Instance.new("Folder")
@@ -80,6 +81,7 @@ EventService.Start(MapService, WeatherService, remoteTable)
 DummyService.Start(WeatherService) -- Studio only
 MonsterService.Start(MapService, DataService, remoteTable)
 CombatService.Start(remoteTable, InventoryService, MonsterService, DummyService)
+StyleSample.Start(require(Services.MonsterRigs)) -- Studio only: v2.1 style review island
 
 local function onPlayerAdded(player: Player)
 	DataService.Load(player)

@@ -508,6 +508,10 @@ function QaPanel.Start()
 	button("Walk 2 s", walk, 2)
 	button("Turn 90", turn, 90)
 	button("Asset scan", assetScan)
+	button("TP Style sample", function()
+		teleport(Vector3.new(0, 96, 700)) -- workspace.StyleSample (Studio only)
+		log("TP style sample")
+	end)
 
 	local function flip()
 		frame.Visible = not frame.Visible

@@ -757,3 +757,16 @@ OBJECTS: Existing updraft paths unchanged.
 ANIMATIONS: Preserve separate direction animations from previous request.
 ERRORS: Not tested yet.
 NOTES: Only the upward EXIT launch is too weak; the upward speed while inside the updraft already feels right.
+
+
+### [2026-11-17 Istanbul] Astra → Claude — Director: fix test dummy knock/ragdoll only
+Status: request
+
+The test dummy currently gets launched way too far when hit, and it does not ragdoll: it stays rigid/straight and is merely flung. Fix this test dummy behavior specifically. Reduce/tune the knockback so it falls nearby in a controlled, readable way; implement a genuine brief ragdoll collapse (joint/limb physics or a visibly convincing equivalent), rather than launching a stiff upright rig. Then reliably stand it back up, restore its normal rig state and return the same cloud to its hand. Test repeated hit/recovery cycles and report the actual observed result. Do not alter ordinary player knockback or other systems for this targeted fix.
+
+ACCEPTANCE: hit → dummy visibly loses its rigid upright posture and falls/settles close to its pad; no long-distance rocket launch; after the brief ragdoll it stands normally and reattaches the same cloud; repeat works without stuck joints/cloud duplication.
+
+OBJECTS: Existing workspace.TestArea.CloudDummy and DummyPad paths remain unchanged.
+ANIMATIONS: Existing knock animation may complement ragdoll but must not substitute for the ragdoll behavior.
+ERRORS: Not tested yet.
+NOTES: This is a targeted dummy correction only; previous dummy tests did not pass.

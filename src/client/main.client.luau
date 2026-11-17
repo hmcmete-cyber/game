@@ -14,6 +14,7 @@ local QaPanel = require(script.Parent:WaitForChild("QaPanel"))
 local WorldFx = require(script.Parent:WaitForChild("WorldFx"))
 local Vfx = require(script.Parent:WaitForChild("Vfx"))
 local Ragdoll = require(script.Parent:WaitForChild("Ragdoll"))
+local CombatInput = require(script.Parent:WaitForChild("CombatInput"))
 
 Hud.Start()
 Movement.Start()
@@ -28,4 +29,5 @@ PlayerAnimator.Start()
 WorldFx.Start()
 Vfx.Start()
 Ragdoll.Start()
+CombatInput.Start()
 QaPanel.Start() -- Studio only

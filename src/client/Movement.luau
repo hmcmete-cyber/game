@@ -85,6 +85,9 @@ local function applySpeed()
 	if active("SpeedUntil") then
 		speed *= player:GetAttribute("SpeedMult") or 1
 	end
+	if active("MonsterSlowUntil") then
+		speed *= player:GetAttribute("MonsterSlow") or 0.6 -- monster frost / spores / shards
+	end
 	local immune = player:GetAttribute("ElectricImmune")
 	if inSwamp and not immune then
 		speed *= Config.ElectricSlow
@@ -98,6 +101,9 @@ local function applySpeed()
 		* (player:GetAttribute("UpgradeJump") or 1)
 	if active("JumpUntil") then
 		jump *= player:GetAttribute("JumpMult") or 1
+	end
+	if active("RootedUntil") then
+		speed, jump = 0, 0 -- held by roots / a bite
 	end
 
 	if math.abs(hum.WalkSpeed - speed) > 0.01 then
@@ -322,6 +328,15 @@ end
 
 function Movement.Start()
 	player:GetAttributeChangedSignal("BaseSpeed"):Connect(applySpeed)
+	-- monster Permafrost Slam / Sprout trip: slip right now
+	player:GetAttributeChangedSignal("SlipAt"):Connect(function()
+		local char = player.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		if hum and root and not slipping then
+			slip(hum, root :: BasePart)
+		end
+	end)
 	player:GetAttributeChangedSignal("ElectricImmune"):Connect(applySpeed)
 	player:GetAttributeChangedSignal("NitroUntil"):Connect(function()
 		applySpeed()

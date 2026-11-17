@@ -117,6 +117,11 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - **Ragdoll** 1.2 s on laser / Quake / lightning hits, then guaranteed get-up. Carried clouds stay leashed.
 - **Notifications**: only Legendary+ spawns/catches/shinies, max one every 15 s (Mythic always).
 
+## Update 13 — Monsters (13) and player combat (director request)
+
+- 13 habitat monsters (Shared/MonsterDefs): Prismaw, Frostback, Voltwraith, Cyclonox, Cindermaw, Smoldlet, Capstride, Sporeback, Rubbleye, Bristlehulk, Gulpvine, Mossgrave, Gnashgut (+ Shroomling summon). Two unique telegraphed abilities each, 6 generated animations each, XP 25-140 on defeat only. They hunt cloud carriers (and attackers), never leave their habitat, never act in the Sky Heart safe radius.
+- Player damage: Gust Punch (R), Air Slam (R in the air), Puff Shot (T), Laser Gun, Quake, Flare, luring into lava / electric water.
+
 ## CURRENT RULES (authoritative — overrides anything above)
 
 The "Update" sections above are history. If they conflict with this section, this section wins.
@@ -127,7 +132,8 @@ The "Update" sections above are history. If they conflict with this section, thi
 3. Bring it home over the bridges to your **base** (one of 12) and drop it into an empty **Vault Sphere** (4 per base).
 4. Filled vaults pay **passive income**; a cloud in a vault can be equipped as a **Perk** (up to the PerkSlots limit).
 5. **Steal**: rivals can take clouds out of your vaults (hold E) unless your base is **locked** (LockPad, 60 s, then cooldown). Owner gets an alarm; touching the thief tags the cloud back.
-6. Spend coins at the two hub shops: **Tayron** (7 consumable items) and **Aurelius** (permanent upgrades).
+6. Survive the habitat monsters that hunt cloud carriers (fight back: R punch / slam, T puff shot, items).
+7. Spend coins at the two hub shops: **Tayron** (7 consumable items) and **Aurelius** (permanent upgrades).
 
 **Rules**
 - Clouds come from `Shared/CloudDB.luau` (106, five rarity tiers, categories Classic/Elemental/SpaceTime/Economic/Chaos). Rarer = bigger reward and stronger perk. Shiny variants are worth more but never stronger.

@@ -447,7 +447,7 @@ function QaPanel.Start()
 	local HOTKEYS = {
 		Enum.KeyCode.Z, Enum.KeyCode.X, Enum.KeyCode.C, Enum.KeyCode.V, Enum.KeyCode.B, Enum.KeyCode.N,
 		Enum.KeyCode.U, Enum.KeyCode.I, Enum.KeyCode.O, Enum.KeyCode.P, Enum.KeyCode.K, Enum.KeyCode.L,
-		Enum.KeyCode.T, Enum.KeyCode.Y, Enum.KeyCode.R, Enum.KeyCode.Q, Enum.KeyCode.Comma, Enum.KeyCode.Period,
+		Enum.KeyCode.Minus, Enum.KeyCode.Y, Enum.KeyCode.Equals, Enum.KeyCode.Q, -- R/T are combat keys Enum.KeyCode.Comma, Enum.KeyCode.Period,
 		Enum.KeyCode.Semicolon,
 	}
 	local hotkeys: { [Enum.KeyCode]: () -> () } = {}

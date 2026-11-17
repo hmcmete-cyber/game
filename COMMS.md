@@ -665,3 +665,35 @@ Status: done (fixes, untested) / plan for review
 **Behaviour**: each habitat gets a roaming area from BiomeMap (monsters never leave their habitat; tether returns them). They aggro on **players carrying a cloud** within ~60 studs (others only if attacked), use abilities with telegraphs (warning circles / wind-up), never spawn within 120 studs of the Sky Heart landing or near the updraft; respawn 60-120 s; 2-3 alive per habitat. XP on defeat only (killer full, assisters 50 %), no other rewards, no bosses. All connections/effects cleaned up on death.
 **Player damage source (needs director OK)**: today players can only hurt monsters with the Laser Gun / Quake. I propose a free basic attack **"Gust Punch"** (click / R, 12 dmg, 0.6 s cooldown) so everyone can defend.
 **Delivery slices**: S1 = framework (MonsterService, rig builder, AI, XP, cleanup) + Prismaw, Frostback, Smoldlet, Gulpvine fully done; S2 = Voltwraith, Cyclonox, Cindermaw, Capstride, Sporeback; S3 = Rubbleye, Bristlehulk, Mossgrave, Gnashgut. Please confirm/adjust names, XP and the Gust Punch before I start S1.
+
+### [2026-11-17 Istanbul] Claude → Astra — v1.9: ALL 13 MONSTERS (S1+S2+S3 in one pass) + player combat — code complete, UNTESTED
+Status: done (code) / request (Studio test)
+
+Director approved the roster + Gust Punch and asked for more damage methods and all three slices now. Everything below exists in code; **nothing has run in Studio yet**, so treat every item as unverified.
+
+**Files**: `Shared/MonsterDefs` (stats, habitat, abilities, XP), `Services/MonsterRigs` (13 part-built rigs + Shroomling, Motor6D joints with Role attributes), `Services/MonsterAnims` (6 clips per rig generated from roles), `Services/MonsterAbilities` (26 abilities + telegraph/projectile/lob helpers, burn tick), `Services/MonsterService` (spawn, brain, damage, XP, cleanup), `Services/CombatService` (player attacks + hooks), client `CombatInput` (keys, touch buttons, blindness overlay), `Shared/MonsterAnimIds` (published ids, empty), `Shared/RagdollLib`.
+**Paths**: `workspace.Monsters.<Habitat>.<Name>` (Habitat = Canyon, Mountains, Marsh, Plateau, Volcanic, Mushroom), tag `Monster`, attrs MonsterType/Habitat, HP bar `HumanoidRootPart.MonsterBar`; effects in `workspace.MonsterFx` (Debris-cleaned).
+
+| Monster | Habitat (count) | HP | XP | Ability 1 | Ability 2 |
+|---|---|---|---|---|---|
+| Prismaw | Canyon (2) | 160 | 60 | Shard Volley (3 shards, slow) | Refraction Dash (blink behind carrier) |
+| Frostback | Mountains (1) | 300 | 110 | Permafrost Slam (ring, slip + slow) | Shell Bastion (-70 % dmg 4 s, knocks back) |
+| Voltwraith | Marsh (1) | 210 | 85 | Chain Lightning (2 jumps) | Static Blink (teleport beside carrier) |
+| Cyclonox | Plateau (1) | 300 | 120 | Vortex Pull (2.5 s drag) | Gale Burst (24-stud blast + ragdoll) |
+| Cindermaw | Volcanic (1) | 360 | 140 | Magma Geyser (circle → eruption + burn) | Ember Wings (60° fire cone + burn) |
+| Smoldlet | Volcanic (3) | 60 | 25 | Fuse Hop (leap + pop) | Ash Puff (blind 3 s) |
+| Capstride | Mushroom (2) | 170 | 70 | Spore Bloom (slow/poison zone 5 s) | Sprout Squad (2 Shroomlings, 20 s, trip) |
+| Sporeback | Mushroom (1) | 190 | 75 | Spine Spray (12 spines) | Mycelium Grip (root 1.5 s) |
+| Rubbleye | Mountains (2) | 200 | 80 | Orbit Crush (ring knock) | Void Gaze (telegraphed beam) |
+| Bristlehulk | Plateau (2) | 180 | 65 | Thorn Charge (line charge + ragdoll) | Bramble Wall (collidable thorns 5 s) |
+| Gulpvine | Marsh (3, rooted) | 110 | 40 | Snap Lunge (bite + hold 1 s) | Acid Spit (lobbed burning puddle) |
+| Mossgrave | Canyon (1) | 260 | 95 | Boulder Toss (lob + marker) | Vine Lash (pull toward it) |
+| Gnashgut | Marsh (1) | 180 | 70 | Frenzy Bite (3 bites) | Ground Pound (ring + 0.8 s stun) |
+Shroomling (summon only): 30 HP, 5 XP, trips on bite.
+
+**Animations — honest status**: per monster 6 clips (Idle, Walk, Ability1, Ability2, Hit, Death) are GENERATED in code from the rig's joint roles (diagonal quadruped trot, biped arm swing, spinning funnel, orbiting boulders, snapping jaws, flapping wings). They play in Studio via KeyframeSequenceProvider; **not published** → live servers would show no monster animation until published. Publishing: Command Bar (edit) `require(game.ServerScriptService.Server.Services.MonsterAnims).ExportAll()` → 84 KeyframeSequences in ServerStorage.MonsterAnimExport → Save to Roblox → ids into `Shared/MonsterAnimIds` (`Prismaw_Walk = "rbxassetid://..."`). These are procedural clips, not hand-keyed art.
+**Behaviour**: brain every 0.25 s only while a player is within 260 studs. Targets players carrying a cloud within Aggro (50-70) or anyone who hit it in the last 10 s; ignores players within 130 studs of the Sky Heart (no landing camping); hub/bases are far below (unreachable). Tether: walks home (healing 2 %/tick) if > 240 studs from home or outside its habitat. Abilities only when in range and off cooldown (first use staggered); telegraphs: ground circles, red lines, landing markers, wind-up animations. Lava/electric hazards hurt monsters from other habitats. Respawn 60-140 s. Death: Death clip, XP (killer 100 %, helpers with ≥ 10 % damage 50 %), fade 1 s, all connections disconnected, model destroyed. Carriers risk the cloud by dying (drop rules unchanged).
+**Player damage methods**: Gust Punch R (12, 8-stud 70° cone, 0.6 s), Air Slam R while airborne (18 in 10 studs on landing, 3 s), Puff Shot T (8, 90 studs/s, 70 range, 1.2 s), Laser Gun 25, Quake 40, Flare 20 in 16 studs, hazards. Touch: PUNCH / PUFF buttons. All server-validated (cooldown, range). The Studio dummy reacts to all of them (via `DummyService.HandleHit`). QA panel hotkeys `[T]`/`[R]` moved to `[-]`/`[=]` (R/T are combat now).
+**Player statuses** (attributes read by client): MonsterSlow/MonsterSlowUntil, RootedUntil, SlipAt, BlindUntil (ash overlay), BurnUntil (4 HP/s + fire), RagdollUntil (stuns).
+
+**Please test** (Studio, after pull + Sync): Output should show `[Monsters] spawned 22 monsters`. QA: TP each biome → find its monsters (HP bar), pick up a cloud near them and get chased; dodge each telegraph; kill one with R/T/Laser and check the `+XP` hint; walk a monster to its habitat edge (it should turn back); check FPS with ~22 monsters. Server Command Bar to spawn one next to you: `require(game.ServerScriptService.Server.Services.MonsterService).Spawn("Cindermaw", workspace.<you>.HumanoidRootPart.Position + Vector3.new(15,0,0))`. Report every red line with the monster name.

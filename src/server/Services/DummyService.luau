@@ -4,7 +4,7 @@
 --   Cloud:  workspace.Weather.<sphere>            attribute TestDummyCloud = true
 --   Spot:   Hexagon Hub, Y 40, at (0, 40, -42) on a glowing pad workspace.TestArea.DummyPad
 --
--- Hit it with:  the Laser Gun · a Quake perk ability · its "Hit dummy" prompt (E)
+-- Hit it with:  Gust Punch (R) · Air Slam · Puff Shot (T) · Laser Gun · Quake · Flare · its "Hit dummy" prompt (E)
 --               · Command Bar (server): require(game.ServerScriptService.Server.Services.DummyService).Knock()
 -- Then:  the leash is cut and the cloud flies off the hand → the dummy falls →
 --        after ~2.5 s it stands up → the SAME cloud instance is re-leashed.
@@ -248,16 +248,19 @@ function DummyService.Knock(dir: Vector3?): boolean
 	return true
 end
 
-function DummyService.Start(weatherService, inventoryService)
+-- any hit from CombatService (Punch, Slam, Puff, Laser, Quake, Flare)
+function DummyService.HandleHit(model: Instance, dir: Vector3?)
+	if model == dummy then
+		DummyService.Knock(dir)
+	end
+end
+
+function DummyService.Start(weatherService)
 	if not RunService:IsStudio() then
 		return
 	end
 	WeatherService = weatherService
-	inventoryService.Hooks.ModelHit = function(_shooter: Player, model: Model, dir: Vector3?)
-		if model == dummy then
-			DummyService.Knock(dir)
-		end
-	end
+	-- hits arrive through CombatService -> DummyService.HandleHit
 	-- a small pad + sign so testers can find it
 	local map = workspace:FindFirstChild("Map")
 	if map and not workspace:FindFirstChild("TestArea") then

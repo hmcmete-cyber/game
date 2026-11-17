@@ -26,7 +26,8 @@ local InventoryService = {}
 
 -- Hooks filled in by other services (avoids require loops):
 --   LaserHit(shooter, target) -> boolean   WeatherService: thief drops shooter's cloud?
---   ModelHit(shooter, model, dir)          a non-player model was hit (DummyService)
+--   ModelHit(shooter, model, dir, kind)    a non-player model was hit (CombatService)
+--   AreaHit(player, pos, radius, kind)     area item hit (Flare)
 --   OnOwnBase(player) -> boolean           near your own Nest?
 --   ForceLock(player, seconds)             BaseLockService: raise your base shield now
 InventoryService.Hooks = {} :: { [string]: any }
@@ -216,10 +217,12 @@ local function quake(player: Player, root: BasePart)
 		end
 	end
 	if InventoryService.Hooks.ModelHit then
-		for _, dummy in CollectionService:GetTagged("TestDummy") do
-			local r = dummy:FindFirstChild("HumanoidRootPart") :: BasePart?
-			if r and (r.Position - root.Position).Magnitude <= Config.QuakeRadius then
-				InventoryService.Hooks.ModelHit(player, dummy, (r.Position - root.Position).Unit)
+		for _, tag in { "TestDummy", "Monster" } do
+			for _, model in CollectionService:GetTagged(tag) do
+				local r = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if r and (r.Position - root.Position).Magnitude <= Config.QuakeRadius then
+					InventoryService.Hooks.ModelHit(player, model, (r.Position - root.Position).Unit, "Quake")
+				end
 			end
 		end
 	end
@@ -322,6 +325,9 @@ local function flare(player: Player)
 	pillar.Parent = workspace
 	Debris:AddItem(pillar, ShopItems.Types.Flare.Duration)
 	Remotes.Hint:FireAllClients(`{player.DisplayName} sent a flare!`, 3)
+	if InventoryService.Hooks.AreaHit then
+		InventoryService.Hooks.AreaHit(player, root.Position, 16, "Flare") -- the flash burns monsters nearby
+	end
 end
 
 ------------------------------------------------------------------------
@@ -375,7 +381,7 @@ local function fireLaser(player: Player, root: BasePart, aim: unknown): boolean
 	local model = hit and hit.Instance:FindFirstAncestorOfClass("Model")
 	local target = model and Players:GetPlayerFromCharacter(model)
 	if not target and model and InventoryService.Hooks.ModelHit then
-		InventoryService.Hooks.ModelHit(player, model, dir) -- e.g. the Studio test dummy
+		InventoryService.Hooks.ModelHit(player, model, dir, "Laser") -- monsters / the Studio test dummy
 	end
 	if not target or target == player then
 		return true

@@ -18,6 +18,8 @@ local NpcService = require(Services.NpcService)
 local UpgradeService = require(Services.UpgradeService)
 local EventService = require(Services.EventService)
 local DummyService = require(Services.DummyService)
+local MonsterService = require(Services.MonsterService)
+local CombatService = require(Services.CombatService)
 
 -- Remotes (server -> client messages)
 local remotes = Instance.new("Folder")
@@ -48,6 +50,7 @@ local buyUpgradeEvent = remote("BuyUpgrade") -- client -> server: Aurelius upgra
 local perkAbilityEvent = remote("PerkAbility") -- client -> server: use perk ability (slot)
 local dazzleEvent = remote("Dazzle") -- server -> client: white-out flash (seconds)
 local grappleEvent = remote("Grapple") -- server -> client: zip to this point (Grappling Hook)
+local attackEvent = remote("Attack") -- client -> server: ("Punch" | "Slam" | "Puff", aim)
 local knockEvent = Instance.new("RemoteEvent") -- server -> client: lightning knockback
 knockEvent.Name = "Knock"
 knockEvent.Parent = remotes
@@ -59,7 +62,7 @@ DataService.Start()
 MapService.Start()
 local remoteTable = { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent, UseItem = useItemEvent, Knock = knockEvent,
 	BuyItem = buyItemEvent, PerkAction = perkActionEvent, OpenShop = openShopEvent,
-	BuyUpgrade = buyUpgradeEvent, PerkAbility = perkAbilityEvent, Dazzle = dazzleEvent, Grapple = grappleEvent }
+	BuyUpgrade = buyUpgradeEvent, PerkAbility = perkAbilityEvent, Dazzle = dazzleEvent, Grapple = grappleEvent, Attack = attackEvent }
 WeatherService.Start(MapService, DataService, remoteTable)
 BaseLockService.Start(MapService, remoteTable)
 InventoryService.Start(DataService, remoteTable)
@@ -74,7 +77,9 @@ HazardService.Start(MapService, remoteTable)
 UpgradeService.Start(DataService, remoteTable)
 NpcService.Start(remoteTable)
 EventService.Start(MapService, WeatherService, remoteTable)
-DummyService.Start(WeatherService, InventoryService) -- Studio only
+DummyService.Start(WeatherService) -- Studio only
+MonsterService.Start(MapService, DataService, remoteTable)
+CombatService.Start(remoteTable, InventoryService, MonsterService, DummyService)
 
 local function onPlayerAdded(player: Player)
 	DataService.Load(player)

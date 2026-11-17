@@ -105,13 +105,14 @@ function ContinentBuilder.Build(ctx)
 		return p
 	end
 
-	-- v2.0 blocky style: a square block (2r x height x 2r) with its TOP at topY
-	-- (was a cylinder). Peaks, mesas, calderas, mushroom caps all become
-	-- stepped square forms that match the tile ground.
+	-- a round terrace / cap / hill: upright cylinder with its TOP at topY
 	local function disc(parent, name, center: Vector3, radius: number, height: number, topY: number, color, material, z, props)
-		local p = newPart(parent, name, Vector3.new(radius * 2, height, radius * 2),
-			CFrame.new(center.X, topY - height / 2, center.Z), color, {
-				Material = material == Enum.Material.Glacier and material or Enum.Material.SmoothPlastic,
+		-- v2.2: round again (classic Roblox builds use cylinders for round
+		-- terraces, caps and hills); toy plastic, glacier ice stays glacier
+		local p = newPart(parent, name, Vector3.new(height, radius * 2, radius * 2),
+			CFrame.new(center.X, topY - height / 2, center.Z) * CFrame.Angles(0, 0, math.pi / 2), color, {
+				Shape = Enum.PartType.Cylinder,
+				Material = material == Enum.Material.Glacier and material or Enum.Material.Plastic,
 				CastShadow = false,
 			})
 		if props then
@@ -166,23 +167,24 @@ function ContinentBuilder.Build(ctx)
 		end
 	end
 	------------------------------------------------------------------
-	-- v2.0 BLOCKY TILE GROUND (A Tile-like build style). The island is a grid
-	-- of 20-stud square columns; every cell belongs to exactly ONE habitat
-	-- (BiomeMap at the cell centre) -> no overlapping or interpenetrating
-	-- ground anywhere. Heights step per habitat; all columns share the same
-	-- bottom (UP-24) so there are never gaps between steps. Cells in a row
-	-- with the same look merge into one long block (part budget).
-	-- Border cells take a 40 % colour blend toward the neighbour habitat
-	-- (a one-tile checker-like seam) — visual only, ownership stays exact.
-	-- The coastline becomes a stair-stepped outline of the organic shape.
+	-- v2.2 STUDDED ROUND GROUND (classic Roblox build style). The island is
+	-- cut into GSEG pie slices; each slice is cut into radial bands, and
+	-- every band is built EXACTLY to its wedge shape: one studded plastic
+	-- block (inner chord width) + two flat triangle WedgeParts filling out to
+	-- the outer chord. Neighbouring slices share their radial edges, so
+	-- nothing overlaps and nothing gaps; the coastline is a smooth organic
+	-- curve (Wr) instead of steps. Each band belongs to exactly ONE habitat
+	-- (BiomeMap at the band centre); equal neighbours merge. All bands share
+	-- one bottom (UP-24) so height steps never open slits. Near a habitat
+	-- border the colour blends 35 % toward the neighbour (visual only).
 	------------------------------------------------------------------
-	local CELL = 20
+	local GSEG = 90 -- 4° slices
 	local BOTTOM = UP - 24
 	local LOOK = { Plateau = 0, Mountains = 0, Mushroom = 0, Marsh = -3, Volcanic = 0, Canyon = 0 }
 	local HCOLOR = {
-		Plateau = Color3.fromRGB(120, 200, 110), Mountains = Color3.fromRGB(160, 155, 150), Mushroom = Color3.fromRGB(120, 175, 160),
-		Marsh = Color3.fromRGB(90, 110, 95), Volcanic = Color3.fromRGB(70, 58, 58), Canyon = Color3.fromRGB(175, 125, 160),
-		Heart = Color3.fromRGB(236, 239, 248), Coast = Color3.fromRGB(242, 222, 170), Shallows = Color3.fromRGB(110, 195, 230),
+		Plateau = Color3.fromRGB(110, 195, 90), Mountains = Color3.fromRGB(165, 160, 158), Mushroom = Color3.fromRGB(120, 180, 165),
+		Marsh = Color3.fromRGB(95, 120, 100), Volcanic = Color3.fromRGB(75, 62, 62), Canyon = Color3.fromRGB(185, 130, 170),
+		Heart = Color3.fromRGB(240, 242, 250), Coast = Color3.fromRGB(245, 225, 165), Shallows = Color3.fromRGB(110, 195, 235),
 	}
 	local function canyonTop(r0: number): number
 		if r0 < 90 or r0 >= 238 then
@@ -193,80 +195,118 @@ function ContinentBuilder.Build(ctx)
 		return UP - 12
 	end
 	local transitions = {}
-	-- cell -> { key, top, color, zone, material } or nil (void / hole)
-	local function cellLook(x: number, z: number)
-		local pos = Vector3.new(x, 0, z)
-		local deg, rOld = BiomeMap.Polar(pos)
-		local rs = Vector2.new(x, z).Magnitude
-		if rOld > BiomeMap.EDGE or rs < 20 then
-			return nil -- open sky, or the updraft hole
-		end
-		if rOld < BiomeMap.HEART then
-			return { Key = "Heart", Top = UP, Color = HCOLOR.Heart, Zone = Z.Heart, Material = Enum.Material.Marble }
-		end
-		if rOld >= 300 then
-			return { Key = "Shallows", Top = UP - 1.5, Color = HCOLOR.Shallows, Zone = Z.Coast, Material = Enum.Material.Glass, Transparency = 0.15 }
-		elseif rOld >= BiomeMap.COAST then
-			return { Key = "Coast", Top = UP - 0.5, Color = HCOLOR.Coast, Zone = Z.Coast, Material = Enum.Material.SmoothPlastic }
-		end
-		local d2 = wobble(deg, rOld)
-		local h = sector(d2)
-		if h == "Canyon" and inPit(deg, rOld, rOld) then
-			return nil
-		end
-		local top = h == "Canyon" and canyonTop(rOld) or UP + LOOK[h]
-		local color = HCOLOR[h]
-		local key = h .. top
-		local bd = borderDist(d2)
-		if bd < 4 then
-			local other = sector(d2 + 6) ~= h and sector(d2 + 6) or sector(d2 - 6)
-			color = color:Lerp(HCOLOR[other], 0.4)
-			key ..= "~" .. other
-			table.insert(transitions, { r = rOld, deg = deg, top = top, a = h, b = other })
-		end
-		local roof = h == "Canyon" and d2 >= 258 and d2 < 270 and rOld >= 110 and rOld <= 222
-		return { Key = key, Top = top, Color = color, Zone = Z[h], Material = Enum.Material.SmoothPlastic, Roof = roof }
+	local groundFolder = Instance.new("Folder")
+	groundFolder.Name = "Ground"
+	groundFolder.Parent = continent
+	local pieces = 0
+	local function studs(p: BasePart, face: string)
+		p.Material = Enum.Material.Plastic
+		;(p :: any)[face .. "Surface"] = Enum.SurfaceType.Studs
 	end
-	local tileFolder = Instance.new("Folder")
-	tileFolder.Name = "Tiles"
-	tileFolder.Parent = continent
-	local tileCount = 0
-	local function emit(run, z: number)
-		tileCount += 1
-		local x0, x1 = run.X0, run.X1 + CELL
-		-- a tiny per-block shade change keeps big flat areas lively
-		local shade = run.Color:Lerp(Color3.new(1, 1, 1), rng:NextNumber(-0.04, 0.05))
-		local p = newPart(tileFolder, run.Key .. "_" .. tileCount, Vector3.new(x1 - x0, run.Top - BOTTOM, CELL),
-			CFrame.new((x0 + x1) / 2, (run.Top + BOTTOM) / 2, z), shade, { Material = run.Material, CastShadow = false })
-		if run.Transparency then
-			p.Transparency = run.Transparency
+	-- one exact wedge-shaped band (radii in warped studs)
+	local function band(name: string, deg: number, r0: number, r1: number, top: number, color: Color3, zone, opts)
+		local half = math.rad(180 / GSEG)
+		local th = math.rad(deg)
+		local d = Vector3.new(math.cos(th), 0, math.sin(th)) -- radial (slice +z)
+		local t = Vector3.new(math.sin(th), 0, -math.cos(th)) -- tangent (slice +x)
+		local up = Vector3.yAxis
+		local wi, wo = 2 * r0 * math.sin(half), 2 * r1 * math.sin(half)
+		-- chords sit at r*cos(half) along the radial line
+		local z0, z1 = r0 * math.cos(half), r1 * math.cos(half)
+		local thick = top - (opts and opts.Bottom or BOTTOM)
+		local yMid = top - thick / 2
+		local glass = opts and opts.Glass
+		local function finish(p: BasePart)
+			p.CastShadow = false
+			if glass then
+				p.Material = Enum.Material.Glass
+				p.Transparency = 0.15
+			end
+			tag(p, zone)
+			pieces += 1
 		end
-		tag(p, run.Zone)
-		if run.Roof then -- canyon cave roof slab over this block
-			local roofPart = newPart(tileFolder, "CaveRoof_" .. tileCount, Vector3.new(x1 - x0, 4, CELL), CFrame.new((x0 + x1) / 2, UP - 2, z),
-				Color3.fromRGB(120, 95, 120), { Material = Enum.Material.Slate, CastShadow = false })
-			tag(roofPart, Z.Canyon)
+		local mid = d * ((z0 + z1) / 2) + Vector3.new(0, yMid, 0)
+		local block = newPart(groundFolder, name, Vector3.new(wi, thick, z1 - z0), CFrame.fromMatrix(mid, t, up, d), color, {})
+		if not glass then
+			studs(block, "Top")
 		end
-	end
-	for z = -820, 820, CELL do
-		local run = nil
-		for x = -820, 820, CELL do
-			local c = cellLook(x, z)
-			if c and run and run.Key == c.Key and run.Roof == c.Roof and run.X1 == x - CELL then
-				run.X1 = x
-			else
-				if run then
-					emit(run, z)
+		finish(block)
+		if wo - wi > 0.05 then
+			for side = -1, 1, 2 do
+				-- right triangle: legs along the tangent ((wo-wi)/2) and radial (z1-z0),
+				-- right angle at the outer chord next to the block
+				local legT, legR = (wo - wi) / 2, z1 - z0
+				local centre = d * ((z0 + z1) / 2) + t * side * (wi / 2 + legT / 2) + Vector3.new(0, yMid, 0)
+				local localY = t * side -- wedge height axis -> outward along the tangent
+				local localZ = d -- wedge depth axis -> outward radially (vertical face at the outer chord)
+				local localX = localY:Cross(localZ)
+				local w = Instance.new("WedgePart")
+				w.Name = name .. (side < 0 and "_L" or "_R")
+				w.Anchored = true
+				w.Size = Vector3.new(thick, legT, legR)
+				w.CFrame = CFrame.fromMatrix(centre, localX, localY, localZ)
+				w.Color = color
+				w.Material = Enum.Material.Plastic
+				if not glass then
+					-- the world-up face of this wedge is local -X (Left) or +X (Right)
+					local upFace = localX.Y < 0 and "Left" or "Right"
+					studs(w, upFace)
 				end
-				run = c and { Key = c.Key, Top = c.Top, Color = c.Color, Zone = c.Zone, Material = c.Material,
-					Transparency = c.Transparency, Roof = c.Roof, X0 = x, X1 = x } or nil
+				w.Parent = groundFolder
+				finish(w)
 			end
 		end
-		if run then
-			emit(run, z)
-		end
 	end
-	print(string.format("[MapCheck] tile ground: %d blocks", tileCount))
+
+	local EDGES = { 70, 90, 110, 138, 166, 194, 222, 238, 262 }
+	for k = 0, GSEG - 1 do
+		local deg = (k + 0.5) * 360 / GSEG
+		band("Heart" .. k, deg, R(16), R(70), UP, HCOLOR.Heart, Z.Heart)
+		local run = nil
+		local function flush()
+			if run then
+				band(run.Name .. k, deg, Wr(R(run.R0), deg), Wr(R(run.R1), deg), run.Top, run.Color, run.Zone)
+				if run.Roof then
+					local roofTop = UP
+					-- a 4-stud slab (not a full column): you can walk under it
+					band("CaveRoof" .. k .. "_" .. run.R0, deg, Wr(R(run.R0), deg), Wr(R(run.R1), deg), roofTop, Color3.fromRGB(125, 100, 125), Z.Canyon, { Bottom = UP - 4 })
+				end
+				run = nil
+			end
+		end
+		for b = 1, #EDGES - 1 do
+			local r0, r1 = EDGES[b], EDGES[b + 1]
+			local d2 = wobble(deg, (r0 + r1) / 2)
+			local h = sector(d2)
+			local top = h == "Canyon" and canyonTop(r0) or UP + LOOK[h]
+			local color = HCOLOR[h]
+			local bd = borderDist(d2)
+			local key = h .. top
+			if bd < 4 then
+				local other = sector(d2 + 6) ~= h and sector(d2 + 6) or sector(d2 - 6)
+				color = color:Lerp(HCOLOR[other], 0.35)
+				key ..= "~" .. other
+				table.insert(transitions, { r = (r0 + r1) / 2, deg = deg, top = top, a = h, b = other })
+			end
+			local roof = false -- cave roofs only over the canyon floor near its east wall
+			if h == "Canyon" and d2 >= 258 and d2 < 270 and r0 >= 110 and r1 <= 222 then
+				roof = true
+				key ..= "+roof"
+			end
+			if h == "Canyon" and inPit(deg, r0, r1) then
+				flush()
+			elseif run and run.Key == key then
+				run.R1 = r1
+			else
+				flush()
+				run = { Key = key, Name = h, R0 = r0, R1 = r1, Top = top, Color = color, Zone = Z[h], Roof = roof }
+			end
+		end
+		flush()
+		band("Coast" .. k, deg, Wr(R(262), deg), Wr(R(300), deg), UP - 0.5, HCOLOR.Coast, Z.Coast)
+		band("Shallows" .. k, deg, Wr(R(300), deg), Wr(R(314), deg), UP - 1.5, HCOLOR.Shallows, Z.Coast, { Glass = true })
+	end
+	print(string.format("[MapCheck] studded ground: %d pieces", pieces))
 
 	------------------------------------------------------------------
 	-- Reserve every landmark footprint first (random props avoid them)
@@ -341,7 +381,7 @@ function ContinentBuilder.Build(ctx)
 			Material = Enum.Material.Wood, CastShadow = false,
 		})
 		local leaves = newPart(decor, "TreeLeaves" .. i, Vector3.one * rng:NextNumber(10, 14), CFrame.new(c + Vector3.new(0, h + 2, 0)),
-			Color3.fromRGB(90, 170, 90), { Material = Enum.Material.SmoothPlastic, CanCollide = false }) -- cube canopy (blocky)
+			Color3.fromRGB(90, 170, 90), { Shape = Enum.PartType.Ball, Material = Enum.Material.Plastic, CanCollide = false }) -- round canopy
 		leaves:SetAttribute("Shelter", true)
 	end
 	for _ = 1, 16 do
@@ -360,8 +400,8 @@ function ContinentBuilder.Build(ctx)
 			disc(continent, name .. "Tier" .. t, center, r, 4, top, snowy and Color3.fromRGB(235, 245, 255) or rock,
 				snowy and Enum.Material.Snow or Enum.Material.Rock, snowy and Z.Snow or Z.Mountains)
 			if t >= iceFrom then
-				local ice = newPart(continent, name .. "Ice" .. t, Vector3.new(r * 2, 0.2, r * 2), CFrame.new(center.X, top + 0.1, center.Z),
-					Color3.fromRGB(215, 240, 255), { Material = Enum.Material.Glacier, Transparency = 0.25 })
+				local ice = newPart(continent, name .. "Ice" .. t, Vector3.new(0.2, r * 2, r * 2), CFrame.new(center.X, top + 0.1, center.Z) * CFrame.Angles(0, 0, math.pi / 2),
+					Color3.fromRGB(215, 240, 255), { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Glacier, Transparency = 0.25 })
 				hazardFlag(ice, "Ice")
 			end
 		end
@@ -832,13 +872,14 @@ function ContinentBuilder.Build(ctx)
 				transitionCount += 1
 				local mix = HCOLOR[t.a]:Lerp(HCOLOR[t.b], 0.5)
 				local size = rng:NextNumber(3, 7)
-				newPart(continent, "Transition" .. transitionCount, Vector3.new(size * 1.3, size * 0.8, size),
-					CFrame.new(pos + Vector3.new(0, size * 0.3, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6), 0), mix:Lerp(rock, 0.4), {
-						Material = Enum.Material.SmoothPlastic, CastShadow = false,
+				-- round plastic rock + bush (balls), half sunk into the ground
+				newPart(continent, "Transition" .. transitionCount, Vector3.one * size,
+					CFrame.new(pos + Vector3.new(0, size * 0.2, 0)), mix:Lerp(rock, 0.4), {
+						Shape = Enum.PartType.Ball, Material = Enum.Material.Plastic, CastShadow = false,
 					})
-				newPart(decor, "TransitionShrub" .. transitionCount, Vector3.new(size, size * 0.6, size),
-					CFrame.new(pos + Vector3.new(size * 0.7, size * 0.25, 0)), HCOLOR[t.b]:Lerp(grass, 0.5), {
-						Material = Enum.Material.SmoothPlastic, CanCollide = false, CastShadow = false,
+				newPart(decor, "TransitionShrub" .. transitionCount, Vector3.one * size * 0.8,
+					CFrame.new(pos + Vector3.new(size * 0.7, size * 0.2, 0)), HCOLOR[t.b]:Lerp(grass, 0.5), {
+						Shape = Enum.PartType.Ball, Material = Enum.Material.Plastic, CanCollide = false, CastShadow = false,
 					})
 			end
 		end

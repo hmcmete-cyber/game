@@ -45,6 +45,12 @@ local function add(r, name: string, parent: string, size: Vector3, joint: Vector
 		(p :: Part).Shape = Enum.PartType[opts.Shape]
 	end
 	p.Transparency = opts.Transparency or 0
+	-- v2.2: every monster is built in the classic studded plastic style;
+	-- glowing (Neon), crystal (Glass), and see-through parts keep their material
+	local special = p.Material == M.Neon or p.Material == M.Glass or (opts.Transparency or 0) > 0
+	if opts.Studs ~= false and not special then
+		opts.Studs = true
+	end
 	if opts.Studs then
 		-- classic Roblox studded plastic (v2.1 style): studs on top, inlets below
 		p.Material = M.Plastic

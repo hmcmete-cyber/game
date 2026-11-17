@@ -122,6 +122,13 @@ Weather combines between friends (e.g. rain trail + snow = ice road). Interactio
 - 13 habitat monsters (Shared/MonsterDefs): Prismaw, Frostback, Voltwraith, Cyclonox, Cindermaw, Smoldlet, Capstride, Sporeback, Rubbleye, Bristlehulk, Gulpvine, Mossgrave, Gnashgut (+ Shroomling summon). Two unique telegraphed abilities each, 6 generated animations each, XP 25-140 on defeat only. They hunt cloud carriers (and attackers), never leave their habitat, never act in the Sky Heart safe radius.
 - Player damage: Gust Punch (R), Air Slam (R in the air), Puff Shot (T), Laser Gun, Quake, Flare, luring into lava / electric water.
 
+## Update 14 — Classic studded Roblox style everywhere (director request)
+
+- Ground: exact wedge-shaped pie-slice bands (studded plastic block + two triangle wedges), smooth organic coastline, one habitat per band (no overlaps), shared bottom (no slits). The v2.0 square-tile ground is gone.
+- Round shapes are back where they belong (cylinder terraces, caps, hills; ball canopies, rocks, bushes).
+- Whole map, bases, shops, vendor outfits and all 14 monsters use toy Plastic with Studs on level walkable tops; clouds/atmosphere stay soft puffs; neon/glass/glacier keep their look.
+- Skyfin (Sky Shark, Coast) is the creature style anchor.
+
 ## CURRENT RULES (authoritative — overrides anything above)
 
 The "Update" sections above are history. If they conflict with this section, this section wins.

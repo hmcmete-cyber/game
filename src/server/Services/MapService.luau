@@ -249,8 +249,32 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.0"
+local MAP_VERSION = "2.2"
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
+
+-- v2.2 CLASSIC STUDDED STYLE PASS over the whole generated map: every solid
+-- part becomes toy Plastic; flat, level tops at least 4 studs wide get
+-- Studs (floors, decks, bridges, paths, steps, ledges). Left alone: clouds
+-- (SpecialMesh ellipsoids), Neon/Glass/ForceField/Glacier, see-through or
+-- invisible parts (markers, hazards).
+local KEEP_MATERIAL = {
+	[Enum.Material.Neon] = true, [Enum.Material.Glass] = true, [Enum.Material.ForceField] = true, [Enum.Material.Glacier] = true,
+}
+local function studPass(root: Instance): number
+	local studded = 0
+	for _, p in root:GetDescendants() do
+		if p:IsA("BasePart") and not KEEP_MATERIAL[p.Material] and p.Transparency < 0.5 and not p:FindFirstChildOfClass("SpecialMesh") then
+			p.Material = Enum.Material.Plastic
+			if p:IsA("Part") and p.Shape == Enum.PartType.Block and p.CFrame.UpVector.Y > 0.99
+				and math.min(p.Size.X, p.Size.Z) >= 4 and p.TopSurface ~= Enum.SurfaceType.Studs then
+				p.TopSurface = Enum.SurfaceType.Studs
+				p.BottomSurface = Enum.SurfaceType.Inlet
+				studded += 1
+			end
+		end
+	end
+	return studded
+end
 
 local function buildPlaceholder(): Instance
 	local m = Instance.new("Folder")
@@ -501,6 +525,7 @@ local function buildPlaceholder(): Instance
 
 	getFolder(getFolder(m, "CrateArena"), "CrateSpawns")
 
+	print(`[MapCheck] studded {studPass(m)} extra surfaces`)
 	m.Parent = workspace
 	m:SetAttribute("MapVersion", MAP_VERSION)
 	ContinentBuilder.FixSpawns(m, UP)

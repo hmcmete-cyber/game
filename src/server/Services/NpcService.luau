@@ -51,7 +51,10 @@ local function block(model: Model, to: BasePart, name: string, size: Vector3, of
 	p.Name = name
 	p.Size = size
 	p.Color = color
-	p.Material = material or Enum.Material.SmoothPlastic
+	p.Material = material or Enum.Material.Plastic
+	if p.Material == Enum.Material.Plastic then
+		p.TopSurface = Enum.SurfaceType.Studs -- classic studded toy look
+	end
 	p.CastShadow = false
 	weldTo(p, to, offset, model)
 	return p

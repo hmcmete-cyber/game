@@ -5,7 +5,7 @@
 
 local RagdollLib = {}
 
-export type State = { Motors: { Motor6D }, Made: { Instance }, Collide: { [BasePart]: boolean } }
+export type State = { Motors: { Instance }, Made: { Instance }, Collide: { [BasePart]: boolean } }
 
 function RagdollLib.Enable(char: Model): State?
 	local hum = char:FindFirstChildOfClass("Humanoid")
@@ -14,6 +14,29 @@ function RagdollLib.Enable(char: Model): State?
 	end
 	local st: State = { Motors = {}, Made = {}, Collide = {} }
 	for _, m in char:GetDescendants() do
+		-- newer avatar rigs drive joints with AnimationConstraints instead of
+		-- Motor6Ds: those get a ball socket on their own two attachments
+		if m:IsA("AnimationConstraint") and m.Name ~= "Root" and m.Enabled and m.Attachment0 and m.Attachment1 then
+			local ball = Instance.new("BallSocketConstraint")
+			ball.Name = "RagdollJoint"
+			ball.Attachment0 = m.Attachment0
+			ball.Attachment1 = m.Attachment1
+			ball.LimitsEnabled = true
+			ball.UpperAngle = 70
+			ball.TwistLimitsEnabled = true
+			ball.TwistLowerAngle = -35
+			ball.TwistUpperAngle = 35
+			ball.Parent = m.Parent
+			table.insert(st.Made, ball)
+			m.Enabled = false
+			table.insert(st.Motors, m)
+			local p1 = (m.Attachment1 :: Attachment).Parent
+			if p1 and p1:IsA("BasePart") and st.Collide[p1] == nil then
+				st.Collide[p1] = p1.CanCollide
+				p1.CanCollide = true
+			end
+			continue
+		end
 		if m:IsA("Motor6D") and m.Name ~= "Root" and m.Part0 and m.Part1 then
 			local a0 = Instance.new("Attachment")
 			a0.Name = "RagdollA0"
@@ -59,7 +82,7 @@ function RagdollLib.Disable(char: Model, st: State?)
 	end
 	for _, m in st.Motors do
 		if m.Parent then
-			m.Enabled = true
+			(m :: any).Enabled = true
 		end
 	end
 	for p, was in st.Collide do

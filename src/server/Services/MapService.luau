@@ -249,8 +249,8 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "1.8"
-local DEATH_Y = 0 -- top of the death cloud floor (v1.6: raised from -20)
+local MAP_VERSION = "2.0"
+local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
 local function buildPlaceholder(): Instance
 	local m = Instance.new("Folder")
@@ -384,16 +384,16 @@ local function buildPlaceholder(): Instance
 		Color3.fromRGB(190, 235, 255))
 	updraft:SetAttribute("ExitHeight", UP + 6)
 	-- one smooth arc into the Sky Heart plaza at the continent's center
-	updraft:SetAttribute("LaunchTarget", Vector3.new(40, UP + 3, 0))
-	updraft:SetAttribute("LaunchTime", 0.85)
+	updraft:SetAttribute("LaunchTarget", Vector3.new(46, UP + 4, 0))
+	updraft:SetAttribute("LaunchTime", 0.95) -- v2.0: higher, longer arc (sideways speed held by LaunchCarry)
 	-- v1.8 two-way: drop into the Sky Heart hole to ride DOWN to the hub
 	updraft:SetAttribute("BottomY", Y)
 	updraft:SetAttribute("DownSpeed", 70)
-	zoneSign(signs, "UpdraftDownSign", Vector3.new(0, UP + 14, 0), "JUMP IN - DOWN TO THE HUB", Color3.fromRGB(255, 200, 120))
+	zoneSign(signs, "UpdraftDownSign", Vector3.new(0, UP + 14, 0), "DOWN", Color3.fromRGB(255, 200, 120))
 	newPart(decor, "UpdraftPad", Vector3.new(0.6, 16, 16), CFrame.new(0, Y + 0.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(150, 220, 255), {
 		Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, CanCollide = false,
 	})
-	zoneSign(signs, "UpdraftSign", Vector3.new(0, Y + 12, 0), "UPDRAFT - to the Floating Continent", Color3.fromRGB(190, 235, 255))
+	zoneSign(signs, "UpdraftSign", Vector3.new(0, Y + 12, 0), "UP!", Color3.fromRGB(190, 235, 255))
 
 	------------------------------------------------------------------
 	-- FLOATING CONTINENT (Y 200, radius ~314, 7 biomes) — see ContinentBuilder
@@ -409,8 +409,11 @@ local function buildPlaceholder(): Instance
 	-- Touching it kills you; you respawn at your base.
 	------------------------------------------------------------------
 	local abyss = getFolder(m, "Abyss")
+	-- the kill slab itself is invisible now (it looked like a flat plate);
+	-- what you SEE is the puffy cloud bank + low fog drifting on top of it
 	local slab = newPart(abyss, "DeathClouds", Vector3.new(2048, 6, 2048), CFrame.new(0, DEATH - 3, 0), Color3.fromRGB(235, 238, 245), {
 		Material = Enum.Material.SmoothPlastic,
+		Transparency = 1,
 		CanCollide = false,
 		CanQuery = false,
 		CastShadow = false,
@@ -420,36 +423,53 @@ local function buildPlaceholder(): Instance
 	fog.Color = ColorSequence.new(Color3.fromRGB(240, 242, 250))
 	fog.Size = NumberSequence.new(60, 120)
 	fog.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.55), NumberSequenceKeypoint.new(1, 1),
+		NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.5), NumberSequenceKeypoint.new(1, 1),
 	})
 	fog.Lifetime = NumberRange.new(10, 16)
-	fog.Rate = 40
+	fog.Rate = 50
 	fog.Speed = NumberRange.new(1, 3)
 	fog.EmissionDirection = Enum.NormalId.Top
 	fog.SpreadAngle = Vector2.new(30, 30)
 	fog.LightInfluence = 1
 	fog.Parent = slab
-	-- big puffy cloud lumps on top of the sea (decor only)
+	-- v2.0 CLOUD BANK (decor only, never lethal by itself): puffy masses of
+	-- 5 overlapping rounded lobes, on a jittered 160-stud grid from r 230
+	-- outward (inside r 230 the hub and the 12 bases float above open fog).
+	-- Centres Y 14-20 (just above the kill height); masses never touch.
 	local sea = getFolder(decor, "CloudSea")
-	-- puffs stay below Y ~17 so they never touch the hub (rock ends ~Y 23) or bases
-	-- v1.7: a jittered 130-stud grid (width <= 90, jitter <= 15) so puffs never intersect
+	local function lobe(parent: Instance, size: Vector3, cf: CFrame, color: Color3)
+		local p = newPart(parent, "Lobe", size, cf, color, {
+			Material = Enum.Material.SmoothPlastic, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false,
+		})
+		p.Transparency = 0.06
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = p
+	end
 	local i = 0
-	for gx = -910, 910, 130 do
-		for gz = -910, 910, 130 do
-			i += 1
-		local pos = Vector3.new(gx + rng:NextNumber(-15, 15), DEATH + rng:NextNumber(-2, 4), gz + rng:NextNumber(-15, 15))
-		local w = rng:NextNumber(50, 90)
-		local puff = newPart(sea, "Puff" .. i, Vector3.new(w, math.min(20, w * rng:NextNumber(0.2, 0.25)), w * rng:NextNumber(0.7, 1.1)), CFrame.new(pos),
-			Color3.fromRGB(245, 247, 252):Lerp(Color3.fromRGB(200, 205, 225), rng:NextNumber()), {
-				Material = Enum.Material.SmoothPlastic,
-				CanCollide = false,
-				CanQuery = false,
-				CanTouch = false,
-				CastShadow = false,
-			})
-			local mesh = Instance.new("SpecialMesh")
-			mesh.MeshType = Enum.MeshType.Sphere
-			mesh.Parent = puff
+	for gx = -1040, 1040, 160 do
+		for gz = -1040, 1040, 160 do
+			local c = Vector3.new(gx + rng:NextNumber(-25, 25), DEATH + rng:NextNumber(4, 10), gz + rng:NextNumber(-25, 25))
+			local clear = Vector2.new(c.X, c.Z).Magnitude > 230
+			for _, isl in { Vector2.new(-260, 120), Vector2.new(270, -80), Vector2.new(-120, 260) } do -- hub-level decor islands
+				if (Vector2.new(c.X, c.Z) - isl).Magnitude < 90 then
+					clear = false
+				end
+			end
+			if clear then
+				i += 1
+				local w = rng:NextNumber(70, 105) -- <= 105 wide on a 160 grid with 25 jitter: masses never touch
+				local mass = Instance.new("Model")
+				mass.Name = "Bank" .. i
+				local yaw = CFrame.new(c) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
+				local top, belly = Color3.fromRGB(250, 251, 255), Color3.fromRGB(212, 220, 236)
+				lobe(mass, Vector3.new(w, w * 0.34, w * 0.66), yaw, belly)
+				lobe(mass, Vector3.new(w * 0.46, w * 0.38, w * 0.42), yaw * CFrame.new(-w * 0.22, w * 0.12, 0), belly:Lerp(top, 0.6))
+				lobe(mass, Vector3.new(w * 0.5, w * 0.42, w * 0.46), yaw * CFrame.new(w * 0.14, w * 0.15, w * 0.04), belly:Lerp(top, 0.75))
+				lobe(mass, Vector3.new(w * 0.32, w * 0.3, w * 0.3), yaw * CFrame.new(w * 0.36, w * 0.08, -w * 0.06), belly:Lerp(top, 0.6))
+				lobe(mass, Vector3.new(w * 0.3, w * 0.28, w * 0.3), yaw * CFrame.new(-w * 0.02, w * 0.28, 0), top)
+				mass.Parent = sea
+			end
 		end
 	end
 

@@ -273,8 +273,9 @@ function Effects.Start()
 			end
 			if (core.Position - camPos).Magnitude < 200 then
 				for i, p in r.Parts do
-					local hue = (t * 0.12 + r.Phase + i * 0.04) % 1
-					p.Color = Color3.fromHSV(hue, 0.6, 0.85)
+					-- one soft hue for the whole cloud (per-lobe colours looked like separate balls)
+					local hue = (t * 0.08 + r.Phase) % 1
+					p.Color = Color3.fromHSV(hue, 0.35, 0.95 - i * 0.004)
 				end
 				if r.Light then
 					r.Light.Color = Color3.fromHSV((t * 0.12 + r.Phase) % 1, 0.8, 1)

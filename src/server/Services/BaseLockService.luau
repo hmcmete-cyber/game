@@ -114,7 +114,7 @@ local function tryLock(player: Player, roof: Model, nest: BasePart)
 	if st and now < st.CooldownUntil then
 		if now - (st.LastHint or 0) > 3 then
 			st.LastHint = now
-			Remotes.Hint:FireClient(player, `Shield recharging — {math.ceil(st.CooldownUntil - now)}s`, 2)
+			Remotes.Hint:FireClient(player, `Shield ready in {math.ceil(st.CooldownUntil - now)}s`, 2)
 		end
 		return
 	end
@@ -129,7 +129,7 @@ local function tryLock(player: Player, roof: Model, nest: BasePart)
 		LastHint = now,
 	}
 	roof:SetAttribute("Locked", true)
-	Remotes.Hint:FireClient(player, `Base locked for {Config.LockDuration}s — nobody can steal!`, 4)
+	Remotes.Hint:FireClient(player, `Base locked!`, 4)
 end
 
 -- Shield Generator item: raise the shield right now, ignoring the recharge
@@ -156,7 +156,7 @@ function BaseLock.ForceLock(player: Player, seconds: number)
 		}
 	end
 	roof:SetAttribute("Locked", true)
-	Remotes.Hint:FireClient(player, `Shield Generator: base locked for {math.floor(seconds)} s!`, 3)
+	Remotes.Hint:FireClient(player, `Base locked!`, 3)
 end
 
 -- Push a rival out of the shield
@@ -223,7 +223,7 @@ local function loop()
 					st.Shield = nil
 					roof:SetAttribute("Locked", nil)
 					if st.Owner.Parent then
-						Remotes.Hint:FireClient(st.Owner, "Your shield is down — guard your clouds!", 4)
+						Remotes.Hint:FireClient(st.Owner, "Shield off!", 4)
 					end
 				end
 				if st and now < st.CooldownUntil then

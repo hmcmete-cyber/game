@@ -153,9 +153,9 @@ local function perkAction(player: Player, action: unknown, index: unknown)
 	if InventoryService.ReturnToVault(player, entry.Type, entry.Shiny == true) then
 		table.remove(d.Perks, index)
 		sync(player)
-		Remotes.Hint:FireClient(player, `{Weather.Types[entry.Type].DisplayName} is safe in your vault again`, 3)
+		Remotes.Hint:FireClient(player, `Back in your vault`, 3)
 	else
-		Remotes.Hint:FireClient(player, "Your vault is full!", 2)
+		Remotes.Hint:FireClient(player, "Vault full!", 2)
 	end
 end
 
@@ -287,17 +287,17 @@ local function buy(player: Player, id: unknown)
 		return
 	end
 	if d.Coins < item.Price then
-		Remotes.Hint:FireClient(player, `Not enough coins — {item.DisplayName} costs {item.Price}`, 2)
+		Remotes.Hint:FireClient(player, `Need {item.Price} coins`, 2)
 		return
 	end
 	if not addItem(d, id :: string) then
-		Remotes.Hint:FireClient(player, "Inventory full!", 2)
+		Remotes.Hint:FireClient(player, "Bag full!", 2)
 		return
 	end
 	d.Coins -= item.Price
 	DataService.Sync(player)
 	sync(player)
-	Remotes.Hint:FireClient(player, `Bought {item.DisplayName}!`, 2)
+	Remotes.Hint:FireClient(player, `Got {item.DisplayName}!`, 2)
 end
 
 local function flare(player: Player)
@@ -388,7 +388,7 @@ local function fireLaser(player: Player, root: BasePart, aim: unknown): boolean
 	end
 	local now = workspace:GetServerTimeNow()
 	if (target:GetAttribute("ShieldUntil") or 0) > now then
-		Remotes.Hint:FireClient(player, `{target.DisplayName} is shielded!`, 2)
+		Remotes.Hint:FireClient(player, `Shielded!`, 2)
 		return true
 	end
 	-- a thief carrying YOUR stolen cloud drops it: it flies back to your vault
@@ -407,7 +407,7 @@ end
 local function fireGrapple(player: Player, root: BasePart, aim: unknown): boolean
 	local hit = aimRay(player, root, aim, Config.GrappleRange)
 	if not hit then
-		Remotes.Hint:FireClient(player, "Nothing to hook onto there", 1.5)
+		Remotes.Hint:FireClient(player, "Nothing to grab", 1.5)
 		return false
 	end
 	beam(root.Position, hit.Position, Color3.fromRGB(190, 160, 120), 0.15, 0.6)
@@ -430,7 +430,7 @@ local function shield(player: Player, item, duration: number)
 	ff.Name = "ShieldGenerator"
 	ff.Parent = char
 	Debris:AddItem(ff, duration)
-	Remotes.Hint:FireClient(player, `Personal shield for {math.floor(duration)} s!`, 2)
+	Remotes.Hint:FireClient(player, `Shield on!`, 2)
 end
 
 local function useItem(player: Player, id: unknown, aim: unknown)
@@ -586,9 +586,9 @@ function InventoryService.OnPlayerAdded(player: Player)
 		hum.Died:Connect(function()
 			local items, perks = InventoryService.Wipe(player)
 			if perks > 0 then
-				Remotes.Hint:FireClient(player, `You died — {perks} perk cloud(s) and your items are GONE!`, 5)
+				Remotes.Hint:FireClient(player, `Oh no! You lost your perks and items`, 5)
 			elseif items > 0 then
-				Remotes.Hint:FireClient(player, "You died — your items were lost!", 4)
+				Remotes.Hint:FireClient(player, "Oh no! You lost your items", 4)
 			end
 		end)
 	end

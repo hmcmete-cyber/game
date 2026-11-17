@@ -16,6 +16,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Weather = require(ReplicatedStorage.Shared.WeatherTypes)
@@ -172,7 +173,7 @@ local function buildUi()
 		})
 	end
 
-	small("CoinsTitle", 0, "STORM COINS")
+	small("CoinsTitle", 0, "COINS")
 	coinsValue = text("CoinsValue", status, {
 		Text = "0",
 		Font = Enum.Font.GothamBlack,
@@ -184,7 +185,7 @@ local function buildUi()
 	coinsScale = Instance.new("UIScale")
 	coinsScale.Parent = coinsValue
 
-	small("CarryTitle", 56, "ON YOUR LEASH")
+	small("CarryTitle", 56, "CARRYING")
 	carryValue = text("CarryValue", status, {
 		Text = "—",
 		Position = UDim2.fromOffset(0, 72),
@@ -199,9 +200,9 @@ local function buildUi()
 		TextXAlignment = Enum.TextXAlignment.Left,
 	})
 
-	small("VaultTitle", 120, "YOUR VAULT")
+	small("VaultTitle", 120, "VAULT")
 	vaultValue = text("VaultValue", status, {
-		Text = "0 / 0 spheres full",
+		Text = "0 / 0",
 		Position = UDim2.fromOffset(0, 136),
 		Size = UDim2.new(1, 0, 0, 20),
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -321,7 +322,7 @@ local function updateCarry()
 	local kind = player:GetAttribute("Carrying")
 	local def = kind and Weather.Types[kind]
 	if not def then
-		carryValue.Text = "Nothing — hold E on a cloud"
+		carryValue.Text = "Find a cloud!"
 		carryValue.TextColor3 = Color3.fromRGB(200, 205, 220)
 		rarityText.Text = ""
 		return
@@ -337,20 +338,26 @@ end
 local function updateVault()
 	local filled = player:GetAttribute("VaultFilled") or 0
 	local size = player:GetAttribute("VaultSize") or 0
-	vaultValue.Text = `{filled} / {size} spheres full`
+	vaultValue.Text = `{filled} / {size}`
 	vaultValue.TextColor3 = (size > 0 and filled >= size) and GOLD or Color3.new(1, 1, 1)
 	dots.Text = string.rep("[#] ", filled) .. string.rep("[  ] ", math.max(0, size - filled))
 end
 
--- Beam from you to your Nest while carrying
-local beam, att0, att1
+-- v2.0: a small floating ARROW above your head while carrying (the old beam
+-- to the nest became a huge vertical line from the continent). It points to
+-- the Sky Heart hole while you're up on the continent (ride down), and to
+-- your Nest once you're down at the hub.
+local arrow: Model? = nil
+local arrowConn: RBXScriptConnection? = nil
 local function clearBeam()
-	for _, obj in { beam, att0, att1 } do
-		if obj then
-			obj:Destroy()
-		end
+	if arrowConn then
+		arrowConn:Disconnect()
+		arrowConn = nil
 	end
-	beam, att0, att1 = nil, nil, nil
+	if arrow then
+		arrow:Destroy()
+		arrow = nil
+	end
 end
 
 local function getNest()
@@ -361,32 +368,57 @@ local function getNest()
 	return roof and roof:FindFirstChild("Nest")
 end
 
+local function arrowPart(parent: Instance, class: string, size: Vector3, color: Color3): BasePart
+	local p = Instance.new(class) :: BasePart
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Material = Enum.Material.Neon
+	p.Color = color
+	p.Size = size
+	p.Parent = parent
+	return p
+end
+
 local function updateBeam()
 	clearBeam()
 	if not player:GetAttribute("Carrying") then
 		return
 	end
-	local char = player.Character
-	local root = char and char:FindFirstChild("HumanoidRootPart")
-	local nest = getNest()
-	if not root or not nest then
-		return
-	end
-	att0 = Instance.new("Attachment")
-	att0.Parent = root
-	att1 = Instance.new("Attachment")
-	att1.Position = Vector3.new(0, 3, 0)
-	att1.Parent = nest
-	beam = Instance.new("Beam")
-	beam.Attachment0 = att0
-	beam.Attachment1 = att1
-	beam.Width0 = 0.5
-	beam.Width1 = 0.5
-	beam.FaceCamera = true
-	beam.LightEmission = 1
-	beam.Color = ColorSequence.new(player:GetAttribute("CarryingStolen") and RED or GOLD)
-	beam.Transparency = NumberSequence.new(0.3)
-	beam.Parent = root
+	local color = player:GetAttribute("CarryingStolen") and RED or GOLD
+	local m = Instance.new("Model")
+	m.Name = "CarryArrow"
+	local shaft = arrowPart(m, "Part", Vector3.new(0.5, 0.25, 1.6), color)
+	-- arrow head = a chevron of two bars (reads clearly from any angle)
+	local headL = arrowPart(m, "Part", Vector3.new(0.45, 0.25, 1.3), color)
+	local headR = arrowPart(m, "Part", Vector3.new(0.45, 0.25, 1.3), color)
+	m.Parent = workspace.CurrentCamera
+	arrow = m
+	arrowConn = RunService.RenderStepped:Connect(function()
+		local char = player.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root then
+			return
+		end
+		local goal: Vector3?
+		if root.Position.Y > 150 then
+			goal = Vector3.new(0, root.Position.Y, 0) -- the Sky Heart hole: ride the updraft down
+		else
+			local nest = getNest()
+			goal = nest and (nest :: BasePart).Position
+		end
+		if not goal then
+			return
+		end
+		local from = root.Position + Vector3.new(0, 4.6 + math.sin(os.clock() * 4) * 0.15, 0)
+		local flat = Vector3.new(goal.X - from.X, 0, goal.Z - from.Z)
+		local look = flat.Magnitude > 0.5 and CFrame.lookAt(from, from + flat) or CFrame.new(from)
+		shaft.CFrame = look * CFrame.new(0, 0, 0.4)
+		headL.CFrame = look * CFrame.new(-0.35, 0, -0.75) * CFrame.Angles(0, math.rad(-40), 0)
+		headR.CFrame = look * CFrame.new(0.35, 0, -0.75) * CFrame.Angles(0, math.rad(40), 0)
+	end)
 end
 
 -- Floating "+N" above the nest
@@ -430,14 +462,14 @@ end
 
 local function onStolen(thiefName: string, victimName: string, stormName: string)
 	if victimName == player.DisplayName then
-		showAlert(`WARNING: {thiefName} STOLE YOUR {string.upper(stormName)}!`, true, 3)
+		showAlert(`{thiefName} stole your cloud!`, true, 3)
 	else
-		showAlert(`{thiefName} stole {victimName}'s {stormName}!`, true, 2.5)
+		showAlert(`{thiefName} stole a cloud!`, true, 2.5)
 	end
 end
 
 local function onAlarm(thiefName: string)
-	showAlert(`{thiefName} is on your base! Touch them to take your cloud back!`, true, 3)
+	showAlert(`Thief! Tag {thiefName}!`, true, 3)
 	for i = 1, 3 do
 		task.delay((i - 1) * 0.35, function()
 			playSound(PING, 0.9, 0.6)

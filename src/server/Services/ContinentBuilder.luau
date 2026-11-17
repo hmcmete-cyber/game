@@ -37,12 +37,12 @@ function ContinentBuilder.Build(ctx)
 	local Z = {
 		Heart = zone("Sky Heart", Color3.fromRGB(190, 235, 255), "Plateau"),
 		Plateau = zone("Plateau Meadows", Color3.fromRGB(150, 230, 150), "Plateau"),
-		Mountains = zone("Mountains", Color3.fromRGB(210, 220, 235), "Mountains", "Icy ledges up high - Frost perks help"),
-		Snow = zone("Snowpeaks", Color3.fromRGB(235, 245, 255), "Mountains", "Ice! You will slip without grip"),
-		Mushroom = zone("Mushroom Plateaus", Color3.fromRGB(230, 150, 220), "Mushroom", "Climb the caps - they shelter you from acid rain"),
-		Marsh = zone("Storm Marshes", Color3.fromRGB(140, 190, 170), "Marsh", "Electric pools and lightning fields!"),
-		Canyon = zone("Crystal Canyons", Color3.fromRGB(190, 140, 255), "Canyon", "Pits drop to the death clouds - watch your step!"),
-		Volcanic = zone("Volcanic Caldera", Color3.fromRGB(255, 140, 90), "Volcanic", "Lava burns! Fire perks make you immune"),
+		Mountains = zone("Mountains", Color3.fromRGB(210, 220, 235), "Mountains", "Slippery ice!"),
+		Snow = zone("Snowpeaks", Color3.fromRGB(235, 245, 255), "Mountains", "Slippery ice!"),
+		Mushroom = zone("Mushroom Plateaus", Color3.fromRGB(230, 150, 220), "Mushroom", "Climb the mushrooms!"),
+		Marsh = zone("Storm Marshes", Color3.fromRGB(140, 190, 170), "Marsh", "Zappy water!"),
+		Canyon = zone("Crystal Canyons", Color3.fromRGB(190, 140, 255), "Canyon", "Watch the holes!"),
+		Volcanic = zone("Volcanic Caldera", Color3.fromRGB(255, 140, 90), "Volcanic", "Hot lava!"),
 		Coast = zone("Coast", Color3.fromRGB(255, 225, 160), "Coast"),
 	}
 
@@ -105,12 +105,13 @@ function ContinentBuilder.Build(ctx)
 		return p
 	end
 
-	-- vertical cylinder (stands on its X axis) with its TOP at topY
+	-- v2.0 blocky style: a square block (2r x height x 2r) with its TOP at topY
+	-- (was a cylinder). Peaks, mesas, calderas, mushroom caps all become
+	-- stepped square forms that match the tile ground.
 	local function disc(parent, name, center: Vector3, radius: number, height: number, topY: number, color, material, z, props)
-		local p = newPart(parent, name, Vector3.new(height, radius * 2, radius * 2),
-			CFrame.new(center.X, topY - height / 2, center.Z) * CFrame.Angles(0, 0, math.pi / 2), color, {
-				Shape = Enum.PartType.Cylinder,
-				Material = material,
+		local p = newPart(parent, name, Vector3.new(radius * 2, height, radius * 2),
+			CFrame.new(center.X, topY - height / 2, center.Z), color, {
+				Material = material == Enum.Material.Glacier and material or Enum.Material.SmoothPlastic,
 				CastShadow = false,
 			})
 		if props then
@@ -164,34 +165,25 @@ function ContinentBuilder.Build(ctx)
 			terrain:FillBlock(CFrame.new(gx, UP - 30, gz), Vector3.new(340, 80, 340), Enum.Material.Air)
 		end
 	end
-	local TMAT = {
-		Plateau = Enum.Material.Grass,
-		Mountains = Enum.Material.Rock,
-		Mushroom = Enum.Material.LeafyGrass,
-		Marsh = Enum.Material.Mud,
-		Volcanic = Enum.Material.Basalt,
-		Canyon = Enum.Material.Sandstone,
+	------------------------------------------------------------------
+	-- v2.0 BLOCKY TILE GROUND (A Tile-like build style). The island is a grid
+	-- of 20-stud square columns; every cell belongs to exactly ONE habitat
+	-- (BiomeMap at the cell centre) -> no overlapping or interpenetrating
+	-- ground anywhere. Heights step per habitat; all columns share the same
+	-- bottom (UP-24) so there are never gaps between steps. Cells in a row
+	-- with the same look merge into one long block (part budget).
+	-- Border cells take a 40 % colour blend toward the neighbour habitat
+	-- (a one-tile checker-like seam) — visual only, ownership stays exact.
+	-- The coastline becomes a stair-stepped outline of the organic shape.
+	------------------------------------------------------------------
+	local CELL = 20
+	local BOTTOM = UP - 24
+	local LOOK = { Plateau = 0, Mountains = 0, Mushroom = 0, Marsh = -3, Volcanic = 0, Canyon = 0 }
+	local HCOLOR = {
+		Plateau = Color3.fromRGB(120, 200, 110), Mountains = Color3.fromRGB(160, 155, 150), Mushroom = Color3.fromRGB(120, 175, 160),
+		Marsh = Color3.fromRGB(90, 110, 95), Volcanic = Color3.fromRGB(70, 58, 58), Canyon = Color3.fromRGB(175, 125, 160),
+		Heart = Color3.fromRGB(236, 239, 248), Coast = Color3.fromRGB(242, 222, 170), Shallows = Color3.fromRGB(110, 195, 230),
 	}
-	for mat, color in {
-		[Enum.Material.Grass] = grass, [Enum.Material.Rock] = rock, [Enum.Material.LeafyGrass] = moss,
-		[Enum.Material.Mud] = mud, [Enum.Material.Basalt] = basalt, [Enum.Material.Sandstone] = canyonC,
-		[Enum.Material.Sand] = sand, [Enum.Material.Slate] = Color3.fromRGB(120, 95, 120),
-	} do
-		terrain:SetMaterialColor(mat, color)
-	end
-	local HCOLOR = { Plateau = grass, Mountains = rock, Mushroom = moss, Marsh = mud, Volcanic = basalt, Canyon = canyonC }
-	local LOOK = { -- top offset per habitat (canyon handled by canyonTop)
-		Plateau = 0, Mountains = 0, Mushroom = 0, Marsh = -3, Volcanic = 0, Canyon = 0,
-	}
-	local function fillBand(deg: number, r0: number, r1: number, top: number, thick: number, material: Enum.Material)
-		local a, b = Wr(R(r0), deg), Wr(R(r1), deg)
-		local theta = math.rad(deg)
-		local dir = Vector3.new(math.cos(theta), 0, math.sin(theta))
-		local mid = dir * ((a + b) / 2) + Vector3.new(0, top - thick / 2, 0)
-		local width = 2 * b * math.sin(math.pi / SEG) * 1.15
-		terrain:FillBlock(CFrame.lookAt(mid, mid + dir), Vector3.new(width, thick, b - a), material)
-	end
-	local EDGES = { 70, 90, 110, 138, 166, 194, 222, 238, 262 }
 	local function canyonTop(r0: number): number
 		if r0 < 90 or r0 >= 238 then
 			return UP - 4
@@ -201,30 +193,80 @@ function ContinentBuilder.Build(ctx)
 		return UP - 12
 	end
 	local transitions = {}
-	for k = 0, SEG - 1 do
-		local deg = (k + 0.5) * 360 / SEG
-		ring("Heart" .. k, deg, 16, 70, UP, 4, Color3.fromRGB(235, 238, 248), Enum.Material.Marble, Z.Heart)
-		for b = 1, #EDGES - 1 do
-			local r0, r1 = EDGES[b], EDGES[b + 1]
-			local d2 = wobble(deg, (r0 + r1) / 2)
-			local s = sector(d2)
-			local top = s == "Canyon" and canyonTop(r0) or UP + LOOK[s]
-			if borderDist(d2) < 4 then
-				local other = sector(d2 + 6) ~= s and sector(d2 + 6) or sector(d2 - 6)
-				table.insert(transitions, { r = (r0 + r1) / 2, deg = deg, top = top, a = s, b = other })
-			end
-			if not (s == "Canyon" and inPit(deg, r0, r1)) then
-				fillBand(deg, r0, r1, top, 12, TMAT[s])
-			end
-			-- cave roofs over the canyon floor near its east wall
-			if s == "Canyon" and d2 >= 258 and d2 < 270 and r0 >= 110 and r1 <= 222 then
-				fillBand(deg, r0, r1, UP, 4, Enum.Material.Slate)
+	-- cell -> { key, top, color, zone, material } or nil (void / hole)
+	local function cellLook(x: number, z: number)
+		local pos = Vector3.new(x, 0, z)
+		local deg, rOld = BiomeMap.Polar(pos)
+		local rs = Vector2.new(x, z).Magnitude
+		if rOld > BiomeMap.EDGE or rs < 20 then
+			return nil -- open sky, or the updraft hole
+		end
+		if rOld < BiomeMap.HEART then
+			return { Key = "Heart", Top = UP, Color = HCOLOR.Heart, Zone = Z.Heart, Material = Enum.Material.Marble }
+		end
+		if rOld >= 300 then
+			return { Key = "Shallows", Top = UP - 1.5, Color = HCOLOR.Shallows, Zone = Z.Coast, Material = Enum.Material.Glass, Transparency = 0.15 }
+		elseif rOld >= BiomeMap.COAST then
+			return { Key = "Coast", Top = UP - 0.5, Color = HCOLOR.Coast, Zone = Z.Coast, Material = Enum.Material.SmoothPlastic }
+		end
+		local d2 = wobble(deg, rOld)
+		local h = sector(d2)
+		if h == "Canyon" and inPit(deg, rOld, rOld) then
+			return nil
+		end
+		local top = h == "Canyon" and canyonTop(rOld) or UP + LOOK[h]
+		local color = HCOLOR[h]
+		local key = h .. top
+		local bd = borderDist(d2)
+		if bd < 4 then
+			local other = sector(d2 + 6) ~= h and sector(d2 + 6) or sector(d2 - 6)
+			color = color:Lerp(HCOLOR[other], 0.4)
+			key ..= "~" .. other
+			table.insert(transitions, { r = rOld, deg = deg, top = top, a = h, b = other })
+		end
+		local roof = h == "Canyon" and d2 >= 258 and d2 < 270 and rOld >= 110 and rOld <= 222
+		return { Key = key, Top = top, Color = color, Zone = Z[h], Material = Enum.Material.SmoothPlastic, Roof = roof }
+	end
+	local tileFolder = Instance.new("Folder")
+	tileFolder.Name = "Tiles"
+	tileFolder.Parent = continent
+	local tileCount = 0
+	local function emit(run, z: number)
+		tileCount += 1
+		local x0, x1 = run.X0, run.X1 + CELL
+		-- a tiny per-block shade change keeps big flat areas lively
+		local shade = run.Color:Lerp(Color3.new(1, 1, 1), rng:NextNumber(-0.04, 0.05))
+		local p = newPart(tileFolder, run.Key .. "_" .. tileCount, Vector3.new(x1 - x0, run.Top - BOTTOM, CELL),
+			CFrame.new((x0 + x1) / 2, (run.Top + BOTTOM) / 2, z), shade, { Material = run.Material, CastShadow = false })
+		if run.Transparency then
+			p.Transparency = run.Transparency
+		end
+		tag(p, run.Zone)
+		if run.Roof then -- canyon cave roof slab over this block
+			local roofPart = newPart(tileFolder, "CaveRoof_" .. tileCount, Vector3.new(x1 - x0, 4, CELL), CFrame.new((x0 + x1) / 2, UP - 2, z),
+				Color3.fromRGB(120, 95, 120), { Material = Enum.Material.Slate, CastShadow = false })
+			tag(roofPart, Z.Canyon)
+		end
+	end
+	for z = -820, 820, CELL do
+		local run = nil
+		for x = -820, 820, CELL do
+			local c = cellLook(x, z)
+			if c and run and run.Key == c.Key and run.Roof == c.Roof and run.X1 == x - CELL then
+				run.X1 = x
+			else
+				if run then
+					emit(run, z)
+				end
+				run = c and { Key = c.Key, Top = c.Top, Color = c.Color, Zone = c.Zone, Material = c.Material,
+					Transparency = c.Transparency, Roof = c.Roof, X0 = x, X1 = x } or nil
 			end
 		end
-		fillBand(deg, 262, 300, UP - 0.5, 12, Enum.Material.Sand)
-		fillBand(deg, 300, 314, UP - 3, 8, Enum.Material.Sand)
-		fillBand(deg, 300, 314, UP - 1, 2, Enum.Material.Water)
+		if run then
+			emit(run, z)
+		end
 	end
+	print(string.format("[MapCheck] tile ground: %d blocks", tileCount))
 
 	------------------------------------------------------------------
 	-- Reserve every landmark footprint first (random props avoid them)
@@ -299,7 +341,7 @@ function ContinentBuilder.Build(ctx)
 			Material = Enum.Material.Wood, CastShadow = false,
 		})
 		local leaves = newPart(decor, "TreeLeaves" .. i, Vector3.one * rng:NextNumber(10, 14), CFrame.new(c + Vector3.new(0, h + 2, 0)),
-			Color3.fromRGB(90, 170, 90), { Shape = Enum.PartType.Ball, Material = Enum.Material.Grass, CanCollide = false })
+			Color3.fromRGB(90, 170, 90), { Material = Enum.Material.SmoothPlastic, CanCollide = false }) -- cube canopy (blocky)
 		leaves:SetAttribute("Shelter", true)
 	end
 	for _ = 1, 16 do
@@ -318,8 +360,8 @@ function ContinentBuilder.Build(ctx)
 			disc(continent, name .. "Tier" .. t, center, r, 4, top, snowy and Color3.fromRGB(235, 245, 255) or rock,
 				snowy and Enum.Material.Snow or Enum.Material.Rock, snowy and Z.Snow or Z.Mountains)
 			if t >= iceFrom then
-				local ice = newPart(continent, name .. "Ice" .. t, Vector3.new(0.2, r * 2, r * 2), CFrame.new(center.X, top + 0.1, center.Z) * CFrame.Angles(0, 0, math.pi / 2),
-					Color3.fromRGB(215, 240, 255), { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Glacier, Transparency = 0.25 })
+				local ice = newPart(continent, name .. "Ice" .. t, Vector3.new(r * 2, 0.2, r * 2), CFrame.new(center.X, top + 0.1, center.Z),
+					Color3.fromRGB(215, 240, 255), { Material = Enum.Material.Glacier, Transparency = 0.25 })
 				hazardFlag(ice, "Ice")
 			end
 		end
@@ -790,16 +832,13 @@ function ContinentBuilder.Build(ctx)
 				transitionCount += 1
 				local mix = HCOLOR[t.a]:Lerp(HCOLOR[t.b], 0.5)
 				local size = rng:NextNumber(3, 7)
-				local boulder = newPart(continent, "Transition" .. transitionCount, Vector3.new(size * 1.3, size * 0.8, size),
+				newPart(continent, "Transition" .. transitionCount, Vector3.new(size * 1.3, size * 0.8, size),
 					CFrame.new(pos + Vector3.new(0, size * 0.3, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6), 0), mix:Lerp(rock, 0.4), {
-						Material = Enum.Material.Rock, CastShadow = false,
+						Material = Enum.Material.SmoothPlastic, CastShadow = false,
 					})
-				local mesh = Instance.new("SpecialMesh")
-				mesh.MeshType = Enum.MeshType.Sphere
-				mesh.Parent = boulder
 				newPart(decor, "TransitionShrub" .. transitionCount, Vector3.new(size, size * 0.6, size),
 					CFrame.new(pos + Vector3.new(size * 0.7, size * 0.25, 0)), HCOLOR[t.b]:Lerp(grass, 0.5), {
-						Shape = Enum.PartType.Ball, Material = Enum.Material.Grass, CanCollide = false, CastShadow = false,
+						Material = Enum.Material.SmoothPlastic, CanCollide = false, CastShadow = false,
 					})
 			end
 		end
@@ -867,7 +906,9 @@ function ContinentBuilder.Build(ctx)
 		return true
 	end
 	local masses = 0
-	for _, ringDef in { { 0.62, 0.96, UP - 62, 26, 70, 110 }, { 0.22, 0.58, UP - 74, 18, 60, 95 } } do
+	for _, ringDef in { -- v2.0: three denser rings so the terrain plate is screened from below
+		{ 0.62, 0.98, UP - 62, 46, 70, 110 }, { 0.28, 0.64, UP - 74, 34, 60, 95 }, { 0.08, 0.32, UP - 84, 14, 50, 80 },
+	} do
 		local f0, f1, y, count, wMin, wMax = ringDef[1], ringDef[2], ringDef[3], ringDef[4], ringDef[5], ringDef[6]
 		for i = 1, count do
 			for _ = 1, 8 do
@@ -885,12 +926,12 @@ function ContinentBuilder.Build(ctx)
 		end
 	end
 	-- haze: big, very faint, flat-ish veils + slow drifting fog particles
-	for i = 0, 15 do
-		local deg = i * 22.5 + rng:NextNumber(-5, 5)
+	for i = 0, 23 do
+		local deg = i * 15 + rng:NextNumber(-4, 4)
 		local r = edgeAt(deg) * rng:NextNumber(0.35, 0.95)
 		local w = rng:NextNumber(180, 260)
 		lobe(underHaze, "Veil" .. i, Vector3.new(w, 18, w * 0.7), CFrame.new(polar(r, deg, UP - 100 + rng:NextNumber(-4, 4))) * CFrame.Angles(0, rng:NextNumber(0, 3), 0),
-			Color3.fromRGB(228, 234, 246), 0.8)
+			Color3.fromRGB(228, 234, 246), 0.62)
 	end
 	for i = 0, 11 do
 		local deg = i * 30 + 15

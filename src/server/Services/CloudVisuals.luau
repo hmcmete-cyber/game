@@ -218,7 +218,15 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 	local rng = Random.new()
 	local mirror = rng:NextNumber() < 0.5 and -1 or 1
 	local center
-	local layout = shapeFor(def)
+	-- v2.0 coherence pass: every family is pulled together (offsets x0.72)
+	-- and sits on one wide soft base lobe, so lobes always overlap into ONE
+	-- cloud mass instead of separate floating balls
+	local layout = { shapeFor(def)[1], { Vector3.new(0, -0.08, 0), Vector3.new(0.86, 0.4, 0.64), 0.9 } }
+	for i, e in shapeFor(def) do
+		if i > 1 then
+			table.insert(layout, { e[1] * 0.72, e[2] * 1.08, e[3] })
+		end
+	end
 	for i, puff in layout do
 		local jitter = Vector3.new(rng:NextNumber(-0.04, 0.04), rng:NextNumber(-0.03, 0.03), rng:NextNumber(-0.04, 0.04))
 		local offset = (Vector3.new(puff[1].X * mirror, puff[1].Y, puff[1].Z) + jitter) * d

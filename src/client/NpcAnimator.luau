@@ -51,7 +51,8 @@ local function bubble(model: Model, message: string)
 	-- v1.7: the stall canopy sits ~4.5 studs above the head, so the bubble
 	-- floats IN FRONT of the vendor (toward the customer), just above head
 	-- height, and is drawn on top so the roof can never cut it.
-	gui.StudsOffsetWorldSpace = (head :: BasePart).CFrame.LookVector * 4.5 + Vector3.new(0, 1.6, 0)
+	-- v2.0: in clear sky above the name tag (which sits above the roof)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, 10.5, 0)
 	gui.AlwaysOnTop = true
 	gui.LightInfluence = 0
 	gui.MaxDistance = 40
@@ -77,8 +78,8 @@ local function bubble(model: Model, message: string)
 end
 
 local GREETINGS = {
-	Tayron = "Hey %s! Need some cloud gear?",
-	Aurelius = "Welcome, %s. Ready to grow stronger?",
+	Tayron = "Hi %s! Need gear?",
+	Aurelius = "Hi %s! Get stronger?",
 }
 
 local function joint(model: Model, part: string, name: string): Motor6D?

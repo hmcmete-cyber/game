@@ -22,6 +22,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local Movement = {}
+local PlayerAnimator = require(script.Parent:WaitForChild("PlayerAnimator"))
 
 local player = Players.LocalPlayer
 local onIceRoad = false
@@ -246,7 +247,26 @@ end
 --        DownSpeed, braking near the bottom, released when you touch ground
 -- The latch only clears after you leave the column, so there is no flip-flop
 -- at the boundary and no second launch; after landing you walk out to reset.
+local awaitLanding: (Humanoid, string) -> ()
 local airMode: string? = nil
+local diving = false
+
+-- play `anim` the moment the humanoid touches ground again (max 4 s)
+awaitLanding = function(hum: Humanoid, anim: string)
+	task.spawn(function()
+		local t0 = os.clock()
+		while os.clock() - t0 < 4 and hum.Parent and hum.FloorMaterial == Enum.Material.Air do
+			task.wait()
+		end
+		if hum.Parent and hum.Health > 0 then
+			PlayerAnimator.Play(anim)
+		end
+	end)
+end
+
+function Movement.AirMode(): string?
+	return airMode
+end
 
 updateAir = function(root: BasePart, hum: Humanoid)
 	local column = workspace:GetPartBoundsInBox(root.CFrame, Vector3.new(2, 2, 2), airParams)[1]
@@ -256,6 +276,10 @@ updateAir = function(root: BasePart, hum: Humanoid)
 		if not column then
 			launchedFrom = nil
 			airMode = nil
+			if diving then
+				diving = false
+				PlayerAnimator.Stop("UpdraftDive")
+			end
 		end
 		return
 	end
@@ -288,7 +312,13 @@ updateAir = function(root: BasePart, hum: Humanoid)
 			lv.Enabled = false
 			launchedFrom = column -- landed: no re-lift until you step out
 			root.AssemblyLinearVelocity = Vector3.new(0, math.max(root.AssemblyLinearVelocity.Y, -8), 0)
+			PlayerAnimator.Stop("UpdraftDive")
+			awaitLanding(hum, "UpdraftDropLand")
 			return
+		end
+		if not diving then
+			diving = true
+			PlayerAnimator.Play("UpdraftDive")
 		end
 		local speed = column:GetAttribute("DownSpeed") or 70
 		local down = height < 24 and math.max(10, speed * height / 24) or speed -- brake near the floor
@@ -301,7 +331,11 @@ updateAir = function(root: BasePart, hum: Humanoid)
 	end
 
 	if exitHeight and typeof(target) == "Vector3" and root.Position.Y >= exitHeight then
-		-- Ballistic launch: reach `target` in exactly T seconds under gravity
+		-- Ballistic launch: reach `target` in exactly T seconds under gravity.
+		-- v2.0: a Humanoid in the air pulls its sideways speed back toward
+		-- walking speed, which ate the launch and dropped players back into
+		-- the hole. A Plane LinearVelocity now holds the sideways speed for
+		-- the whole flight, then lets go.
 		local T = column:GetAttribute("LaunchTime") or 0.9
 		local g = workspace.Gravity
 		local d = target - root.Position
@@ -310,6 +344,22 @@ updateAir = function(root: BasePart, hum: Humanoid)
 		launchedFrom = column
 		root.AssemblyLinearVelocity = v
 		hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		local att = root:FindFirstChild("RootAttachment") or Instance.new("Attachment", root)
+		local carry = Instance.new("LinearVelocity")
+		carry.Name = "LaunchCarry"
+		carry.Attachment0 = att :: Attachment
+		carry.RelativeTo = Enum.ActuatorRelativeTo.World
+		carry.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+		carry.PrimaryTangentAxis = Vector3.xAxis
+		carry.SecondaryTangentAxis = Vector3.zAxis
+		carry.PlaneVelocity = Vector2.new(v.X, v.Z)
+		carry.MaxForce = 60000
+		carry.Parent = root
+		task.delay(T, function()
+			carry:Destroy()
+		end)
+		PlayerAnimator.Play("UpdraftLaunch")
+		awaitLanding(hum, "UpdraftLand")
 		return
 	end
 

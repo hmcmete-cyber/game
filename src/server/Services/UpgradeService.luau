@@ -46,19 +46,19 @@ local function buy(player: Player, id: unknown)
 	end
 	local level = lv[id] or 0
 	if level >= def.MaxLevel then
-		Remotes.Hint:FireClient(player, `{def.DisplayName} is already maxed`, 2)
+		Remotes.Hint:FireClient(player, `Max level!`, 2)
 		return
 	end
 	local cost = Upgrades.Cost(id :: string, level)
 	if d.Coins < cost then
-		Remotes.Hint:FireClient(player, `Need {cost} coins for {def.DisplayName}`, 2)
+		Remotes.Hint:FireClient(player, `Need {cost} coins`, 2)
 		return
 	end
 	d.Coins -= cost
 	lv[id] = level + 1
 	DataService.Sync(player)
 	UpgradeService.Sync(player)
-	Remotes.Hint:FireClient(player, `{def.DisplayName} upgraded to level {level + 1}!`, 3)
+	Remotes.Hint:FireClient(player, `Upgraded!`, 3)
 end
 
 function UpgradeService.OnPlayerAdded(player: Player)

@@ -46,57 +46,89 @@ local function weldTo(part: BasePart, to: BasePart, offset: CFrame, model: Model
 	part.Parent = model
 end
 
+local function block(model: Model, to: BasePart, name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material?)
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Size = size
+	p.Color = color
+	p.Material = material or Enum.Material.SmoothPlastic
+	p.CastShadow = false
+	weldTo(p, to, offset, model)
+	return p
+end
+
+-- v2.0 blocky vendor outfits (chunky, readable silhouettes, no meshes)
+local OUTFIT = {
+	-- Tayron: cloud-gear tinkerer — square cap with brim, goggles, apron,
+	-- backpack crate full of glowing cloud jars
+	Tayron = function(model: Model, head: BasePart, torso: BasePart)
+		local blue, white = Color3.fromRGB(90, 150, 240), Color3.fromRGB(250, 250, 255)
+		block(model, head, "Cap", Vector3.new(1.35, 0.55, 1.35), CFrame.new(0, 0.85, 0), blue)
+		block(model, head, "CapBrim", Vector3.new(1.35, 0.15, 0.6), CFrame.new(0, 0.62, -0.85), blue)
+		block(model, head, "GogglesBand", Vector3.new(1.3, 0.2, 1.3), CFrame.new(0, 0.45, 0), Color3.fromRGB(50, 50, 60))
+		block(model, head, "LensL", Vector3.new(0.35, 0.3, 0.12), CFrame.new(-0.28, 0.45, -0.66), Color3.fromRGB(150, 230, 255), Enum.Material.Neon)
+		block(model, head, "LensR", Vector3.new(0.35, 0.3, 0.12), CFrame.new(0.28, 0.45, -0.66), Color3.fromRGB(150, 230, 255), Enum.Material.Neon)
+		block(model, torso, "Apron", Vector3.new(1.7, 1.5, 0.15), CFrame.new(0, -0.3, -0.56), white)
+		block(model, torso, "Pocket", Vector3.new(0.7, 0.45, 0.17), CFrame.new(0, -0.55, -0.6), blue)
+		block(model, torso, "Crate", Vector3.new(1.6, 1.4, 0.9), CFrame.new(0, 0.1, 0.95), Color3.fromRGB(160, 110, 70), Enum.Material.WoodPlanks)
+		for i = -1, 1 do
+			block(model, torso, "Jar" .. (i + 2), Vector3.new(0.35, 0.5, 0.35), CFrame.new(i * 0.45, 1.0, 0.95), Color3.fromRGB(170, 235, 255), Enum.Material.Neon)
+		end
+	end,
+	-- Aurelius: royal upgrade master — square crown with prongs, cape, gold belt
+	Aurelius = function(model: Model, head: BasePart, torso: BasePart)
+		local gold, purple = Color3.fromRGB(255, 205, 80), Color3.fromRGB(130, 70, 190)
+		block(model, head, "CrownBase", Vector3.new(1.35, 0.35, 1.35), CFrame.new(0, 0.75, 0), gold, Enum.Material.SmoothPlastic)
+		for i, off in { Vector3.new(-0.5, 1.05, -0.5), Vector3.new(0.5, 1.05, -0.5), Vector3.new(-0.5, 1.05, 0.5), Vector3.new(0.5, 1.05, 0.5) } do
+			block(model, head, "Prong" .. i, Vector3.new(0.3, 0.35, 0.3), CFrame.new(off), gold)
+		end
+		block(model, head, "Gem", Vector3.new(0.3, 0.3, 0.12), CFrame.new(0, 0.78, -0.7), Color3.fromRGB(255, 80, 140), Enum.Material.Neon)
+		block(model, torso, "Cape", Vector3.new(1.9, 2.6, 0.18), CFrame.new(0, -0.6, 0.6), purple, Enum.Material.Fabric)
+		block(model, torso, "CapeTrim", Vector3.new(1.95, 0.22, 0.2), CFrame.new(0, 0.62, 0.62), gold)
+		block(model, torso, "Belt", Vector3.new(2.05, 0.3, 1.1), CFrame.new(0, -0.75, 0), gold)
+	end,
+}
+
 local function decorate(model: Model, look)
 	local torso = model:FindFirstChild("UpperTorso") :: BasePart
 	local head = model:FindFirstChild("Head") :: BasePart
-	if torso then
-		local apron = Instance.new("Part")
-		apron.Name = "Apron"
-		apron.Size = Vector3.new(1.6, 1.4, 0.15)
-		apron.Color = Color3.fromRGB(255, 252, 245)
-		apron.Material = Enum.Material.Fabric
-		weldTo(apron, torso, CFrame.new(0, -0.3, -0.55), model)
+	if torso and head and OUTFIT[model.Name] then
+		OUTFIT[model.Name](model, head, torso)
 	end
 	if head then
-		-- puffy hat: white cloud for Tayron, golden crown-cloud for Aurelius
-		for i, puff in { { Vector3.new(0, 0.85, 0), Vector3.new(1.8, 0.8, 1.6) }, { Vector3.new(0.5, 1.1, 0.1), Vector3.new(1, 0.7, 1) }, { Vector3.new(-0.45, 1.05, -0.1), Vector3.new(0.9, 0.6, 0.9) } } do
-			local p = Instance.new("Part")
-			p.Name = "HatPuff" .. i
-			p.Size = puff[2]
-			p.Color = look.Hat
-			p.Material = Enum.Material.SmoothPlastic
-			local mesh = Instance.new("SpecialMesh")
-			mesh.MeshType = Enum.MeshType.Sphere
-			mesh.Parent = p
-			weldTo(p, head, CFrame.new(puff[1]), model)
-		end
-
+		-- short name tag in clear sky ABOVE the stall roof (roof ~10 studs up,
+		-- tag ~11.5): dark rounded plate, big name, one small word
 		local gui = Instance.new("BillboardGui")
 		gui.Name = "NameTag"
-		gui.Size = UDim2.fromOffset(200, 50)
-		gui.StudsOffset = Vector3.new(0, 2.2, 0) -- stays under the stall canopy
-		gui.AlwaysOnTop = true -- never clipped by the roof
+		gui.Size = UDim2.fromOffset(150, 46)
+		gui.StudsOffset = Vector3.new(0, 7, 0)
+		gui.AlwaysOnTop = true
 		gui.LightInfluence = 0
-		gui.MaxDistance = 45
+		gui.MaxDistance = 60
+		local plate = Instance.new("Frame")
+		plate.Size = UDim2.fromScale(1, 1)
+		plate.BackgroundColor3 = Color3.fromRGB(16, 27, 48)
+		plate.BackgroundTransparency = 0.15
+		plate.Parent = gui
+		Instance.new("UICorner", plate).CornerRadius = UDim.new(0, 12)
 		local name = Instance.new("TextLabel")
-		name.Size = UDim2.new(1, 0, 0.6, 0)
+		name.Size = UDim2.new(1, -10, 0.62, 0)
+		name.Position = UDim2.fromOffset(5, 2)
 		name.BackgroundTransparency = 1
 		name.Font = Enum.Font.FredokaOne
 		name.TextScaled = true
 		name.Text = model.Name
 		name.TextColor3 = Color3.new(1, 1, 1)
-		name.TextStrokeTransparency = 0.3
-		name.Parent = gui
+		name.Parent = plate
 		local role = Instance.new("TextLabel")
 		role.Position = UDim2.fromScale(0, 0.6)
-		role.Size = UDim2.new(1, 0, 0.4, 0)
+		role.Size = UDim2.new(1, 0, 0.36, 0)
 		role.BackgroundTransparency = 1
 		role.Font = Enum.Font.GothamBold
 		role.TextScaled = true
-		role.Text = look.Title
+		role.Text = look.Shop == "Items" and "SHOP" or "UPGRADES"
 		role.TextColor3 = look.TitleColor
-		role.TextStrokeTransparency = 0.4
-		role.Parent = gui
+		role.Parent = plate
 		gui.Parent = head
 	end
 end

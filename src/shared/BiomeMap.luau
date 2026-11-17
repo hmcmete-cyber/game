@@ -95,11 +95,11 @@ end
 BiomeMap.Zones = {
 	Heart = { ZoneName = "Sky Heart", ZoneColor = Color3.fromRGB(190, 235, 255), Biome = "Plateau" },
 	Plateau = { ZoneName = "Plateau Meadows", ZoneColor = Color3.fromRGB(150, 230, 150), Biome = "Plateau" },
-	Mountains = { ZoneName = "Mountains", ZoneColor = Color3.fromRGB(210, 220, 235), Biome = "Mountains", Warning = "Icy ledges up high - Frost perks help" },
-	Mushroom = { ZoneName = "Mushroom Plateaus", ZoneColor = Color3.fromRGB(230, 150, 220), Biome = "Mushroom", Warning = "Climb the caps - they shelter you from acid rain" },
-	Marsh = { ZoneName = "Storm Marshes", ZoneColor = Color3.fromRGB(140, 190, 170), Biome = "Marsh", Warning = "Electric pools and lightning fields!" },
-	Canyon = { ZoneName = "Crystal Canyons", ZoneColor = Color3.fromRGB(190, 140, 255), Biome = "Canyon", Warning = "Pits drop to the death clouds - watch your step!" },
-	Volcanic = { ZoneName = "Volcanic Caldera", ZoneColor = Color3.fromRGB(255, 140, 90), Biome = "Volcanic", Warning = "Lava burns! Fire perks make you immune" },
+	Mountains = { ZoneName = "Mountains", ZoneColor = Color3.fromRGB(210, 220, 235), Biome = "Mountains", Warning = "Slippery ice!" },
+	Mushroom = { ZoneName = "Mushroom Plateaus", ZoneColor = Color3.fromRGB(230, 150, 220), Biome = "Mushroom", Warning = "Climb the mushrooms!" },
+	Marsh = { ZoneName = "Storm Marshes", ZoneColor = Color3.fromRGB(140, 190, 170), Biome = "Marsh", Warning = "Zappy water!" },
+	Canyon = { ZoneName = "Crystal Canyons", ZoneColor = Color3.fromRGB(190, 140, 255), Biome = "Canyon", Warning = "Watch the holes!" },
+	Volcanic = { ZoneName = "Volcanic Caldera", ZoneColor = Color3.fromRGB(255, 140, 90), Biome = "Volcanic", Warning = "Hot lava!" },
 	Coast = { ZoneName = "Coast", ZoneColor = Color3.fromRGB(255, 225, 160), Biome = "Coast" },
 }
 

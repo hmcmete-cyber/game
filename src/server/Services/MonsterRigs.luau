@@ -219,7 +219,9 @@ BUILD.Smoldlet = function(s)
 	add(r, "Body", "HumanoidRootPart", V(4.2, 3.4, 4), V(0, 0.8, 0), V(0, 0, 0), coal, { Role = "body", Shape = "Ball", Material = M.Basalt })
 	add(r, "Crack1", "Body", V(0.25, 2.6, 0.2), V(-0.8, 0, -1.95), V(0, 0, 0), ember, { Material = M.Neon, Rot = A(0, 0, rad(20)) })
 	add(r, "Crack2", "Body", V(0.25, 2, 0.2), V(0.9, 0.2, -1.9), V(0, 0, 0), ember, { Material = M.Neon, Rot = A(0, 0, rad(-25)) })
-	add(r, "Head", "Body", V(2.6, 0.3, 0.2), V(0, 0.6, -2), V(0, 0, 0), ember, { Role = "head", Material = M.Neon, Glow = ember })
+	add(r, "Head", "Body", V(2.6, 0.3, 0.2), V(0, -0.2, -2), V(0, 0, 0), ember, { Role = "head", Material = M.Neon, Glow = ember })
+	add(r, "EyeL", "Body", V(0.6, 0.7, 0.3), V(-0.75, 0.6, -1.9), V(0, 0, 0), ember, {})
+	add(r, "EyeR", "Body", V(0.6, 0.7, 0.3), V(0.75, 0.6, -1.9), V(0, 0, 0), ember, {})
 	add(r, "FootL", "Body", V(1.2, 1, 1.4), V(-1.1, -1.6, 0), V(0, 0.5, 0), coal, { Role = "legA" })
 	add(r, "FootR", "Body", V(1.2, 1, 1.4), V(1.1, -1.6, 0), V(0, 0.5, 0), coal, { Role = "legB" })
 	local flame = add(r, "Flame", "Body", V(1.4, 1.4, 1.4), V(0, 1.9, 0), V(0, 0, 0), ember, { Shape = "Ball", Material = M.Neon, Role = "tail" })
@@ -314,6 +316,8 @@ BUILD.Gulpvine = function(s)
 	add(r, "StemVein", "Stem", V(0.2, 2.8, 0.2), V(0, 0, -0.62), V(0, 0, 0), volt, { Material = M.Neon })
 	add(r, "Head", "Stem", V(3.4, 1.2, 3.4), V(0, 1.6, 0), V(0, -0.6, 1.2), maw, { Role = "jawTop", Material = M.Slate })
 	add(r, "Jaw", "Stem", V(3.2, 1, 3.2), V(0, 1.4, 0), V(0, 0.5, 1.1), jaw, { Role = "jawBot", Material = M.Slate })
+	add(r, "EyeL", "Head", V(0.5, 0.5, 0.3), V(-0.8, 0.75, -1.2), V(0, 0, 0), volt, {})
+	add(r, "EyeR", "Head", V(0.5, 0.5, 0.3), V(0.8, 0.75, -1.2), V(0, 0, 0), volt, {})
 	add(r, "MawVeinT", "Head", V(3, 0.15, 0.2), V(0, 0.62, -0.6), V(0, 0, 0), volt, { Material = M.Neon })
 	add(r, "MawVeinB", "Jaw", V(2.8, 0.15, 0.2), V(0, -0.52, -0.6), V(0, 0, 0), volt, { Material = M.Neon, Glow = volt })
 	for i = 1, 4 do
@@ -383,8 +387,38 @@ BUILD.Shroomling = function(s)
 	return r
 end
 
+-- v2.0 friendly face pass (Steal-a-Brainrot / Steal-an-Egg readability):
+-- every EyeL/EyeR becomes a big white block eye with a black pupil block,
+-- so all monsters share one cute, cartoony face language
+local function cartoonEyes(r)
+	for _, name in { "EyeL", "EyeR" } do
+		local eye = r.Parts[name]
+		if eye then
+			eye.Size = Vector3.new(math.max(eye.Size.X, 0.55 * r.Scale), math.max(eye.Size.Y, 0.6 * r.Scale), eye.Size.Z) * 1.25
+			eye.Color = Color3.fromRGB(255, 255, 255)
+			eye.Material = Enum.Material.SmoothPlastic
+			local pupil = Instance.new("Part")
+			pupil.Name = name .. "Pupil"
+			pupil.Size = Vector3.new(eye.Size.X * 0.45, eye.Size.Y * 0.5, 0.1)
+			pupil.Color = Color3.fromRGB(20, 20, 28)
+			pupil.Material = Enum.Material.SmoothPlastic
+			pupil.CanCollide = false
+			pupil.CanTouch = false
+			pupil.Massless = true
+			pupil.CastShadow = false
+			pupil.CFrame = eye.CFrame * CFrame.new(0, -eye.Size.Y * 0.08, -eye.Size.Z / 2 - 0.04)
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = eye
+			weld.Part1 = pupil
+			weld.Parent = pupil
+			pupil.Parent = r.Model
+		end
+	end
+end
+
 function MonsterRigs.Build(typeName: string, scale: number): Model
 	local r = BUILD[typeName](scale)
+	cartoonEyes(r)
 	local hum = Instance.new("Humanoid")
 	hum.RigType = Enum.HumanoidRigType.R15
 	hum.HipHeight = r.Hip * scale

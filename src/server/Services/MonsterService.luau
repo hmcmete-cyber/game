@@ -151,9 +151,9 @@ local function onDeath(info)
 			local xp = math.floor(info.Def.XP * share)
 			if xp > 0 then
 				local levelUp = DataService.AddXP(p, xp)
-				Remotes.Hint:FireClient(p, `Defeated {info.Type}! +{xp} XP`, 3)
+				Remotes.Hint:FireClient(p, `+{xp} XP!`, 3)
 				if levelUp then
-					Remotes.Hint:FireClient(p, `LEVEL UP! You are now level {levelUp}`, 4)
+					Remotes.Hint:FireClient(p, `Level {levelUp}!`, 4)
 				end
 			end
 		end

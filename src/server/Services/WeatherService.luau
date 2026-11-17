@@ -645,17 +645,17 @@ local function deliver(player: Player, c, nest: BasePart)
 		reward *= 2
 		addCoins(player, reward)
 		burstAt(nest.Position + Vector3.new(0, 2, 0), Weather.ShinyColor, 40)
-		hint(player, `Vault full — sold {def.DisplayName} for {reward} coins!`, 3)
+		hint(player, `Vault full! Sold for {reward} coins`, 3)
 	end
 	-- XP + Economic cloud bonuses
 	local levelUp = DataService.AddXP(player, def.XP * (c.Shiny and 2 or 1))
 	if levelUp then
-		hint(player, `LEVEL UP! You are now level {levelUp}`, 4)
+		hint(player, `Level {levelUp}!`, 4)
 	end
 	if def.ItemChance > 0 and math.random() < def.ItemChance then
 		local itemId = InventoryService.GiveRandomItem(player)
 		if itemId then
-			hint(player, `Bonus drop from {def.DisplayName}: {itemId}!`, 3)
+			hint(player, `Bonus: {itemId}!`, 3)
 		end
 	end
 	Remotes.Delivered:FireClient(player, reward, c.Type, c.Shiny, nest.Position)
@@ -680,14 +680,14 @@ local function catch(player: Player, sphere: BasePart)
 	sphere.Size *= 0.75
 	startCarry(player, root, sphere, info.Type, info.Shiny, nil)
 
-	hint(player, `You caught a {def.DisplayName}! Bring it to your base — follow the beam`, 5)
+	hint(player, `Got it! Follow the arrow home`, 5)
 	if info.Type == "Mythic" then
-		hintAll(`{player.DisplayName} CAUGHT THE MYTHIC STORM CLOUD!`, 8)
+		hintAll(`{player.DisplayName} got a MYTHIC cloud!`, 8)
 	else
 		announceRare(`{player.DisplayName} has a {string.upper(def.DisplayName)}!`, 4, def.Tier)
 	end
 	if info.Shiny then
-		announceRare(`* {player.DisplayName} caught a SHINY {def.DisplayName}! *`, 5, math.max(def.Tier, Config.AnnounceTier))
+		announceRare(`{player.DisplayName} got a SHINY cloud!`, 5, math.max(def.Tier, Config.AnnounceTier))
 	end
 end
 
@@ -709,7 +709,7 @@ local function steal(thief: Player, root: BasePart, owner: Player, slot: number,
 
 	alarm(owner, thief)
 	Remotes.Stolen:FireAllClients(thief.DisplayName, owner.DisplayName, def.DisplayName)
-	hint(thief, `You stole {owner.DisplayName}'s {def.DisplayName}! Run home — if they tag you, it flies back!`, 5)
+	hint(thief, `Stolen! Run home!`, 5)
 end
 
 -- Rival holds E on a full vault
@@ -722,7 +722,7 @@ onStealPrompt = function(player: Player, owner: Player, vault: BasePart)
 		return
 	end
 	if BaseLock.IsLocked(roof) then
-		hint(player, "This base is shielded!", 2)
+		hint(player, "Locked!", 2)
 		return
 	end
 	local root = getRoot(player)
@@ -745,13 +745,13 @@ onPerkPrompt = function(player: Player, owner: Player, vault: BasePart)
 		return
 	end
 	if not InventoryService.EquipPerk(player, entry.Type, entry.Shiny == true) then
-		hint(player, `Perk slots full ({Config.PerkSlots}) — return one to your vault first`, 3)
+		hint(player, `Perk slots full`, 3)
 		return
 	end
 	slots[slot] = false
 	refreshVaults(owner)
 	burstAt(vault.Position, def.ParticleColor, 30)
-	hint(player, `* {def.Perk.Name} active — {def.Perk.Desc}. If you die, this cloud is GONE!`, 5)
+	hint(player, `{def.Perk.Name} on!`, 5)
 end
 
 -- Perks inventory -> back into the vault (called by InventoryService)
@@ -990,7 +990,7 @@ local function spawnLoop()
 				if typeName then
 					spawnWild(spot, typeName, math.random() < Weather.ShinyChance)
 					local def = Weather.Types[typeName]
-					announceRare(`A {string.upper(def.Rarity)} {def.DisplayName} appeared in the {spot:GetAttribute("Biome") or "sky"}!`, 5, def.Tier)
+					announceRare(`{def.Rarity} cloud in the {spot:GetAttribute("Biome") or "sky"}!`, 5, def.Tier)
 				end
 			end
 		end
@@ -1014,9 +1014,9 @@ local function altarLoop()
 			spawnWild(altar, typeName, not mythic and math.random() < Weather.ShinyChance * 5)
 			burstAt(altar.Position, Weather.Types[typeName].ParticleColor, 60)
 			if mythic then
-				hintAll("A MYTHIC STORM CLOUD has appeared at a Cloud Altar!", 10)
+				hintAll("A MYTHIC cloud is at an altar!", 10)
 			else
-				announceRare(`* A {Weather.Types[typeName].DisplayName} rose from a Cloud Altar!`, 5, Weather.Types[typeName].Tier)
+				announceRare(`Rare cloud at an altar!`, 5, Weather.Types[typeName].Tier)
 			end
 		end
 	end
@@ -1239,8 +1239,8 @@ local function mainLoop()
 					burstAt(root.Position + Vector3.new(0, 3, 0), THIEF_COLOR, 30)
 					local victim = c.Victim
 					clearCarry(player, true)
-					hint(player, `{victim.DisplayName} caught you! The storm flew back.`, 4)
-					hint(victim, `You caught {player.DisplayName}! Storm recovered`, 4)
+					hint(player, `Caught! The cloud went back.`, 4)
+					hint(victim, `Got your cloud back!`, 4)
 					continue
 				end
 			end
@@ -1319,9 +1319,9 @@ function WeatherService.OnPlayerAdded(player: Player)
 			end
 			local data = DataService.Get(player)
 			if data and data.Delivered == 0 then
-				hint(player, "Jump into the UPDRAFT in the middle of the hub to reach the clouds!", 8)
+				hint(player, "Jump in the wind to fly up!", 8)
 			else
-				hint(player, "Catch storms, fill your vaults, raid other bases!", 5)
+				hint(player, "Catch clouds, bring them home!", 5)
 			end
 		end)
 	end
@@ -1376,8 +1376,8 @@ function WeatherService.Start(mapService, dataService, remotes)
 		if pos then
 			burstAt(pos, THIEF_COLOR, 35)
 		end
-		hint(target, `{shooter.DisplayName} lasered you - the cloud flew back home!`, 4)
-		hint(shooter, "Direct hit! Your cloud is back in your vault.", 4)
+		hint(target, `Zapped! The cloud flew home.`, 4)
+		hint(shooter, "Hit! Your cloud is back.", 4)
 		return true
 	end
 	setupStorm()

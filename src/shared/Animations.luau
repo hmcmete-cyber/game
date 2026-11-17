@@ -17,4 +17,9 @@ return {
 	Throw = "rbxassetid://70471743222633",
 	Knocked = "rbxassetid://104512508038685",
 	Ability = "rbxassetid://86207575587524",
+	-- v2.0 directional updraft (not published yet -> built in Studio)
+	UpdraftLaunch = "",
+	UpdraftLand = "",
+	UpdraftDive = "",
+	UpdraftDropLand = "",
 }

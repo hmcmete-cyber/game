@@ -109,7 +109,7 @@ end
 local function meteorShower()
 	local biome = randomBiome()
 	workspace:SetAttribute("EventBiome", biome)
-	announce(`METEOR SHOWER over the {BIOME_NAMES[biome]}! Epic+ clouds are falling - go!`, 7)
+	announce(`Meteor shower! Rare clouds in the {BIOME_NAMES[biome]}!`, 7)
 	local spots = spawnsIn(biome)
 	for i = 1, Config.MeteorClouds do
 		if #spots == 0 then
@@ -119,7 +119,7 @@ local function meteorShower()
 		task.spawn(meteor, target)
 		task.wait(math.random(3, 7))
 		if i == 1 then
-			announce("Meteors are hitting - rare clouds are landing!", 3)
+			announce("Meteors landing!", 3)
 		end
 	end
 end
@@ -140,7 +140,7 @@ end
 local function acidRain()
 	local biome = randomBiome("Coast")
 	workspace:SetAttribute("EventBiome", biome)
-	announce(`ACID RAIN in the {BIOME_NAMES[biome]}! Find shelter - caps, caves, trees - or take damage!`, 7)
+	announce(`Acid rain in the {BIOME_NAMES[biome]}! Hide under something!`, 7)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.RespectCanCollide = false
@@ -178,7 +178,7 @@ local function acidRain()
 				hum:TakeDamage(Config.AcidDamage * (1 - (player:GetAttribute("DamageResist") or 0)))
 				if not warned[player] then
 					warned[player] = true
-					Remotes.Hint:FireClient(player, "The acid rain burns! Get under something!", 3)
+					Remotes.Hint:FireClient(player, "Ouch! Find a roof!", 3)
 				end
 			end
 		end
@@ -198,7 +198,7 @@ end
 
 local function fog()
 	workspace:SetAttribute("EventBiome", "")
-	announce("FOG BANK rolling in! You can barely see - stealing is FASTER. Guard your vaults!", 7)
+	announce("Fog! Stealing is faster - guard your clouds!", 7)
 	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
 	local before = atmosphere and { Density = atmosphere.Density, Haze = atmosphere.Haze, Offset = atmosphere.Offset }
 	if atmosphere then
@@ -242,7 +242,7 @@ function EventService.Run(name: string)
 		end
 		workspace:SetAttribute("Event", "")
 		workspace:SetAttribute("EventBiome", "")
-		announce("The skies calm down... for now.", 3)
+		announce("The sky is calm again.", 3)
 		running = false
 	end)
 	return true

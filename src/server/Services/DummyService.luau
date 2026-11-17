@@ -149,7 +149,7 @@ local function build()
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "HitDummyPrompt"
-	prompt.ActionText = "Hit dummy"
+	prompt.ActionText = "Hit"
 	prompt.ObjectText = "Test Dummy"
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = 12
@@ -202,10 +202,11 @@ function DummyService.Knock(dir: Vector3?): boolean
 			end)
 		end
 	end
+	-- v2.0: a small shove only (it used to be launched far away while still
+	-- rigid); the limbs fold and it settles next to its pad
 	local torso = (dummy :: Model):FindFirstChild("UpperTorso") :: BasePart?
-	r.AssemblyLinearVelocity = push * 28 + Vector3.new(0, 16, 0)
 	if torso then
-		torso:ApplyImpulse((push * 40 + Vector3.new(0, 20, 0)) * torso.AssemblyMass)
+		torso:ApplyImpulse((push * 9 + Vector3.new(0, 3, 0)) * torso:GetMass())
 	end
 	local ragdolled = rag ~= nil and #rag.Motors > 0
 
@@ -229,7 +230,7 @@ function DummyService.Knock(dir: Vector3?): boolean
 		local pass = detached and same and c.clouds == 1 and c.ropes == 1 and c.aligns == 1 and c.handAtts == 1 and c.targets == 1
 		local motorsBack = true
 		for _, m in (dummy :: Model):GetDescendants() do
-			if m:IsA("Motor6D") and not m.Enabled then
+			if (m:IsA("Motor6D") or m:IsA("AnimationConstraint")) and not m.Enabled and m.Name ~= "Root" then
 				motorsBack = false
 			end
 		end

@@ -172,7 +172,7 @@ function CombatService.Start(remotes, inventoryService, monsterService, dummySer
 	Players.PlayerAdded:Connect(function(p)
 		task.delay(12, function()
 			if p.Parent then
-				remotes.Hint:FireClient(p, "Monsters hunt cloud carriers! R = Gust Punch (Air Slam when jumping), T = Puff Shot", 6)
+				remotes.Hint:FireClient(p, "Monsters chase cloud carriers! R = punch, T = shoot", 6)
 			end
 		end)
 	end)

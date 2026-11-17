@@ -135,6 +135,31 @@ ANIMS = {
         (0.3, {RUA: (60, 0, 110), LUA: (60, 0, -110), UT: (8, 0, 0), H: (10, 0, 0)}),
         (0.6, {}),
     ]),
+    # v2.0 directional updraft feedback (UP exit vs DOWN ride look different)
+    "UpdraftLaunch": (False, "Action2", "Shooting OUT of the top of the updraft: arms thrust up, then a flying pose", [
+        (0.0, {RUA: (0, 0, 120), LUA: (0, 0, -120)}),
+        (0.15, {RUA: (0, 0, 170), LUA: (0, 0, -170), UT: (-8, 0, 0), LUL: (-8, 0, 0), RUL: (-8, 0, 0)}),
+        (0.45, {RUA: (150, 0, 15), LUA: (20, 0, -60), UT: (-20, 0, 0), H: (-15, 0, 0), LUL: (-20, 0, 0), RUL: (10, 0, 0), RLL: (-30, 0, 0)}),
+        (0.7, {RUA: (140, 0, 15), LUA: (20, 0, -60), UT: (-15, 0, 0), H: (-10, 0, 0), LUL: (-15, 0, 0), RUL: (5, 0, 0), RLL: (-25, 0, 0)}),
+    ]),
+    "UpdraftLand": (False, "Action2", "Light, bouncy landing on the Sky Heart after the upward launch", [
+        (0.0, {LT: ((0, 0, 0), (0, -0.7, 0)), LUL: (35, 0, 0), RUL: (35, 0, 0), LLL: (-55, 0, 0), RLL: (-55, 0, 0), RUA: (20, 0, 55), LUA: (20, 0, -55)}),
+        (0.25, {LT: ((0, 0, 0), (0, 0.2, 0)), RUA: (0, 0, 120), LUA: (0, 0, -120), H: (12, 0, 0)}),
+        (0.6, {}),
+    ]),
+    "UpdraftDive": (True, "Action", "Riding the updraft DOWN: pencil dive, arms straight up, legs together", [
+        (0.0, {RUA: (0, 0, 172), LUA: (0, 0, -172), H: (10, 0, 0), LUL: (0, 0, 3), RUL: (0, 0, -3), UT: (3, 0, 0)}),
+        (0.4, {RUA: (5, 0, 168), LUA: (-5, 0, -168), H: (14, 6, 0), LUL: (4, 0, 3), RUL: (-4, 0, -3), UT: (5, 4, 0)}),
+        (0.8, {RUA: (0, 0, 172), LUA: (0, 0, -172), H: (10, 0, 0), LUL: (0, 0, 3), RUL: (0, 0, -3), UT: (3, 0, 0)}),
+    ]),
+    "UpdraftDropLand": (False, "Action2", "Heavy hero landing at the hub after riding DOWN: knee + fist, then stand", [
+        (0.0, {LT: ((0, 0, 0), (0, -1.3, 0)), UT: (-20, 0, 0), RUL: (75, 0, 0), RLL: (-95, 0, 0), LUL: (-15, 0, 0), LLL: (-70, 0, 0),
+               RUA: (40, 0, 10), RLA: (10, 0, 0), LUA: (-10, 0, -50), H: (-15, 0, 0)}),
+        (0.45, {LT: ((0, 0, 0), (0, -1.1, 0)), UT: (-15, 0, 0), RUL: (70, 0, 0), RLL: (-90, 0, 0), LUL: (-10, 0, 0), LLL: (-60, 0, 0),
+                RUA: (35, 0, 10), LUA: (-10, 0, -45), H: (5, 0, 0)}),
+        (0.8, {}),
+    ]),
+
 }
 
 

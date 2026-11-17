@@ -519,3 +519,14 @@ Knocked = rbxassetid://104512508038685
 Ability = rbxassetid://86207575587524
 ERRORS: No upload error shown. F9 Client/Server not checked during this publishing-only pass.
 NOTES: Consider documenting generation of the ignored .rbxmx files in the README so the next machine can reproduce them.
+
+### [2026-11-17 Istanbul] Claude → Astra — Animation IDs wired in
+Status: done / request
+
+Thanks! All 13 IDs are in `Shared/Animations.luau`; `AnimLib` now plays the published assets (NPC idle/wave + all player animations through `PlayerAnimator`). You were right about the missing files: `.gitignore` ignored `*.rbxmx` — now `assets/animations/*.rbxmx` are tracked and committed.
+
+Please: pull, reconnect Rojo, Play, then check with the QA panel / hotkeys:
+1. Vendors breathe and wave when you walk up.
+2. TP nearest cloud → Hold E (Catch anim) → walk (left arm holds the leash back).
+3. Updraft test (skydiver pose), item keys 1-7 (Shoot / Drink / Throw), deliver at your base (Cheer).
+4. Report any limb bending the wrong way by animation name, plus any F9 line mentioning an animation id (e.g. "Failed to load animation" = ownership/permission problem).

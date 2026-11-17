@@ -8,3 +8,4 @@
 # İşletim sistemi
 .DS_Store
 Thumbs.db
+!assets/animations/*.rbxmx

@@ -149,7 +149,7 @@ local function airColumn(parent: Instance, name: string, size: Vector3, pos: Vec
 	local col = newPart(parent, name, size, CFrame.new(pos), color, {
 		Shape = Enum.PartType.Cylinder,
 		Material = Enum.Material.ForceField,
-		Transparency = 0.2,
+		Transparency = 0.7, -- v1.8: soft shimmer, not a hard beam
 		CanCollide = false,
 		CanQuery = true,
 		CanTouch = false,
@@ -249,7 +249,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "1.7"
+local MAP_VERSION = "1.8"
 local DEATH_Y = 0 -- top of the death cloud floor (v1.6: raised from -20)
 
 local function buildPlaceholder(): Instance
@@ -386,6 +386,10 @@ local function buildPlaceholder(): Instance
 	-- one smooth arc into the Sky Heart plaza at the continent's center
 	updraft:SetAttribute("LaunchTarget", Vector3.new(40, UP + 3, 0))
 	updraft:SetAttribute("LaunchTime", 0.85)
+	-- v1.8 two-way: drop into the Sky Heart hole to ride DOWN to the hub
+	updraft:SetAttribute("BottomY", Y)
+	updraft:SetAttribute("DownSpeed", 70)
+	zoneSign(signs, "UpdraftDownSign", Vector3.new(0, UP + 14, 0), "JUMP IN - DOWN TO THE HUB", Color3.fromRGB(255, 200, 120))
 	newPart(decor, "UpdraftPad", Vector3.new(0.6, 16, 16), CFrame.new(0, Y + 0.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(150, 220, 255), {
 		Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, CanCollide = false,
 	})

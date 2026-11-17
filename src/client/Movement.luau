@@ -234,6 +234,14 @@ local function getAirLift(root: BasePart): LinearVelocity
 	return lv
 end
 
+-- v1.8 DIRECTIONAL: the direction is latched once when you enter a column
+--   from BELOW (anywhere under ExitHeight-12)  -> "Up": ride up, one launch
+--   from ABOVE (dropping in near the top)      -> "Down": carried down at
+--        DownSpeed, braking near the bottom, released when you touch ground
+-- The latch only clears after you leave the column, so there is no flip-flop
+-- at the boundary and no second launch; after landing you walk out to reset.
+local airMode: string? = nil
+
 updateAir = function(root: BasePart, hum: Humanoid)
 	local column = workspace:GetPartBoundsInBox(root.CFrame, Vector3.new(2, 2, 2), airParams)[1]
 	local lv = getAirLift(root)
@@ -241,17 +249,50 @@ updateAir = function(root: BasePart, hum: Humanoid)
 		lv.Enabled = false
 		if not column then
 			launchedFrom = nil
+			airMode = nil
 		end
 		return
 	end
 	if launchedFrom == column then
-		lv.Enabled = false -- already launched out of this column
+		lv.Enabled = false -- already launched / landed in this column
 		return
 	end
 
 	local lift = column:GetAttribute("Lift") or 0
 	local exitHeight = column:GetAttribute("ExitHeight")
 	local target = column:GetAttribute("LaunchTarget")
+	local bottomY = column:GetAttribute("BottomY") or (column.Position.Y - column.Size.X / 2)
+
+	if airMode == nil then
+		local fromAbove = exitHeight ~= nil and root.Position.Y > exitHeight - 12 and root.AssemblyLinearVelocity.Y <= 2
+		airMode = fromAbove and "Down" or "Up"
+	end
+
+	-- keep riders centred in the column
+	local axis = column.Position
+	local toAxis = Vector3.new(axis.X - root.Position.X, 0, axis.Z - root.Position.Z)
+	local drift = toAxis * 2
+	if drift.Magnitude > 12 then
+		drift = drift.Unit * 12
+	end
+
+	if airMode == "Down" then
+		local height = root.Position.Y - bottomY
+		if height < 4 or (height < 10 and hum.FloorMaterial ~= Enum.Material.Air) then
+			lv.Enabled = false
+			launchedFrom = column -- landed: no re-lift until you step out
+			root.AssemblyLinearVelocity = Vector3.new(0, math.max(root.AssemblyLinearVelocity.Y, -8), 0)
+			return
+		end
+		local speed = column:GetAttribute("DownSpeed") or 70
+		local down = height < 24 and math.max(10, speed * height / 24) or speed -- brake near the floor
+		lv.VectorVelocity = Vector3.new(drift.X, -down, drift.Z)
+		lv.Enabled = true
+		if hum:GetState() ~= Enum.HumanoidStateType.Freefall then
+			hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		end
+		return
+	end
 
 	if exitHeight and typeof(target) == "Vector3" and root.Position.Y >= exitHeight then
 		-- Ballistic launch: reach `target` in exactly T seconds under gravity
@@ -266,13 +307,6 @@ updateAir = function(root: BasePart, hum: Humanoid)
 		return
 	end
 
-	-- Ride up, drifting toward the column's axis so you can't fall out
-	local axis = column.Position
-	local toAxis = Vector3.new(axis.X - root.Position.X, 0, axis.Z - root.Position.Z)
-	local drift = toAxis * 2
-	if drift.Magnitude > 12 then
-		drift = drift.Unit * 12
-	end
 	local push = Vector3.zero
 	local pushAbove = column:GetAttribute("PushAbove")
 	if pushAbove and root.Position.Y >= pushAbove then -- legacy columns

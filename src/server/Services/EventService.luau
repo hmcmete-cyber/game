@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 
 local EventService = {}
 
@@ -127,16 +128,8 @@ end
 -- Acid Rain
 ------------------------------------------------------------------------
 local function biomeUnder(root: BasePart, params: RaycastParams): string?
-	local hit = workspace:Raycast(root.Position, Vector3.new(0, -40, 0), params)
-	local p: Instance? = hit and hit.Instance
-	while p and p ~= workspace do
-		local b = p:GetAttribute("Biome")
-		if b then
-			return b
-		end
-		p = p.Parent
-	end
-	return nil
+	local info = BiomeMap.ZoneOfHit(workspace:Raycast(root.Position, Vector3.new(0, -40, 0), params))
+	return info and info.Biome or nil
 end
 
 local function sheltered(root: BasePart, params: RaycastParams): boolean

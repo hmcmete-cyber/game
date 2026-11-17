@@ -9,10 +9,9 @@
 --   Mythic    huge black-purple storm with all of the above
 --   Rain / Snow / Tornado: tinted puffs + drops / flakes / dust
 --
--- No balls: every cloud is an asymmetric stack of ellipsoids. Each visual
--- family has its own silhouette (SHAPES): heap, sheet, tiers, funnel, anvil,
--- ring, ribbon, hourglass, wings, crown, sun, spiral, coins, lumpy.
--- Legendary+ also get a halo ring (rarity cue).
+-- Every cloud is a stack of soft rounded lobes (ellipsoids). Each visual
+-- family arranges them differently (SHAPES): heap, bank, tiers, funnel,
+-- anvil, ring, ribbon, hourglass, wings, crown, sun, spiral, pile, lumpy.
 -- Clients animate each puff (breathing scale, per-type motion) in Effects.luau.
 --
 -- Returns the center Part ("Core"); every other piece is welded to it.
@@ -32,148 +31,115 @@ local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 --   body  medium lumps, offset to one side
 --   crown small bright tops
 -- Each entry: offset (in cloud widths), size (w, h, d in cloud widths), shade
-local LAYOUT = {
-	-- base
-	{ Vector3.new(0, -0.12, 0), Vector3.new(1.0, 0.32, 0.62), 0.9 },
-	{ Vector3.new(0.32, -0.1, 0.12), Vector3.new(0.55, 0.28, 0.5), 0.88 },
-	{ Vector3.new(-0.36, -0.11, -0.08), Vector3.new(0.5, 0.26, 0.46), 0.9 },
-	-- body
-	{ Vector3.new(-0.12, 0.06, 0.02), Vector3.new(0.58, 0.48, 0.5), 1 },
-	{ Vector3.new(0.2, 0.08, -0.06), Vector3.new(0.5, 0.44, 0.46), 1.02 },
-	{ Vector3.new(0.4, 0.0, 0.1), Vector3.new(0.34, 0.3, 0.34), 0.97 },
-	{ Vector3.new(-0.4, 0.0, 0.12), Vector3.new(0.3, 0.28, 0.32), 0.96 },
-	-- crown
-	{ Vector3.new(-0.02, 0.24, 0.0), Vector3.new(0.36, 0.32, 0.34), 1.06 },
-	{ Vector3.new(0.2, 0.2, 0.1), Vector3.new(0.26, 0.24, 0.26), 1.08 },
-}
-
--- v1.7: every visual family has its own SILHOUETTE (readable with effects off).
--- Entry 1 is the core. Same format as LAYOUT: offset, size (cloud widths), shade.
+-- v1.8: EVERY family is built only from rounded, soft lobes (no lobe is
+-- flatter than ~1.6:1), so each type reads as a cloud first; the families
+-- differ in how the lobes are arranged. Entry 1 is the core.
+-- Format: offset, size (in cloud widths), shade.
 local function V(x, y, z)
 	return Vector3.new(x, y, z)
 end
-local SHAPES = {
-	Cumulus = LAYOUT, -- tall cotton heap
-	-- Stratus: long, flat, layered sheet with a dark belly (rain)
-	Rain = {
-		{ V(0, 0, 0), V(1.25, 0.22, 0.7), 0.85 },
-		{ V(0.45, 0.02, 0.08), V(0.7, 0.2, 0.55), 0.88 },
-		{ V(-0.5, 0.01, -0.06), V(0.65, 0.2, 0.5), 0.87 },
-		{ V(0.05, 0.14, 0), V(0.9, 0.18, 0.5), 0.98 },
-		{ V(-0.25, 0.22, 0.05), V(0.5, 0.16, 0.36), 1.02 },
-		{ V(0.3, 0.21, -0.04), V(0.45, 0.15, 0.32), 1.0 },
-		{ V(0, -0.12, 0), V(1.0, 0.1, 0.55), 0.7 },
-	},
-	-- Tiered: three stacked flattening layers (snow / ice)
-	Snow = {
-		{ V(0, 0, 0), V(0.95, 0.24, 0.8), 0.92 },
-		{ V(0.05, 0.2, 0.02), V(0.72, 0.2, 0.62), 1.0 },
-		{ V(-0.03, 0.37, -0.02), V(0.5, 0.18, 0.44), 1.05 },
-		{ V(0.02, 0.52, 0), V(0.28, 0.16, 0.26), 1.1 },
-		{ V(0.42, -0.02, 0.15), V(0.3, 0.18, 0.3), 0.95 },
-		{ V(-0.42, -0.03, -0.12), V(0.3, 0.18, 0.3), 0.95 },
-	},
-	-- Funnel: wide top, spinning column narrowing downward
-	Tornado = {
-		{ V(0, 0, 0), V(0.95, 0.26, 0.95), 0.95 },
-		{ V(0.04, -0.2, 0), V(0.62, 0.24, 0.62), 0.92 },
-		{ V(0.08, -0.38, 0.03), V(0.42, 0.22, 0.42), 0.9 },
-		{ V(0.1, -0.54, 0.05), V(0.27, 0.2, 0.27), 0.88 },
-		{ V(0.1, -0.68, 0.06), V(0.15, 0.18, 0.15), 0.86 },
-		{ V(-0.2, 0.12, 0.1), V(0.5, 0.22, 0.45), 1.02 },
-	},
-	-- Anvil: tall dark column with a flat spreading top (storm)
-	Storm = {
-		{ V(0, 0, 0), V(0.62, 0.6, 0.58), 0.85 },
-		{ V(0, 0.38, 0), V(1.35, 0.18, 0.85), 1.0 },
-		{ V(0.5, 0.36, 0.1), V(0.5, 0.15, 0.45), 0.98 },
-		{ V(-0.55, 0.35, -0.08), V(0.45, 0.14, 0.4), 0.98 },
-		{ V(0.15, -0.3, 0.05), V(0.75, 0.24, 0.55), 0.75 },
-		{ V(-0.2, 0.12, 0.1), V(0.4, 0.4, 0.38), 0.9 },
-	},
-	-- Ring: core orb inside a ring of 8 lobes (cosmic)
-	Cosmic = (function()
-		local t = { { V(0, 0, 0), V(0.45, 0.45, 0.45), 1.1 } }
-		for k = 0, 7 do
-			local a = k / 8 * math.pi * 2
-			table.insert(t, { V(math.cos(a) * 0.5, math.sin(a * 2) * 0.04, math.sin(a) * 0.5), V(0.3, 0.2, 0.3), 0.95 + (k % 2) * 0.08 })
+local LAYOUT = { -- Cumulus: tall cotton heap
+	{ V(0, 0, 0), V(0.55, 0.42, 0.5), 0.92 },
+	{ V(0.34, -0.03, 0.1), V(0.46, 0.36, 0.42), 0.9 },
+	{ V(-0.36, -0.04, -0.06), V(0.44, 0.34, 0.4), 0.9 },
+	{ V(-0.12, 0.2, 0.02), V(0.48, 0.44, 0.44), 1.0 },
+	{ V(0.2, 0.22, -0.05), V(0.42, 0.4, 0.4), 1.02 },
+	{ V(0.42, 0.12, 0.08), V(0.3, 0.28, 0.3), 0.98 },
+	{ V(-0.42, 0.1, 0.1), V(0.28, 0.26, 0.28), 0.97 },
+	{ V(-0.02, 0.42, 0.0), V(0.34, 0.32, 0.32), 1.06 },
+	{ V(0.2, 0.38, 0.08), V(0.26, 0.24, 0.26), 1.08 },
+}
+local function ringOf(n: number, r: number, y: number, size: Vector3, shade: number, phase: number?)
+	local t = {}
+	for k = 0, n - 1 do
+		local a = (k / n + (phase or 0)) * math.pi * 2
+		table.insert(t, { V(math.cos(a) * r, y, math.sin(a) * r), size, shade })
+	end
+	return t
+end
+local function join(...)
+	local out = {}
+	for _, list in { ... } do
+		for _, e in list do
+			table.insert(out, e)
 		end
-		return t
-	end)(),
-	-- Ribbon: long wavy band (aurora)
+	end
+	return out
+end
+local SHAPES = {
+	Cumulus = LAYOUT,
+	-- Rain bank: a long, low chain of round lobes with a grey belly
+	Rain = join({ { V(0, 0, 0), V(0.42, 0.32, 0.4), 0.85 } },
+		{ { V(0.36, -0.02, 0.06), V(0.4, 0.3, 0.38), 0.84 }, { V(-0.36, -0.01, -0.05), V(0.4, 0.3, 0.38), 0.84 },
+			{ V(0.7, -0.04, 0.02), V(0.32, 0.26, 0.32), 0.82 }, { V(-0.7, -0.03, 0.03), V(0.32, 0.26, 0.32), 0.82 },
+			{ V(0.18, 0.18, 0), V(0.34, 0.28, 0.32), 0.96 }, { V(-0.2, 0.17, 0.02), V(0.32, 0.27, 0.3), 0.96 } }),
+	-- Snow tiers: wide ring of puffs, a smaller ring above, one top puff
+	Snow = join({ { V(0, 0, 0), V(0.44, 0.34, 0.44), 0.94 } }, ringOf(5, 0.34, -0.02, V(0.32, 0.26, 0.32), 0.92),
+		ringOf(3, 0.18, 0.22, V(0.28, 0.24, 0.28), 1.02, 0.15), { { V(0, 0.42, 0), V(0.24, 0.22, 0.24), 1.08 } }),
+	-- Funnel: round puffy head, then smaller and smaller puffs spiralling down
+	Tornado = join({ { V(0, 0, 0), V(0.5, 0.38, 0.5), 0.96 } }, ringOf(3, 0.24, 0.04, V(0.34, 0.28, 0.34), 1.0),
+		{ { V(0.05, -0.28, 0.02), V(0.32, 0.28, 0.32), 0.92 }, { V(0.1, -0.48, 0.06), V(0.24, 0.22, 0.24), 0.9 },
+			{ V(0.08, -0.64, 0.1), V(0.17, 0.16, 0.17), 0.88 }, { V(0.02, -0.76, 0.12), V(0.11, 0.11, 0.11), 0.86 } }),
+	-- Anvil: a tall stack of puffs that spreads into a crown of wide puffs on top
+	Storm = join({ { V(0, 0, 0), V(0.5, 0.46, 0.48), 0.82 } }, { { V(0.05, 0.3, 0.02), V(0.44, 0.4, 0.42), 0.88 } },
+		ringOf(5, 0.42, 0.52, V(0.42, 0.28, 0.4), 1.0, 0.1), { { V(0.1, -0.3, 0.04), V(0.48, 0.32, 0.44), 0.74 } }),
+	-- Ring: soft core with a halo of eight small puffs around it
+	Cosmic = join({ { V(0, 0, 0), V(0.42, 0.4, 0.42), 1.05 } }, ringOf(8, 0.46, 0, V(0.24, 0.22, 0.24), 0.98)),
+	-- Ribbon: a wavy line of puffs (aurora)
 	Aurora = (function()
-		local t = { { V(0, 0, 0), V(0.38, 0.3, 0.3), 1.0 } }
+		local t = { { V(0, 0, 0), V(0.34, 0.3, 0.3), 1.0 } }
 		for k = -3, 3 do
 			if k ~= 0 then
-				table.insert(t, { V(k * 0.24, math.sin(k * 1.1) * 0.12, math.cos(k * 0.9) * 0.08), V(0.34, 0.24 - math.abs(k) * 0.02, 0.26), 1 + k * 0.02 })
+				table.insert(t, { V(k * 0.22, math.sin(k * 1.1) * 0.12, math.cos(k * 0.9) * 0.1), V(0.3 - math.abs(k) * 0.02, 0.26, 0.28), 1 + k * 0.02 })
 			end
 		end
 		return t
 	end)(),
-	-- Hourglass: two cones meeting at a thin waist (time)
-	Chrono = {
-		{ V(0, 0, 0), V(0.22, 0.22, 0.22), 1.1 },
-		{ V(0, 0.2, 0), V(0.5, 0.18, 0.5), 1.0 },
-		{ V(0, 0.36, 0), V(0.82, 0.2, 0.82), 1.04 },
-		{ V(0, -0.2, 0), V(0.5, 0.18, 0.5), 0.95 },
-		{ V(0, -0.36, 0), V(0.82, 0.2, 0.82), 0.92 },
-	},
-	-- Wings: body with two swept wings (phoenix / fire)
+	-- Hourglass: a puff cluster above and below a small waist puff
+	Chrono = join({ { V(0, 0, 0), V(0.22, 0.2, 0.22), 1.1 } }, ringOf(3, 0.16, 0.28, V(0.32, 0.26, 0.32), 1.04),
+		ringOf(3, 0.16, -0.28, V(0.32, 0.26, 0.32), 0.94, 0.17), { { V(0, 0.46, 0), V(0.22, 0.2, 0.22), 1.08 } }),
+	-- Wings: round body with two rising wings made of puffs (phoenix)
 	Phoenix = {
-		{ V(0, 0, 0), V(0.42, 0.42, 0.55), 1.05 },
-		{ V(0.42, 0.14, 0.12), V(0.55, 0.16, 0.36), 1.0 },
-		{ V(0.82, 0.3, 0.26), V(0.4, 0.12, 0.24), 1.08 },
-		{ V(-0.42, 0.14, 0.12), V(0.55, 0.16, 0.36), 1.0 },
-		{ V(-0.82, 0.3, 0.26), V(0.4, 0.12, 0.24), 1.08 },
-		{ V(0, 0.08, -0.38), V(0.22, 0.22, 0.3), 1.1 },
-		{ V(0, -0.1, 0.45), V(0.2, 0.12, 0.5), 0.9 },
+		{ V(0, 0, 0), V(0.42, 0.4, 0.44), 1.05 },
+		{ V(0.36, 0.12, 0.08), V(0.36, 0.26, 0.3), 1.0 }, { V(0.66, 0.3, 0.16), V(0.26, 0.2, 0.22), 1.06 },
+		{ V(-0.36, 0.12, 0.08), V(0.36, 0.26, 0.3), 1.0 }, { V(-0.66, 0.3, 0.16), V(0.26, 0.2, 0.22), 1.06 },
+		{ V(0, 0.28, -0.12), V(0.26, 0.24, 0.24), 1.1 }, { V(0, -0.12, 0.34), V(0.24, 0.2, 0.3), 0.9 },
 	},
-	-- Crown: dark core with spikes radiating up and out (void)
-	Void = (function()
-		local t = { { V(0, 0, 0), V(0.62, 0.5, 0.62), 0.9 } }
-		for k = 0, 5 do
-			local a = k / 6 * math.pi * 2
-			table.insert(t, { V(math.cos(a) * 0.3, 0.32, math.sin(a) * 0.3), V(0.12, 0.45, 0.12), 1.1 })
-		end
-		table.insert(t, { V(0, -0.28, 0), V(0.4, 0.2, 0.4), 0.8 })
-		return t
-	end)(),
-	-- Sun: bright disc core with 8 flat rays (solar)
+	-- Crown: a heavy dark puff wearing a ring of small round puffs (void)
+	Void = join({ { V(0, 0, 0), V(0.56, 0.46, 0.56), 0.9 } }, ringOf(6, 0.26, 0.28, V(0.2, 0.22, 0.2), 1.08),
+		{ { V(0, -0.24, 0), V(0.4, 0.28, 0.4), 0.8 } }),
+	-- Sun: a round bright puff with a ring of small puffs around its rim
 	Solar = (function()
-		local t = { { V(0, 0, 0), V(0.6, 0.6, 0.25), 1.1 } }
+		local t = { { V(0, 0, 0), V(0.5, 0.48, 0.42), 1.08 } }
 		for k = 0, 7 do
 			local a = k / 8 * math.pi * 2
-			table.insert(t, { V(math.cos(a) * 0.48, math.sin(a) * 0.48, 0), V(0.18, 0.18, 0.1), 1.05 })
+			table.insert(t, { V(math.cos(a) * 0.42, math.sin(a) * 0.42, 0), V(0.2, 0.2, 0.2), 1.02 })
 		end
 		return t
 	end)(),
-	-- Spiral: big coiling tower (mythic)
+	-- Spiral: a big puffy tower coiling upward (mythic)
 	Mythic = (function()
-		local t = { { V(0, 0, 0), V(0.8, 0.45, 0.8), 0.9 } }
+		local t = { { V(0, 0, 0), V(0.62, 0.44, 0.62), 0.9 } }
 		for k = 1, 8 do
 			local a = k * 0.9
-			local r = 0.45 - k * 0.035
-			table.insert(t, { V(math.cos(a) * r, k * 0.11, math.sin(a) * r), V(0.42 - k * 0.03, 0.26, 0.42 - k * 0.03), 0.95 + k * 0.02 })
+			local r = 0.4 - k * 0.03
+			local w = 0.4 - k * 0.025
+			table.insert(t, { V(math.cos(a) * r, k * 0.1, math.sin(a) * r), V(w, w * 0.8, w), 0.95 + k * 0.02 })
 		end
 		return t
 	end)(),
-}
--- Category overrides (if a cloud has no special visual): chaos clouds are lumpy & lopsided
-SHAPES.Chaos = {
-	{ V(0, 0, 0), V(0.6, 0.5, 0.55), 1.0 },
-	{ V(0.42, 0.22, 0.05), V(0.45, 0.55, 0.4), 1.05 },
-	{ V(-0.35, -0.15, 0.2), V(0.5, 0.3, 0.45), 0.9 },
-	{ V(0.05, 0.4, -0.2), V(0.3, 0.3, 0.3), 1.1 },
-	{ V(-0.3, 0.25, -0.15), V(0.22, 0.4, 0.22), 1.0 },
-	{ V(0.3, -0.25, -0.2), V(0.35, 0.22, 0.32), 0.92 },
-}
--- Economic clouds: stacked coin-like discs
-SHAPES.Economic = {
-	{ V(0, 0, 0), V(0.75, 0.16, 0.75), 1.0 },
-	{ V(0.06, 0.15, 0.03), V(0.68, 0.15, 0.68), 1.05 },
-	{ V(-0.04, 0.3, -0.02), V(0.6, 0.14, 0.6), 1.1 },
-	{ V(0.35, -0.1, 0.25), V(0.4, 0.2, 0.4), 0.95 },
-	{ V(-0.35, -0.08, -0.25), V(0.38, 0.2, 0.38), 0.95 },
+	-- Economic: a neat pile of three round puffs with two side puffs ("coin pile")
+	Economic = {
+		{ V(0, 0, 0), V(0.5, 0.34, 0.5), 1.0 }, { V(0.04, 0.24, 0.02), V(0.42, 0.3, 0.42), 1.05 },
+		{ V(-0.02, 0.44, -0.01), V(0.32, 0.26, 0.32), 1.1 }, { V(0.36, -0.06, 0.2), V(0.3, 0.26, 0.3), 0.95 },
+		{ V(-0.36, -0.05, -0.2), V(0.3, 0.26, 0.3), 0.95 },
+	},
+	-- Chaos: lopsided, bumpy heap
+	Chaos = {
+		{ V(0, 0, 0), V(0.52, 0.46, 0.5), 1.0 }, { V(0.38, 0.22, 0.05), V(0.4, 0.42, 0.38), 1.05 },
+		{ V(-0.34, -0.12, 0.2), V(0.42, 0.32, 0.4), 0.9 }, { V(0.05, 0.4, -0.18), V(0.28, 0.28, 0.28), 1.1 },
+		{ V(-0.28, 0.26, -0.14), V(0.24, 0.3, 0.24), 1.0 }, { V(0.3, -0.22, -0.2), V(0.3, 0.24, 0.3), 0.92 },
+	},
 }
 
 local function shapeFor(def): { any }
@@ -197,7 +163,7 @@ local STYLE = {
 	Chrono = { Tint = Color3.fromRGB(255, 235, 175), Smoke = Color3.fromRGB(255, 225, 150), Material = Enum.Material.SmoothPlastic, Alpha = 0.35 },
 	Phoenix = { Tint = Color3.fromRGB(255, 140, 70), Smoke = Color3.fromRGB(255, 110, 50), Material = Enum.Material.SmoothPlastic, Alpha = 0.25 },
 	Void = { Tint = Color3.fromRGB(30, 18, 55), Smoke = Color3.fromRGB(70, 40, 120), Material = Enum.Material.SmoothPlastic, Alpha = 0.15 },
-	Solar = { Tint = Color3.fromRGB(255, 225, 120), Smoke = Color3.fromRGB(255, 240, 170), Material = Enum.Material.Neon, Alpha = 0.3 },
+	Solar = { Tint = Color3.fromRGB(255, 232, 150), Smoke = Color3.fromRGB(255, 240, 170), Material = Enum.Material.SmoothPlastic, Alpha = 0.3 },
 	Mythic = { Tint = Color3.fromRGB(45, 20, 70), Smoke = Color3.fromRGB(80, 30, 120), Material = Enum.Material.Slate, Alpha = 0.1 },
 }
 
@@ -262,7 +228,7 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 		p.Name = i == 1 and "Core" or ("Puff" .. i)
 		p.Size = size
 		p.Color = shade(tint, puff[3])
-		p.Material = shiny and Enum.Material.Neon or style.Material
+		p.Material = style.Material -- shiny = gold tint only (neon washed the shape out)
 		p.Transparency = style.Alpha
 		p.Anchored = i == 1
 		p.CanCollide = false
@@ -285,27 +251,6 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 		end
 	end
 
-	-- Rarity cue that survives "effects off": Legendary/Mythic wear a halo
-	if def.Tier and def.Tier >= 4 then
-		local halo = Instance.new("Part")
-		halo.Name = "Halo"
-		halo.Shape = Enum.PartType.Cylinder
-		halo.Size = Vector3.new(0.08, d * (def.Tier >= 5 and 1.5 or 1.25), d * (def.Tier >= 5 and 1.5 or 1.25))
-		halo.Color = Weather.Rarity[def.Rarity].Color
-		halo.Material = Enum.Material.Neon
-		halo.Transparency = 0.55
-		halo.CanCollide = false
-		halo.CanQuery = false
-		halo.CanTouch = false
-		halo.CastShadow = false
-		halo.Massless = true
-		halo.CFrame = center.CFrame * CFrame.new(0, d * 0.62, 0) * CFrame.Angles(0, 0, math.pi / 2)
-		local weld = Instance.new("WeldConstraint")
-		weld.Part0 = center
-		weld.Part1 = halo
-		weld.Parent = halo
-		halo.Parent = center
-	end
 	center:SetAttribute("Motion", visual)
 
 	-- Puffy smoke breathing out of the center
@@ -481,11 +426,11 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 			beam.Attachment1 = bottom
 			beam.Color = auroraColor
 			beam.Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 0.2),
+				NumberSequenceKeypoint.new(0, 0.6),
 				NumberSequenceKeypoint.new(1, 1),
 			})
-			beam.Width0 = d * 0.35
-			beam.Width1 = d * 0.15
+			beam.Width0 = d * 0.3
+			beam.Width1 = d * 0.12
 			beam.LightEmission = 1
 			beam.LightInfluence = 0
 			beam.FaceCamera = true
@@ -576,8 +521,8 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 			LightEmission = 1,
 		})
 		light.Color = Color3.fromRGB(255, 230, 150)
-		light.Brightness = 4
-		light.Range = 14 * scale
+		light.Brightness = 2 -- accent only: too much glow washed the puffs out
+		light.Range = 12 * scale
 	end
 
 	if visual == "Chrono" then

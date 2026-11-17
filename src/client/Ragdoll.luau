@@ -11,32 +11,13 @@ local Players = game:GetService("Players")
 local Ragdoll = {}
 
 local player = Players.LocalPlayer
-local active: { Motors: { Motor6D }, Made: { Instance }, Collide: { [BasePart]: boolean } }? = nil
+local RagdollLib = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("RagdollLib"))
+local active: RagdollLib.State? = nil
 
 local function stop(char: Model)
 	local st = active
 	active = nil
-	if not st then
-		return
-	end
-	for _, inst in st.Made do
-		inst:Destroy()
-	end
-	for _, m in st.Motors do
-		if m.Parent then
-			m.Enabled = true
-		end
-	end
-	for p, was in st.Collide do
-		if p.Parent then
-			p.CanCollide = was
-		end
-	end
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if hum and hum.Health > 0 then
-		hum.PlatformStand = false
-		hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-	end
+	RagdollLib.Disable(char, st)
 end
 
 local function start(char: Model)
@@ -47,42 +28,7 @@ local function start(char: Model)
 	if not hum or hum.Health <= 0 then
 		return
 	end
-	local st = { Motors = {}, Made = {}, Collide = {} }
-	for _, m in char:GetDescendants() do
-		if m:IsA("Motor6D") and m.Name ~= "Root" and m.Part0 and m.Part1 then
-			local a0 = Instance.new("Attachment")
-			a0.Name = "RagdollA0"
-			a0.CFrame = m.C0
-			a0.Parent = m.Part0
-			local a1 = Instance.new("Attachment")
-			a1.Name = "RagdollA1"
-			a1.CFrame = m.C1
-			a1.Parent = m.Part1
-			local ball = Instance.new("BallSocketConstraint")
-			ball.Name = "RagdollJoint"
-			ball.Attachment0 = a0
-			ball.Attachment1 = a1
-			ball.LimitsEnabled = true
-			ball.UpperAngle = m.Name == "Neck" and 30 or 70
-			ball.TwistLimitsEnabled = true
-			ball.TwistLowerAngle = -35
-			ball.TwistUpperAngle = 35
-			ball.Parent = m.Part1
-			table.insert(st.Made, a0)
-			table.insert(st.Made, a1)
-			table.insert(st.Made, ball)
-			m.Enabled = false
-			table.insert(st.Motors, m)
-			-- limbs must collide with the floor while floppy
-			local p1 = m.Part1 :: BasePart
-			if st.Collide[p1] == nil then
-				st.Collide[p1] = p1.CanCollide
-				p1.CanCollide = true
-			end
-		end
-	end
-	active = st
-	hum.PlatformStand = true
+	active = RagdollLib.Enable(char)
 end
 
 local function check()

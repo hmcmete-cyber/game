@@ -2,8 +2,8 @@
 -- particles and the default Roblox particle textures — no uploaded assets.
 --
 --   Catch burst      ring shockwave + sparkles when anyone catches a cloud
---   Rarity aura      Rare+ carriers glow in the rarity colour; Legendary and
---                    Mythic also get a light pillar visible across the map
+--   Rarity aura      Rare+ carriers sparkle in the rarity colour; Legendary and
+--                    Mythic also glow (soft light, no beam)
 --   Delivery         gold coin fountain at your nest
 --   Level up         golden pillar + ring on whoever levels up
 --   Updraft          speed lines + wider FOV while riding, dust puff on landing
@@ -152,25 +152,13 @@ local function setAura(p: Player)
 	aura.Parent = root
 
 	if rarity.Tier >= 4 then
-		-- light pillar so everyone on the map sees a Legendary/Mythic heist
-		local a0 = Instance.new("Attachment")
-		a0.Name = "VfxPillarAtt0"
-		a0.Parent = root
-		local a1 = Instance.new("Attachment")
-		a1.Name = "VfxPillarAtt1"
-		a1.Position = Vector3.new(0, 140, 0)
-		a1.Parent = root
-		local beam = Instance.new("Beam")
-		beam.Name = "VfxPillar"
-		beam.Attachment0 = a0
-		beam.Attachment1 = a1
-		beam.Color = ColorSequence.new(rarity.Color)
-		beam.LightEmission = 1
-		beam.FaceCamera = true
-		beam.Width0 = rarity.Tier >= 5 and 4 or 2.5
-		beam.Width1 = 0.5
-		beam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
-		beam.Parent = root
+		-- v1.8: no light pillar (it read as a hard beam); a soft coloured glow instead
+		local glow = Instance.new("PointLight")
+		glow.Name = "VfxPillar"
+		glow.Color = rarity.Color
+		glow.Range = 16
+		glow.Brightness = 1.5
+		glow.Parent = root
 	end
 end
 

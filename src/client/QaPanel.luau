@@ -51,13 +51,9 @@ local function groundAt(pos: Vector3): (BasePart?, string)
 	if not hit then
 		return nil, "none"
 	end
-	local p: Instance? = hit.Instance
-	while p and p ~= workspace do
-		local zone = p:GetAttribute("ZoneName") or p:GetAttribute("Biome")
-		if zone then
-			return hit.Instance, tostring(zone)
-		end
-		p = p.Parent
+	local info = require(game:GetService("ReplicatedStorage").Shared.BiomeMap).ZoneOfHit(hit)
+	if info and (info.ZoneName or info.Biome) then
+		return hit.Instance, tostring(info.ZoneName or info.Biome)
 	end
 	return hit.Instance, hit.Instance.Name
 end

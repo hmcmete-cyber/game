@@ -20,6 +20,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local AnimLib = require(ReplicatedStorage.Shared.AnimLib)
+local RagdollLib = require(ReplicatedStorage.Shared.RagdollLib)
 
 local DummyService = {}
 
@@ -191,31 +192,57 @@ function DummyService.Knock(dir: Vector3?): boolean
 	local afterDetach = countCheck()
 	local detached = afterDetach.ropes == 0 and afterDetach.aligns == 0 and afterDetach.handAtts == 0 and afterDetach.targets == 0
 
-	-- 2) dummy falls
+	-- 2) dummy falls as a REAL ragdoll (v1.8): Motor6Ds -> ball sockets
 	stop("LeashHold")
-	play("Knocked")
-	hum.PlatformStand = true
-	r.AssemblyLinearVelocity = push * 30 + Vector3.new(0, 18, 0)
+	local rag = RagdollLib.Enable(dummy :: Model)
+	for _, part in (dummy :: Model):GetDescendants() do
+		if part:IsA("BasePart") then
+			pcall(function()
+				part:SetNetworkOwner(nil) -- limbs are separate bodies now; keep them on the server
+			end)
+		end
+	end
+	local torso = (dummy :: Model):FindFirstChild("UpperTorso") :: BasePart?
+	r.AssemblyLinearVelocity = push * 28 + Vector3.new(0, 16, 0)
+	if torso then
+		torso:ApplyImpulse((push * 40 + Vector3.new(0, 20, 0)) * torso.AssemblyMass)
+	end
+	local ragdolled = rag ~= nil and #rag.Motors > 0
 
 	task.spawn(function()
-		task.wait(2.5)
-		-- 3) stand up: upright at the spot again
-		hum.PlatformStand = false
-		hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-		task.wait(0.4)
+		task.wait(2.2)
+		-- 3) stand up: joints back, upright at the spot again
+		RagdollLib.Disable(dummy :: Model, rag)
+		for _, part in (dummy :: Model):GetDescendants() do
+			if part:IsA("BasePart") then
+				part.AssemblyLinearVelocity = Vector3.zero
+				part.AssemblyAngularVelocity = Vector3.zero
+			end
+		end
 		dummy:PivotTo(CFrame.new(SPOT + Vector3.new(0, 3, 0)))
-		r.AssemblyLinearVelocity = Vector3.zero
-		r.AssemblyAngularVelocity = Vector3.zero
-		task.wait(0.6)
+		task.wait(0.8)
 
 		-- 4) the SAME cloud comes back to the hand
 		leash()
 		local c = countCheck()
 		local same = state.Sphere == sphere
 		local pass = detached and same and c.clouds == 1 and c.ropes == 1 and c.aligns == 1 and c.handAtts == 1 and c.targets == 1
-		print(string.format("[Dummy] cycle %d: detached=%s reattached=%s sameCloud=%s clouds=%d ropes=%d aligns=%d handAtts=%d targets=%d -> %s",
-			cycle, tostring(detached), tostring(c.ropes == 1), tostring(same), c.clouds, c.ropes, c.aligns, c.handAtts, c.targets,
-			pass and "PASS" or "FAIL"))
+		local motorsBack = true
+		for _, m in (dummy :: Model):GetDescendants() do
+			if m:IsA("Motor6D") and not m.Enabled then
+				motorsBack = false
+			end
+		end
+		local leftovers = 0
+		for _, d in (dummy :: Model):GetDescendants() do
+			if d.Name == "RagdollJoint" then
+				leftovers += 1
+			end
+		end
+		pass = pass and ragdolled and motorsBack and leftovers == 0
+		print(string.format("[Dummy] cycle %d: ragdolled=%s jointsRestored=%s staleJoints=%d detached=%s reattached=%s sameCloud=%s clouds=%d ropes=%d aligns=%d handAtts=%d targets=%d -> %s",
+			cycle, tostring(ragdolled), tostring(motorsBack), leftovers, tostring(detached), tostring(c.ropes == 1), tostring(same),
+			c.clouds, c.ropes, c.aligns, c.handAtts, c.targets, pass and "PASS" or "FAIL"))
 		state.Busy = false
 	end)
 	return true

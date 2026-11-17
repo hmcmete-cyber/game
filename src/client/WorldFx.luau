@@ -13,6 +13,8 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
+local BiomeMap = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("BiomeMap"))
+
 local WorldFx = {}
 
 local player = Players.LocalPlayer
@@ -37,16 +39,8 @@ local function groundBiome(root: BasePart): string?
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { player.Character }
-	local hit = workspace:Raycast(root.Position, Vector3.new(0, -40, 0), params)
-	local p: Instance? = hit and hit.Instance
-	while p and p ~= workspace do
-		local b = p:GetAttribute("Biome")
-		if b then
-			return b
-		end
-		p = p.Parent
-	end
-	return nil
+	local info = BiomeMap.ZoneOfHit(workspace:Raycast(root.Position, Vector3.new(0, -40, 0), params))
+	return info and info.Biome or nil
 end
 
 local function sheltered(root: BasePart): boolean

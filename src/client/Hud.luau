@@ -20,6 +20,7 @@ local TweenService = game:GetService("TweenService")
 
 local Weather = require(ReplicatedStorage.Shared.WeatherTypes)
 
+local BiomeMap = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BiomeMap"))
 local Hud = {}
 
 local player = Players.LocalPlayer
@@ -461,18 +462,22 @@ local function zoneLoop()
 		task.wait(0.25)
 		local char = player.Character
 		local root = char and char:FindFirstChild("HumanoidRootPart")
-		local zone: Instance? = nil
+		-- zone info table { ZoneName, ZoneColor, Warning } from a zone volume,
+		-- a tagged part under you, or BiomeMap when the ground is Terrain
+		local zone = nil
 		if root then
-			zone = workspace:GetPartBoundsInBox(root.CFrame, Vector3.one, params)[1]
-			if not zone then
+			local vol = workspace:GetPartBoundsInBox(root.CFrame, Vector3.one, params)[1]
+			if vol then
+				zone = { ZoneName = vol:GetAttribute("ZoneName"), ZoneColor = vol:GetAttribute("ZoneColor"), Warning = vol:GetAttribute("Warning") }
+			else
 				down.FilterDescendantsInstances = { char, workspace:FindFirstChild("Weather") }
-				local hit = workspace:Raycast(root.Position, Vector3.new(0, -40, 0), down)
-				if hit and hit.Instance:GetAttribute("ZoneName") then
-					zone = hit.Instance
+				local info = BiomeMap.ZoneOfHit(workspace:Raycast(root.Position, Vector3.new(0, -40, 0), down))
+				if info and info.ZoneName then
+					zone = info
 				end
 			end
 		end
-		local name = zone and zone:GetAttribute("ZoneName") or nil
+		local name = zone and zone.ZoneName or nil
 		if name ~= currentZoneName then
 			-- keep showing the last biome while you're in the air
 			if not zone and root and root.AssemblyLinearVelocity.Y < -5 then
@@ -481,7 +486,7 @@ local function zoneLoop()
 			currentZoneName = name
 			if zone then
 				zoneText.Text = name
-				zoneText.TextColor3 = zone:GetAttribute("ZoneColor") or Color3.new(1, 1, 1)
+				zoneText.TextColor3 = zone.ZoneColor or Color3.new(1, 1, 1)
 			else
 				-- never show a blank pill
 				local fallback = "Skylands"
@@ -501,7 +506,7 @@ local function zoneLoop()
 				zoneText.TextColor3 = Color3.fromRGB(220, 230, 255)
 			end
 			zonePill.Visible = zoneText.Text ~= ""
-			gateWarning = zone and zone:GetAttribute("Warning") or nil
+			gateWarning = zone and zone.Warning or nil
 			if gateWarning then
 				showAlert(`{gateWarning}`, false, 4)
 			elseif alert.BackgroundColor3 == AMBER then

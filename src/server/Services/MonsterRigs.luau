@@ -1038,42 +1038,72 @@ BUILD.PrismSovereign = function(s)
 	return r
 end
 
--- Caldera Titan (Volcanic): a magma giant. Basalt plate armour over a
--- cracked glowing core, a volcano-crater head pouring lava with ember horns,
--- huge rock fists with magma knuckles, obsidian spikes down the back,
--- column legs with glowing seams
+-- Caldera Titan (Volcanic) v2.12 redesign (director: too close to Cindermaw).
+-- Now a colossal LAVA TORTOISE that carries a whole erupting volcano on its
+-- back: a wide hexagonal basalt shell rim, a stepped cone with glowing lava
+-- rivers and a crater on top, a long low serpent neck with a horned dragon
+-- head and glowing jaw, four huge pillar legs with obsidian claws, armour
+-- plates, and a tail of cooling magma segments
 BUILD.CalderaTitan = function(s)
-	local r = rig("CalderaTitan", s, 3.6)
-	local rock, rock2, obs, magma, glow = RGB(70, 58, 56), RGB(48, 40, 42), RGB(30, 25, 35), RGB(255, 110, 40), RGB(255, 200, 90)
-	add(r, "Body", "HumanoidRootPart", V(6, 4.4, 4.6), V(0, 1, 0), V(0, 0, 0), rock, { Role = "body" })
-	add(r, "Core", "Body", V(2.6, 2.6, 0.4), V(0, 1, -2.4), V(0, 0, 0), magma, { Material = M.Neon, Glow = magma })
-	for k = 1, 4 do
-		add(r, "Seam" .. k, "Body", V(0.3, 3, 0.3), V(-2.4 + k * 1, 0, -2.35), V(0, 0, 0), magma, { Material = M.Neon, Rot = A(0, 0, rad((k % 2 == 0) and 15 or -15)) })
+	local r = rig("CalderaTitan", s, 2.6)
+	local rock, rock2, obs, magma, glow, ash = RGB(70, 58, 56), RGB(48, 40, 42), RGB(30, 25, 35), RGB(255, 110, 40), RGB(255, 200, 90), RGB(95, 85, 85)
+	add(r, "Body", "HumanoidRootPart", V(9, 2.6, 11), V(0, 0.6, 0), V(0, 0, 0), rock2, { Role = "body" })
+	add(r, "Belly", "Body", V(8, 1, 10), V(0, -1.6, 0), V(0, 0, 0), ash, {})
+	-- shell rim: six plates around the body (hexagon)
+	for k = 0, 5 do
+		local a = k / 6 * math.pi * 2
+		add(r, "Rim" .. k, "Body", V(5.4, 1.6, 1.4), V(math.sin(a) * 5.2, 1, math.cos(a) * 6), V(0, 0, 0), rock, { Rot = A(0, a, 0) })
+		add(r, "RimGlow" .. k, "Rim" .. k, V(4.6, 0.25, 0.3), V(0, -0.5, 0.75), V(0, 0, 0), magma, { Material = M.Neon })
 	end
-	add(r, "Chest", "Body", V(7, 3, 5), V(0, 3.4, 0), V(0, 0, 0), rock2, {})
+	-- the volcano on its back: three stepped cone tiers + crater
+	add(r, "Cone1", "Body", V(8, 2, 9), V(0, 2.3, 0.4), V(0, 0, 0), rock, {})
+	add(r, "Cone2", "Cone1", V(6, 2, 6.6), V(0.3, 2, -0.2), V(0, 0, 0), rock2, {})
+	add(r, "Cone3", "Cone2", V(4, 2, 4.4), V(-0.2, 2, 0.3), V(0, 0, 0), rock, {})
+	add(r, "Crater", "Cone3", V(3, 0.6, 3.2), V(0, 1.2, 0), V(0, 0, 0), obs, {})
+	add(r, "CraterLava", "Crater", V(2.2, 0.3, 2.4), V(0, 0.3, 0), V(0, 0, 0), magma, { Material = M.Neon, Glow = magma })
 	for k = 1, 5 do
-		add(r, "BackSpike" .. k, "Chest", V(0.8, 2 + (k % 3) * 0.8, 0.8), V(-2.4 + k * 0.8, 1.2, 2.2), V(0, -1, 0), obs, { Rot = A(rad(-30), 0, 0) })
+		local a = k * 1.25
+		add(r, "LavaRiver" .. k, "Cone2", V(0.5, 2.2, 0.4), V(math.cos(a) * 2.9, 0, math.sin(a) * 3.2), V(0, 0, 0), magma, { Material = M.Neon, Rot = A(math.sin(a) * 0.4, 0, -math.cos(a) * 0.4) })
 	end
-	add(r, "Head", "Chest", V(3.4, 2.4, 3.2), V(0, 2.2, -0.6), V(0, -1, 0), rock, { Role = "head" })
-	add(r, "Crater", "Head", V(2.6, 1, 2.4), V(0, 1.4, 0), V(0, 0, 0), rock2, {})
-	add(r, "CraterLava", "Crater", V(1.8, 0.2, 1.6), V(0, 0.5, 0), V(0, 0, 0), magma, { Material = M.Neon, Glow = magma })
-	add(r, "LavaDrip", "Crater", V(0.4, 1.6, 0.3), V(0.6, -0.4, -1.25), V(0, 0, 0), magma, { Material = M.Neon })
-	add(r, "Jaw", "Head", V(3, 0.8, 1), V(0, -1, -1.4), V(0, 0, 0), rock2, { Role = "jawBot" })
-	add(r, "Mouth", "Head", V(2.2, 0.4, 0.2), V(0, -0.5, -1.65), V(0, 0, 0), magma, { Material = M.Neon })
-	add(r, "EyeGlowL", "Head", V(0.7, 0.4, 0.2), V(-0.7, 0.3, -1.65), V(0, 0, 0), glow, { Material = M.Neon })
-	add(r, "EyeGlowR", "Head", V(0.7, 0.4, 0.2), V(0.7, 0.3, -1.65), V(0, 0, 0), glow, { Material = M.Neon })
+	for k = 1, 4 do
+		local a = k * 1.57 + 0.5
+		add(r, "Vent" .. k, "Cone1", V(1, 1.4, 1), V(math.cos(a) * 3.4, 1.2, math.sin(a) * 3.8), V(0, 0, 0), obs, {})
+		add(r, "VentGlow" .. k, "Vent" .. k, V(0.6, 0.2, 0.6), V(0, 0.7, 0), V(0, 0, 0), glow, { Material = M.Neon })
+	end
+	for k = 1, 3 do
+		add(r, "Boulder" .. k, "Cone1", V(1.4, 1.2, 1.4), V(-3 + k * 1.8, 1, -3.8), V(0, 0, 0), ash, { Rot = A(0, k, 0.3) })
+	end
+	-- long low serpent neck and horned dragon head
+	add(r, "Neck1", "Body", V(2.4, 2, 2.6), V(0, 0.4, -5.8), V(0, 0, 0.8), rock, {})
+	add(r, "Neck2", "Neck1", V(2.1, 1.8, 2.4), V(0, 0.5, -1.8), V(0, 0, 0.8), rock2, {})
+	add(r, "Head", "Neck2", V(3, 2, 3.4), V(0, 0.6, -1.8), V(0, -0.2, 1), rock, { Role = "head" })
+	add(r, "Snout", "Head", V(2.2, 1.2, 1.6), V(0, -0.2, -2.2), V(0, 0, 0), rock2, {})
+	add(r, "Jaw", "Head", V(2.4, 0.7, 2.6), V(0, -1.1, -1), V(0, 0, 0), rock2, { Role = "jawBot" })
+	add(r, "JawGlow", "Jaw", V(1.8, 0.2, 2), V(0, 0.4, -0.1), V(0, 0, 0), magma, { Material = M.Neon })
+	teeth(r, "Fang", "Snout", V(0, -0.65, -0.6), 4, 1.8, V(0.25, 0.5, 0.25), true, RGB(250, 240, 220))
+	add(r, "EyeGlowL", "Head", V(0.6, 0.35, 0.2), V(-0.9, 0.4, -1.75), V(0, 0, 0), glow, { Material = M.Neon })
+	add(r, "EyeGlowR", "Head", V(0.6, 0.35, 0.2), V(0.9, 0.4, -1.75), V(0, 0, 0), glow, { Material = M.Neon })
 	for _, side in { -1, 1 } do
 		local n = side < 0 and "L" or "R"
-		add(r, "Horn" .. n, "Head", V(0.7, 2.4, 0.7), V(side * 1.6, 1.2, 0), V(0, -1, 0), obs, { Rot = A(0, 0, rad(side * -30)) })
-		add(r, "HornTip" .. n, "Horn" .. n, V(0.5, 0.8, 0.5), V(0, 1.4, 0), V(0, 0, 0), magma, { Material = M.Neon })
-		add(r, "Shoulder" .. n, "Chest", V(3, 2.4, 3.2), V(side * 4.4, 0.8, 0), V(0, 0, 0), rock, {})
-		add(r, "ShoulderSpike" .. n, "Shoulder" .. n, V(0.8, 2, 0.8), V(side * 0.6, 1.6, 0), V(0, -0.6, 0), obs, { Rot = A(0, 0, rad(side * -25)) })
-		limb(r, "Arm" .. n, "Shoulder" .. n, V(side * 0.4, -0.8, 0), V(2, 3.4, 2), V(1.8, 3, 1.8), V(3, 2.4, 3), rock2, rock, side < 0 and "armL" or "armR")
+		add(r, "Horn" .. n, "Head", V(0.6, 0.6, 2.6), V(side * 1.2, 0.9, 0.6), V(0, 0, -1), obs, { Rot = A(rad(25), rad(side * -25), 0) })
+		add(r, "HornTip" .. n, "Horn" .. n, V(0.4, 0.4, 0.8), V(0, 0, 1.6), V(0, 0, 0), magma, { Material = M.Neon })
+		add(r, "Frill" .. n, "Head", V(0.3, 1.4, 1.6), V(side * 1.6, 0.2, 0.8), V(0, 0, 0), rock2, { Rot = A(0, 0, rad(side * 25)) })
+	end
+	-- four pillar legs with obsidian claws
+	for _, spec in { { "LegFL", -4, -3.6, "legA" }, { "LegFR", 4, -3.6, "legB" }, { "LegBL", -4, 3.6, "legB" }, { "LegBR", 4, 3.6, "legA" } } do
+		limb(r, spec[1], "Body", V(spec[2], -1.2, spec[3]), V(2.6, 2, 2.6), V(2.4, 1.8, 2.4), V(3.2, 0.8, 3.4), rock, obs, spec[4])
+		add(r, spec[1] .. "Plate", spec[1], V(2.9, 0.8, 2.9), V(0, 0.4, 0), V(0, 0, 0), rock2, {})
 		for k = 1, 3 do
-			add(r, "Knuckle" .. n .. k, "Arm" .. n .. "Tip", V(0.7, 0.5, 0.7), V(-1 + k * 0.5, -1.1, -1.2), V(0, 0, 0), magma, { Material = M.Neon })
+			add(r, spec[1] .. "Claw" .. k, spec[1] .. "Tip", V(0.5, 0.5, 0.9), V(-1 + k * 0.5, -0.2, -1.8), V(0, 0, 0), obs, { Class = "WedgePart", Rot = A(rad(180), 0, 0) })
 		end
-		limb(r, "Leg" .. n, "Body", V(side * 1.9, -2.2, 0), V(2.4, 2.6, 2.4), V(2.2, 2, 2.2), V(3, 0.9, 3.4), rock, rock2, side < 0 and "legA" or "legB")
-		add(r, "LegSeam" .. n, "Leg" .. n, V(0.3, 2, 0.3), V(0, 0, -1.25), V(0, 0, 0), magma, { Material = M.Neon })
+	end
+	-- magma tail
+	local prev = "Body"
+	for k = 1, 4 do
+		local name = "Tail" .. k
+		add(r, name, prev, V(1.8 - k * 0.3, 1.2 - k * 0.15, 2), V(0, k == 1 and 0 or 0, k == 1 and 5.6 or 1.6), V(0, 0, -0.8), k % 2 == 0 and rock or rock2, { Role = k == 1 and "tail" or nil })
+		add(r, name .. "Seam", name, V(0.3, 0.2, 1.8), V(0, 0.6 - k * 0.07, 0), V(0, 0, 0), magma, { Material = M.Neon })
+		prev = name
 	end
 	return r
 end

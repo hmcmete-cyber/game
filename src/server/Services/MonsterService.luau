@@ -23,6 +23,7 @@ local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local MonsterRigs = require(script.Parent:WaitForChild("MonsterRigs"))
 local MonsterAnims = require(script.Parent:WaitForChild("MonsterAnims"))
 local Abilities = require(script.Parent:WaitForChild("MonsterAbilities"))
+local MonsterDeaths = require(script.Parent:WaitForChild("MonsterDeaths"))
 local HazardService = require(script.Parent:WaitForChild("HazardService"))
 
 local MonsterService = {}
@@ -160,7 +161,6 @@ local function onDeath(info)
 		end
 	end
 	play(info, "Death")
-	Abilities.Burst(info.Root.Position, Color3.fromRGB(255, 255, 255), 25)
 
 	-- XP: killer 100 %, helpers with >= 10 % of the damage get AssistShare
 	local total = 0
@@ -181,14 +181,9 @@ local function onDeath(info)
 		end
 	end
 
+	-- v2.12: every species has its own death sequence (MonsterDeaths)
 	local model = info.Model
-	task.delay(1.4, function()
-		for _, d in model:GetDescendants() do
-			if d:IsA("BasePart") and d.Transparency < 1 then
-				TweenService:Create(d, TweenInfo.new(1), { Transparency = 1 }):Play()
-			end
-		end
-		task.wait(1.1)
+	MonsterDeaths.Play(info, function()
 		monsters[model] = nil
 		model:Destroy()
 	end)
@@ -197,6 +192,60 @@ local function onDeath(info)
 			spawnMonster(info.Type)
 		end)
 	end
+end
+
+-- v2.12 boss spectacle: a themed aura around the body, smoke/embers/sparkles
+-- from its signature part, and a little glow emitter on every neon detail
+local BOSS_FX = {
+	MesaColossus = { Color3.fromRGB(230, 200, 150), Color3.fromRGB(255, 220, 120), "Mesa" },
+	FrostpeakWarden = { Color3.fromRGB(240, 250, 255), Color3.fromRGB(150, 230, 255), "Helm" },
+	MyceliumMonarch = { Color3.fromRGB(255, 170, 220), Color3.fromRGB(190, 255, 210), "Crown" },
+	BogstormCroaker = { Color3.fromRGB(170, 220, 255), Color3.fromRGB(230, 245, 255), "Sac" },
+	PrismSovereign = { Color3.fromRGB(150, 210, 255), Color3.fromRGB(200, 170, 255), "Heart" },
+	CalderaTitan = { Color3.fromRGB(255, 140, 50), Color3.fromRGB(80, 70, 70), "CraterLava" },
+	Tidebreaker = { Color3.fromRGB(180, 230, 255), Color3.fromRGB(255, 150, 190), "Shell" },
+}
+local function bossAura(model: Model, typeName: string)
+	local fx = BOSS_FX[typeName]
+	if not fx then
+		return
+	end
+	local root = model.PrimaryPart
+	local function emitter(parent: Instance, color: Color3, rate: number, size: number, speed: number, accel: Vector3, life: number, smoke: boolean?)
+		local e = Instance.new("ParticleEmitter")
+		e.Color = ColorSequence.new(color)
+		e.Rate = rate
+		e.Size = NumberSequence.new(size, smoke and size * 2.5 or 0)
+		e.Transparency = NumberSequence.new(smoke and 0.4 or 0, 1)
+		e.Lifetime = NumberRange.new(life * 0.6, life)
+		e.Speed = NumberRange.new(speed * 0.5, speed)
+		e.SpreadAngle = Vector2.new(180, 180)
+		e.Acceleration = accel
+		e.LightEmission = smoke and 0 or 0.9
+		if smoke then
+			e.Texture = "rbxasset://textures/particles/smoke_main.dds"
+		end
+		e.Parent = parent
+	end
+	emitter(root, fx[1], 30, 0.7, 6, Vector3.new(0, 3, 0), 2.5)
+	emitter(root, fx[2], 12, 1.2, 3, Vector3.new(0, 1, 0), 3)
+	local sig = model:FindFirstChild(fx[3], true)
+	if sig then
+		emitter(sig, fx[1], 25, 1, 8, Vector3.new(0, 6, 0), 2)
+		emitter(sig, fx[2], 6, 3, 4, Vector3.new(0, 4, 0), 4, typeName == "CalderaTitan")
+	end
+	local n = 0
+	for _, p in model:GetDescendants() do
+		if p:IsA("BasePart") and p.Material == Enum.Material.Neon and n < 10 then
+			n += 1
+			emitter(p, p.Color, 5, 0.35, 2, Vector3.new(0, 2, 0), 1.5)
+		end
+	end
+	local light = Instance.new("PointLight")
+	light.Color = fx[1]
+	light.Range = 40
+	light.Brightness = 2
+	light.Parent = root
 end
 
 spawnMonster = function(typeName: string, at: Vector3?, life: number?, target: Player?)
@@ -251,6 +300,9 @@ spawnMonster = function(typeName: string, at: Vector3?, life: number?, target: P
 	end
 	play(info, "Idle")
 	healthBar(info)
+	if def.Boss then
+		bossAura(model, typeName)
+	end
 	table.insert(info.Conns, hum.Died:Connect(function()
 		onDeath(info)
 	end))
@@ -285,6 +337,28 @@ function MonsterService.Damage(model: Instance, amount: number, player: Player?,
 		info.Aggro[player] = now() + 10
 		if not info.Target then
 			info.Target = player
+		end
+	end
+	-- enrage at low health
+	if not info.Enraged and info.Hum.Health > 0 and info.Hum.Health / info.Hum.MaxHealth < Defs.EnrageAt then
+		info.Enraged = true
+		info.Hum.WalkSpeed *= Defs.EnrageSpeed
+		local hl = Instance.new("Highlight")
+		hl.Name = "Enraged"
+		hl.FillColor = Color3.fromRGB(255, 60, 40)
+		hl.FillTransparency = 0.75
+		hl.OutlineColor = Color3.fromRGB(255, 120, 60)
+		hl.Parent = info.Model
+		Abilities.Burst(info.Root.Position + Vector3.new(0, 3, 0), Color3.fromRGB(255, 80, 50), 30)
+	end
+	-- pack: neighbours of the same habitat join the fight
+	if player and not info.Def.Boss then
+		for _, other in monsters do
+			if other ~= info and other.Alive and not other.Target and other.Def.Habitat == info.Def.Habitat
+				and (other.Root.Position - info.Root.Position).Magnitude <= Defs.PackRadius then
+				other.Aggro[player] = now() + 8
+				other.Target = player
+			end
 		end
 	end
 	if not info.Busy and os.clock() - info.LastHit > 0.5 then
@@ -408,7 +482,9 @@ local function runAction(info, fn, ...)
 		if not ok then
 			warn(`[Monsters] {info.Type} ability failed: {err}`)
 		end
-		task.wait(0.3)
+		-- recovery window after a special ability (fair counter-attack moment)
+		task.wait(info.RecoverNext or 0.3)
+		info.RecoverNext = nil
 		info.Busy = false
 	end)
 end
@@ -485,7 +561,8 @@ local function think(info)
 	for _, i in order do
 		local a = def.Abilities[i]
 		if os.clock() >= info.Cooldowns[i] and dist <= a.Range then
-			info.Cooldowns[i] = os.clock() + a.Cooldown
+			info.Cooldowns[i] = os.clock() + a.Cooldown * (info.Enraged and Defs.EnrageCooldown or 1)
+			info.RecoverNext = Defs.Recovery
 			runAction(info, Abilities.F[a.Id], makeCtx(info, target, tRoot), a)
 			return
 		end

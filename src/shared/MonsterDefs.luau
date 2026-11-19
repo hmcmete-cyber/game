@@ -78,8 +78,8 @@ M.Types = {
 		},
 	},
 	CalderaTitan = {
-		Title = "Caldera Titan", Gait = "Stomp", Habitat = "Volcanic", Arena = "Volcanic", Boss = true, Count = 1, Respawn = 300,
-		HP = 4400, Speed = 11, Scale = 2.7, XP = 650, Aggro = 75, Tether = 60,
+		Title = "Caldera Titan", Gait = "Plod", Habitat = "Volcanic", Arena = "Volcanic", Boss = true, Count = 1, Respawn = 300,
+		HP = 4400, Speed = 10, Scale = 2.4, XP = 650, Aggro = 75, Tether = 60,
 		Melee = { Damage = 28, Range = 16, Cooldown = 2.2 },
 		Abilities = {
 			{ Id = "LavaLanes", Name = "Erupting Lava Lanes", Cooldown = 10, Range = 65, Damage = 24, Lanes = 5, Width = 7, Length = 65, Burn = 3, Windup = 1.2 },
@@ -300,5 +300,37 @@ M.WakeRadius = 260 -- monsters only think when a player is this close
 M.SafeRadius = 130 -- no spawns/aggro this close to the Sky Heart (updraft landing)
 M.Tether = 240 -- max distance from home before a monster walks back
 M.AssistShare = 0.5 -- XP share for players who helped (>= 10 % of the damage)
+
+-- v2.12 DIFFICULTY (director: normal monsters were too weak; bosses a clear
+-- step up). Applied once on load to every non-summoned type, on top of the
+-- tuned numbers above. Behaviour (MonsterService) adds more than HP:
+--   Enrage   below EnrageAt health: faster, shorter cooldowns, red glow
+--   Pack     hitting a monster alerts its neighbours of the same habitat
+--   Recovery after every special ability the monster stands still for a
+--            short window (a fair moment to counter-attack)
+M.EnrageAt = 0.4
+M.EnrageSpeed = 1.25
+M.EnrageCooldown = 0.7
+M.Recovery = 0.9
+M.PackRadius = 70
+for _, def in M.Types do
+	if not def.Summon then
+		local hpK = def.Boss and 1.6 or 1.9
+		local dmgK = def.Boss and 1.25 or 1.4
+		def.HP = math.floor(def.HP * hpK)
+		def.Speed = def.Speed * 1.08
+		def.Aggro = def.Aggro + 10
+		if def.Melee then
+			def.Melee.Damage = math.floor(def.Melee.Damage * dmgK)
+			def.Melee.Cooldown = def.Melee.Cooldown * 0.9
+		end
+		for _, a in def.Abilities or {} do
+			if a.Damage then
+				a.Damage = math.floor(a.Damage * dmgK)
+			end
+			a.Cooldown = a.Cooldown * 0.85
+		end
+	end
+end
 
 return M

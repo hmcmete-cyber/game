@@ -1,7 +1,8 @@
 -- TEST ONLY (director request): an OP weapon for the director's QA account so
 -- monster/boss deaths can be tested. Given only to QA_USER_IDS, and only in
 -- Studio or a private server (never in public live servers).
--- To remove after testing: delete this file and its two lines in main.server.luau.
+-- To remove after testing: delete this file, its line in main.server.luau and
+-- the QaSpeed block in client/Movement.luau.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -82,6 +83,35 @@ local function makeTool(monsterService): Tool
 	return tool
 end
 
+-- TEST ONLY: speed tool. Click to cycle walk speed x1 -> x4 -> x8 -> x12 -> x1
+-- (jump gets up to x3). The client Movement reads the QaSpeed attribute.
+local SPEEDS = { 1, 4, 8, 12 }
+local function makeSpeedTool(): Tool
+	local tool = Instance.new("Tool")
+	tool.Name = "QA Speed (test only)"
+	tool.ToolTip = "Test tool: click to change speed x1 / x4 / x8 / x12"
+	tool.CanBeDropped = false
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(1, 1, 2)
+	handle.Color = Color3.fromRGB(60, 255, 140)
+	handle.Material = Enum.Material.Neon
+	handle.CanCollide = false
+	handle.Parent = tool
+	tool.Activated:Connect(function()
+		local player = Players:GetPlayerFromCharacter(tool.Parent)
+		if not player or not allowed(player) then
+			return
+		end
+		local cur = player:GetAttribute("QaSpeed") or 1
+		local idx = table.find(SPEEDS, cur) or 1
+		local nextSpeed = SPEEDS[idx % #SPEEDS + 1]
+		player:SetAttribute("QaSpeed", nextSpeed)
+		print(`[QA] {player.Name} speed x{nextSpeed}`)
+	end)
+	return tool
+end
+
 function QaWeaponService.Start(monsterService)
 	local function give(player: Player)
 		if not allowed(player) then
@@ -91,6 +121,9 @@ function QaWeaponService.Start(monsterService)
 			local backpack = player:WaitForChild("Backpack", 10)
 			if backpack and not backpack:FindFirstChild("QA OP Smasher (test only)") then
 				makeTool(monsterService).Parent = backpack
+			end
+			if backpack and not backpack:FindFirstChild("QA Speed (test only)") then
+				makeSpeedTool().Parent = backpack
 			end
 		end
 		player.CharacterAdded:Connect(function()

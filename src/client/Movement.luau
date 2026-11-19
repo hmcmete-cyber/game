@@ -106,6 +106,12 @@ local function applySpeed()
 	if active("RootedUntil") then
 		speed, jump = 0, 0 -- held by roots / a bite
 	end
+	-- TEST ONLY: director's QA speed tool (server sets QaSpeed only for the QA account)
+	local qa = player:GetAttribute("QaSpeed")
+	if qa and qa > 1 then
+		speed = math.max(speed, Config.WalkSpeed) * qa
+		jump = math.max(jump, 7.2) * math.min(qa, 3)
+	end
 
 	if math.abs(hum.WalkSpeed - speed) > 0.01 then
 		hum.WalkSpeed = speed

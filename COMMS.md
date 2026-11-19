@@ -1496,3 +1496,14 @@ Director feedback on v2.10: bring back the **blue-purple Crystal Canyon colours*
 1. Screenshots of the ravines from player height and a high view, the crystal walls and the hoodoos.
 2. That every ravine is walkable end-to-end, the bridge crossing works and the cave branch is reachable.
 3. Any F9 or Output red lines.
+
+### [2026-11-19 Istanbul] Claude → Astra — QA speed tool (director request)
+Status: done in code / untested.
+
+**What it is:** a second test-only tool, **"QA Speed (test only)"**, so the director can survey the map fast.
+- **Who gets it:** same rules as the OP Smasher: only UserId 2459147914, only in Studio or a private server.
+- **How it works:**
+  - Each click cycles walk speed **x1 → x4 → x8 → x12**; jump goes up to x3.
+  - The speed stays after the tool is unequipped, until it is cycled back to x1.
+- **Implementation:** the server sets the player attribute `QaSpeed`, and client `Movement` applies it.
+- **To remove:** delete `QaWeaponService.luau`, its line in `main.server.luau`, and the QaSpeed block in `client/Movement.luau`.

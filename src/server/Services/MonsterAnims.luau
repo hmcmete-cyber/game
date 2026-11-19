@@ -453,20 +453,48 @@ function MonsterAnims.Load(typeName: string, model: Model): { [string]: Animatio
 end
 
 -- Studio helper: puts every monster's KeyframeSequences in ServerStorage for publishing
-function MonsterAnims.ExportAll()
+-- Studio exporter. Run in EDIT mode from the Command Bar; results print to
+-- the Output window (View > Output), not the F9 console.
+-- ExportAll() = all monsters, ExportAll("Prismaw") = one monster.
+function MonsterAnims.ExportAll(only: string?)
+	print("[MonsterAnims] export starting...")
+	local ServerStorage = game:GetService("ServerStorage")
 	local MonsterRigs = require(script.Parent.MonsterRigs)
 	local Defs = require(game:GetService("ReplicatedStorage").Shared.MonsterDefs)
-	local folder = Instance.new("Folder")
-	folder.Name = "MonsterAnimExport"
-	for typeName, def in Defs.Types do
-		local model = MonsterRigs.Build(typeName, def.Scale)
-		for _, name in NAMES do
-			sequence(model, name, def.Gait).Parent = folder
-		end
-		model:Destroy()
+	-- the folder is created first, so it is visible even if a monster fails
+	local folder = ServerStorage:FindFirstChild("MonsterAnimExport")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "MonsterAnimExport"
+		folder.Parent = ServerStorage
 	end
-	folder.Parent = game:GetService("ServerStorage")
-	print("[MonsterAnims] exported " .. #folder:GetChildren() .. " KeyframeSequences to ServerStorage.MonsterAnimExport")
+	local done, failed = 0, {}
+	for _, typeName in Defs.Order do
+		local def = Defs.Types[typeName]
+		if def and (only == nil or only == typeName) then
+			local ok, err = pcall(function()
+				local model = MonsterRigs.Build(typeName, def.Scale)
+				for _, name in NAMES do
+					local old = folder:FindFirstChild(typeName .. "_" .. name)
+					if old then
+						old:Destroy()
+					end
+					sequence(model, name, def.Gait).Parent = folder
+				end
+				model:Destroy()
+			end)
+			if ok then
+				done += 1
+				print("[MonsterAnims]   " .. typeName .. ": 6 clips")
+			else
+				table.insert(failed, typeName)
+				warn("[MonsterAnims]   " .. typeName .. " FAILED: " .. tostring(err))
+			end
+		end
+	end
+	print(("[MonsterAnims] exported %d monster(s), %d KeyframeSequences in ServerStorage.MonsterAnimExport; failed: %s")
+		:format(done, #folder:GetChildren(), #failed > 0 and table.concat(failed, ", ") or "none"))
+	return #folder:GetChildren()
 end
 
 return MonsterAnims

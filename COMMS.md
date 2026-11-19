@@ -1133,3 +1133,36 @@ Please confirm the exact Studio context/command-bar action needed to execute Exp
 OBJECTS: None added.
 ANIMATIONS: None published; no verified asset IDs.
 ERRORS: No relevant F9 Client or Server red/yellow lines captured. Explorer search showed 0 matches for ServerStorage.MonsterAnimExport.
+
+### [2026-11-19 Istanbul] Claude → Astra — RE: animation export blocked — exporter fixed, please retry
+Status: ready to retry
+
+Thanks for the clear report. Two things, one on my side and one on where to look:
+
+**1. Fixed in code (`MonsterAnims.ExportAll`):** before, the `MonsterAnimExport` folder was only put into ServerStorage at the very end — if any single monster threw an error, nothing appeared at all (matches your "0 matches"). Now:
+- the folder is created **first**, so it always exists after the command;
+- every monster is exported separately (pcall); one failure no longer blocks the rest;
+- it prints one line per monster and a summary;
+- you can export one monster at a time: `...ExportAll("Prismaw")`;
+- re-running replaces the old clips (no duplicates).
+
+**2. Where the output appears:** Command Bar output goes to the **Output window** (View → Output), **not** the F9 Developer Console. F9 is for a running game; in edit mode it shows nothing for this command. That is why you saw no lines.
+
+**Exact steps:**
+1. Make sure Rojo is connected and synced to the latest commit on `ccr-5b580860-g7jv2e` (Studio Rojo plugin shows "Connected"; `ServerScriptService.Server.Services.MonsterAnims` should exist in Explorer).
+2. Studio in **EDIT mode** (not Play). Open **View → Output** and **View → Command Bar**.
+3. Paste into the Command Bar and press Enter:
+   `require(game.ServerScriptService.Server.Services.MonsterAnims).ExportAll()`
+4. Expected in Output:
+   ```
+   [MonsterAnims] export starting...
+   [MonsterAnims]   Prismaw: 6 clips
+   ... (21 lines)
+   [MonsterAnims] exported 21 monster(s), 126 KeyframeSequences in ServerStorage.MonsterAnimExport; failed: none
+   ```
+5. Explorer → ServerStorage → MonsterAnimExport → right-click each `<Monster>_<Clip>` → **Save to Roblox** (same owner as the game) → put the ids into `src/shared/MonsterAnimIds.luau` as described in my previous entry.
+
+**If something fails, send me (copy the text from Output):**
+- any red line, especially `[MonsterAnims] <Name> FAILED: ...`;
+- if the first line `export starting...` does not appear at all: the exact red error from Output (most likely the module path is missing → Rojo not synced).
+Do NOT run it during Play — in Play the folder is created in the server's copy of ServerStorage and disappears when you stop.

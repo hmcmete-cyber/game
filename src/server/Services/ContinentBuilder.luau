@@ -462,7 +462,7 @@ function ContinentBuilder.Build(ctx)
 	local LOOK = { Plateau = 0, Mountains = 0, Mushroom = 0, Marsh = -3, Volcanic = 0, Canyon = 0 }
 	local HCOLOR = {
 		Plateau = Color3.fromRGB(110, 195, 90), Mountains = Color3.fromRGB(165, 160, 158), Mushroom = Color3.fromRGB(120, 180, 165),
-		Marsh = Color3.fromRGB(95, 120, 100), Volcanic = Color3.fromRGB(75, 62, 62), Canyon = Color3.fromRGB(205, 140, 98),
+		Marsh = Color3.fromRGB(95, 120, 100), Volcanic = Color3.fromRGB(75, 62, 62), Canyon = Color3.fromRGB(185, 130, 170),
 		Heart = Color3.fromRGB(240, 242, 250), Coast = Color3.fromRGB(245, 225, 165), Shallows = Color3.fromRGB(110, 195, 235),
 	}
 	local function canyonTop(r0: number): number
@@ -548,7 +548,7 @@ function ContinentBuilder.Build(ctx)
 				if run.Roof then
 					local roofTop = UP
 					-- a 4-stud slab (not a full column): you can walk under it
-					band("CaveRoof" .. k .. "_" .. run.R0, deg, Wr(R(run.R0), deg), Wr(R(run.R1), deg), roofTop, Color3.fromRGB(150, 92, 70), Z.Canyon, { Bottom = UP - 4 })
+					band("CaveRoof" .. k .. "_" .. run.R0, deg, Wr(R(run.R0), deg), Wr(R(run.R1), deg), roofTop, Color3.fromRGB(125, 100, 125), Z.Canyon, { Bottom = UP - 4 })
 				end
 				run = nil
 			end
@@ -1101,7 +1101,8 @@ function ContinentBuilder.Build(ctx)
 	-- you can climb), with broken chips on the rims. Big blue crystal
 	-- clusters glow at the ravine bends as landmarks.
 	------------------------------------------------------------------
-	local STRATA = { Color3.fromRGB(150, 86, 64), Color3.fromRGB(196, 122, 82), Color3.fromRGB(214, 152, 104), Color3.fromRGB(176, 104, 74), Color3.fromRGB(228, 182, 132) }
+	-- v2.11: back to the blue-purple crystal palette (director liked it)
+	local STRATA = { Color3.fromRGB(120, 92, 165), Color3.fromRGB(150, 112, 195), Color3.fromRGB(96, 78, 145), Color3.fromRGB(178, 140, 212), Color3.fromRGB(110, 120, 190) }
 	local function mainDeg(r: number): number
 		local f = (r - 74) / 182
 		return 240 + 11 * math.sin(f * math.pi * 2 * 1.15 + 0.4)
@@ -1142,52 +1143,103 @@ function ContinentBuilder.Build(ctx)
 		end
 		return best
 	end
+	-- v2.11 (director didn't like the box mesas): the ravines are lined by
+	-- CONTINUOUS CLIFF WALLS that follow every bend: overlapping tall slabs
+	-- of blue-purple crystal rock, leaning out, heights rolling like a real
+	-- skyline, glowing crystal veins on the faces and crystals growing out of
+	-- the walls into the ravine. Above the walls the canyon rim is open
+	-- ground with hoodoo rock spires capped by crystals.
 	local mesaFolder = Instance.new("Folder")
-	mesaFolder.Name = "CanyonMesas"
+	mesaFolder.Name = "CanyonWalls"
 	mesaFolder.Parent = continent
 	local mesaCount = 0
-	for r = 78, 254, 7 do
-		local rStuds = R(r)
-		local dStep = math.deg(30 / rStuds)
-		for deg = 211, 269, dStep do
-			local d = deg + rng:NextNumber(-dStep * 0.2, dStep * 0.2)
-			local rr = r + rng:NextNumber(-1.2, 1.2)
-			local w2 = wobble(d % 360, rr)
-			local floorY = canyonTop(rr)
-			local pos = A(rr, d, floorY)
-			local roofZone = w2 >= 256 and rr >= 108 and rr <= 224
-			local nearRiver = rr >= 189 and rr <= 213
-			if habitatAt(d, rr) == "Canyon" and not roofZone and not nearRiver and not inPit(d, rr - 5, rr + 5)
-				and ravineDist(pos) > RAVINE_HALF and isFree(pos, 13) then
-				mesaCount += 1
-				-- taller toward the canyon rims, lower in the middle
-				local edge = math.min(w2 - 210, 270 - w2)
-				local levels = math.clamp(math.floor(2 + (1 - math.clamp(edge / 30, 0, 1)) * 3 + rng:NextNumber(-0.5, 1.5)), 2, 5)
-				local m = Instance.new("Model")
-				m.Name = "Mesa" .. mesaCount
-				local yaw = CFrame.Angles(0, -math.rad(d) + math.rad(rng:NextNumber(-12, 12)), 0)
-				local w, dd = rng:NextNumber(30, 38), rng:NextNumber(30, 40)
-				local off = Vector2.zero
-				for L = 1, levels do
-					local inset = (L - 1) * rng:NextNumber(1.6, 3.2)
-					off += Vector2.new(rng:NextNumber(-1.2, 1.2), rng:NextNumber(-1.2, 1.2))
-					local h = L * 4
-					local cf = CFrame.new(pos.X + off.X, floorY + h / 2, pos.Z + off.Y) * yaw
-					local layer = newPart(m, "Strata" .. L, Vector3.new(math.max(8, w - inset * 2), h, math.max(8, dd - inset * 2)), cf, STRATA[(L + mesaCount) % #STRATA + 1], {})
-					studAll(layer)
-					tag(layer, Z.Canyon)
-				end
-				-- broken rim chips / small ledges sticking out of the top layers
-				for k = 1, rng:NextInteger(1, 3) do
-					local a = rng:NextNumber(0, math.pi * 2)
-					local top = floorY + levels * 4
-					local chip = chunk(m, "Chip" .. k, Vector3.new(rng:NextNumber(3, 6), rng:NextNumber(1.5, 3), rng:NextNumber(3, 5)),
-						Vector3.new(pos.X + math.cos(a) * w * 0.42, top - rng:NextNumber(0, 3), pos.Z + math.sin(a) * dd * 0.42), STRATA[k % #STRATA + 1], 14, true)
-					tag(chip, Z.Canyon)
-				end
-				m.Parent = mesaFolder
-				reserve(pos, 16)
+	local VEIN = { Color3.fromRGB(120, 200, 255), Color3.fromRGB(200, 140, 255), Color3.fromRGB(150, 230, 255) }
+	for pi, path in ravines do
+		local wall = Instance.new("Model")
+		wall.Name = "Ravine" .. pi
+		for k = 2, #path - 1, 2 do
+			local q, prev, nxt = path[k], path[k - 1], path[k + 1]
+			local tan = Vector3.new(nxt.X - prev.X, 0, nxt.Z - prev.Z)
+			if tan.Magnitude < 0.01 then
+				continue
 			end
+			tan = tan.Unit
+			local side = tan:Cross(Vector3.yAxis)
+			for _, sgn in { -1, 1 } do
+				local thick = rng:NextNumber(10, 16)
+				local at = q + side * sgn * (RAVINE_HALF + thick / 2 - 2)
+				local _, ar = BiomeMap.Polar(at)
+				local ad = math.deg(math.atan2(at.Z, at.X)) % 360
+				local w2 = wobble(ad, ar)
+				local roofZone = w2 >= 256 and ar >= 108 and ar <= 224
+				local nearRiver = ar >= 189 and ar <= 213
+				if habitatAt(ad, ar) == "Canyon" and not roofZone and not nearRiver and not inPit(ad, ar - 4, ar + 4)
+					and ravineDist(at) > RAVINE_HALF - 1 and isFree(at, 6) then
+					mesaCount += 1
+					local floorY = canyonTop(ar)
+					-- rolling skyline: two sine waves along the path + jitter
+					local h = 12 + 7 * math.sin(k * 0.21 + pi * 1.7) + 4 * math.sin(k * 0.57 + sgn) + rng:NextNumber(-2, 3)
+					h = math.clamp(math.floor(h / 2) * 2, 8, 26)
+					local lean = CFrame.Angles(0, 0, math.rad(sgn * rng:NextNumber(3, 9)))
+					local cf = CFrame.lookAt(Vector3.new(at.X, floorY + h / 2, at.Z), Vector3.new(at.X, floorY + h / 2, at.Z) + tan) * lean
+					local col = STRATA[(k + pi) % #STRATA + 1]
+					local slab = newPart(wall, "Slab" .. k .. "_" .. sgn, Vector3.new(thick, h, rng:NextNumber(14, 19)), cf, col, {})
+					studAll(slab)
+					tag(slab, Z.Canyon)
+					-- darker band near the foot and a lighter broken cap on top
+					local band = newPart(wall, "Band" .. k .. "_" .. sgn, Vector3.new(thick + 0.4, math.min(4, h * 0.3), slab.Size.Z + 0.4), cf * CFrame.new(0, -h / 2 + 2, 0), col:Lerp(Color3.new(0, 0, 0), 0.25), {})
+					studAll(band)
+					tag(band, Z.Canyon)
+					if rng:NextNumber() < 0.6 then
+						local cap = chunk(wall, "Cap" .. k .. "_" .. sgn, Vector3.new(thick * 0.8, rng:NextNumber(1.5, 3.5), slab.Size.Z * 0.7), (cf * CFrame.new(rng:NextNumber(-1, 1), h / 2 + 1, 0)).Position, col:Lerp(Color3.new(1, 1, 1), 0.12), 12, true)
+						tag(cap, Z.Canyon)
+					end
+					-- glowing crystal vein running down the ravine-facing side
+					if rng:NextNumber() < 0.35 then
+						newPart(wall, "Vein" .. k .. "_" .. sgn, Vector3.new(0.4, h * rng:NextNumber(0.5, 0.85), 0.8), cf * CFrame.new(-sgn * (thick / 2 + 0.1), rng:NextNumber(-1, 2), rng:NextNumber(-4, 4)) * CFrame.Angles(math.rad(rng:NextNumber(-15, 15)), 0, 0),
+							VEIN[rng:NextInteger(1, #VEIN)], { Material = Enum.Material.Neon, CanCollide = false, CastShadow = false })
+					end
+					-- crystals growing out of the wall into the ravine
+					if rng:NextNumber() < 0.22 then
+						local root = at - side * sgn * (thick / 2 - 1) + Vector3.new(0, rng:NextNumber(2, h * 0.6), 0) - Vector3.new(0, 0, 0)
+						crystalPrism(wall, "WallCrystal" .. k .. "_" .. sgn, Vector3.new(root.X, floorY + (root.Y - at.Y), root.Z), rng:NextNumber(5, 10), rng:NextNumber(1.4, 2.4),
+							CFrame.fromAxisAngle(tan, math.rad(-sgn * rng:NextNumber(35, 60))), CRYSTAL_BLUES[rng:NextInteger(1, #CRYSTAL_BLUES)])
+					end
+					reserve(at, 8)
+				end
+			end
+		end
+		wall.Parent = mesaFolder
+	end
+	-- hoodoos: tall stacked rock spires with crystal caps on the open rim
+	local hoodoos = 0
+	for i = 1, 40 do
+		local pos = place(function()
+			local deg, r = rng:NextNumber(213, 267), rng:NextNumber(80, 252)
+			if habitatAt(deg, r) ~= "Canyon" or inPit(deg, r - 5, r + 5) then
+				return nil
+			end
+			local p = A(r, deg, canyonTop(r))
+			if ravineDist(p) < RAVINE_HALF + 12 then
+				return nil
+			end
+			return p
+		end, 7)
+		if pos then
+			hoodoos += 1
+			local m = Instance.new("Model")
+			m.Name = "Hoodoo" .. i
+			local y = pos.Y
+			local n = rng:NextInteger(3, 5)
+			for k = 1, n do
+				local w = 7 - k * 0.9 + rng:NextNumber(-0.6, 0.6)
+				local h = rng:NextNumber(3, 5)
+				local seg = chunk(m, "Seg" .. k, Vector3.new(w, h, w * rng:NextNumber(0.8, 1.1)), Vector3.new(pos.X + rng:NextNumber(-0.6, 0.6), y + h / 2, pos.Z + rng:NextNumber(-0.6, 0.6)), STRATA[(k + i) % #STRATA + 1], 5, true)
+				tag(seg, Z.Canyon)
+				y += h
+			end
+			crystalPrism(m, "Top", Vector3.new(pos.X, y, pos.Z), rng:NextNumber(4, 8), rng:NextNumber(1.4, 2.2), CFrame.Angles(math.rad(rng:NextNumber(-12, 12)), 0, math.rad(rng:NextNumber(-12, 12))), CRYSTAL_BLUES[i % #CRYSTAL_BLUES + 1])
+			m.Parent = mesaFolder
 		end
 	end
 	-- crystal landmarks at the ravine bends (big glowing blue clusters)
@@ -1226,7 +1278,7 @@ function ContinentBuilder.Build(ctx)
 		m.Parent = decor
 		reserve(base, 10)
 	end
-	print(string.format("[MapCheck] canyon: %d strata mesas, 3 ravines, %d crystal landmarks", mesaCount, #clusterAt))
+	print(string.format("[MapCheck] canyon: %d wall slabs along 3 ravines, %d hoodoos, %d crystal landmarks", mesaCount, hoodoos, #clusterAt))
 
 	------------------------------------------------------------------
 	-- CRYSTAL CANYONS (210-270): crystals, electric river, storm bridge
@@ -1636,7 +1688,7 @@ function ContinentBuilder.Build(ctx)
 		for k = 0, 8 do
 			local t = k / 8 * math.pi
 			local pos = c + axis * math.cos(t) * 18 + Vector3.new(0, math.sin(t) * 16 + 2, 0)
-			block(continent, `Arch{i}_{k}`, Vector3.new(6, 4, 7), CFrame.lookAt(pos, pos + axis), Color3.fromRGB(196, 128, 88), Enum.Material.Sandstone, Z.Canyon)
+			block(continent, `Arch{i}_{k}`, Vector3.new(6, 4, 7), CFrame.lookAt(pos, pos + axis), Color3.fromRGB(165, 120, 140), Enum.Material.Sandstone, Z.Canyon)
 		end
 	end
 	local spireC = A(130, 220, UP - 12)

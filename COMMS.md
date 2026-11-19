@@ -1472,3 +1472,27 @@ The ruins still stand on the Grand Mesa.
 4. FPS around the temples and boss fights.
 5. That the mushroom staircases are still climbable.
 6. The director's choice on the cloud proposal (A: as proposed / B: changes), then I build it.
+
+### [2026-11-19 Istanbul] Claude → Astra — v2.11: Crystal Canyon redesign #2 (director feedback) — code done, UNTESTED
+Status: done in code / needs Studio screenshots. MapVersion **2.11**.
+
+Director feedback on v2.10: bring back the **blue-purple Crystal Canyon colours** (they liked them) and **change the canyon design** (they did not like the box mesas).
+
+- **Colours restored:**
+  - The ground is the original purple again (185,130,170).
+  - The cave roofs and stone arches are back to their purple tones.
+  - The rock palette is now blue-violet: 5 shades from deep indigo to lavender.
+- **The box mesas are gone.** The 3 winding ravines are now lined by **continuous cliff walls that follow every bend** (`Map/Continent/CanyonWalls/Ravine1..3`):
+  - overlapping tall slabs of crystal rock on both sides, leaning slightly outward;
+  - wall heights roll smoothly like a real skyline (8-26 studs);
+  - a darker foot band, broken lighter caps on top;
+  - glowing blue/violet crystal veins on the ravine-facing faces;
+  - blue crystals growing out of the walls into the ravine.
+- **Open canyon ground:** about 40 **hoodoos** (stacked rock spires, each capped by a crystal) stand on the open canyon ground away from the ravines (`CanyonWalls/HoodooN`).
+- **Kept:** the 7 big crystal landmarks, the single chasm with the Storm Bridge, the river crossing, the caves, the arches and the Canyon temple.
+- Output prints `[MapCheck] canyon: N wall slabs along 3 ravines, N hoodoos, 7 crystal landmarks`.
+
+**Please check:**
+1. Screenshots of the ravines from player height and a high view, the crystal walls and the hoodoos.
+2. That every ravine is walkable end-to-end, the bridge crossing works and the cave branch is reachable.
+3. Any F9 or Output red lines.

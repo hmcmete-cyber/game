@@ -1185,3 +1185,35 @@ OBJECTS: Keep all current code-required paths and names; report any added/rework
 ANIMATIONS: None.
 ERRORS: No mountain-related F9 errors captured; map generation completed in the visible Output log.
 NOTES: The director requests a real silhouette/material correction across the generated map, not only a color/texture touch-up.
+
+### [2026-11-19 Istanbul] Claude → Astra — RE: cylindrical mountains/volcano + stud texture — v2.7 code done, UNTESTED
+Status: done in code / needs your Studio check + the before/after screenshots (I cannot run Studio, so the screenshots must come from you). MapVersion **2.7** (rebuilds automatically).
+
+**New mountain construction — `crag()` in ContinentBuilder** (replaces every stacked-disc mountain):
+- Each 4-stud tier (still jumpable while carrying) = a **rotated core block stretched along a ridge axis** + **spur blocks** continuing the ridgeline past both ends + 2-3 **shoulder/outcrop blocks** on the flanks at uneven angles, some 2 studs lower (stepped foothills).
+- **Wedge ramps** on many spurs/outcrops = angled rock faces sloping outward.
+- Tier centres **drift sideways**, so summits are off-centre and asymmetric; every crag has its own seed, ridge angle, stretch and profile curve, so no two are alike.
+- All pieces are **full-height columns from the ground** (no overhangs, no gaps under ledges, continuous collision).
+- **Ranges read as connected:** each of the 5 side peaks points its ridge at the main Snowpeak; the main peak's ridge runs between its two biggest neighbours.
+- Palette: dark rock at the base → lighter rock higher up → snow on the upper tiers (Snowpeak from tier 10, side peaks from tier 5); Glacier ice sheets near the tops (Ice hazard kept).
+
+**Volcano (`Caldera`)** is now a crag too, with a broken profile: shoulders, spurs and ramps; summit offset; **uneven crater rim** of 8 broken blocks of different heights with one gap where the lava spills out. Lava lake (18x18), eruption, smoke and fire are kept on the crater.
+**Lava streaks now follow the actual contours:** they run over each step's top and drip down every drop, hot yellow at the crater cooling to red lower down (`Map/Decor/LavaStreaks`). The **Ash Cone** is also rebuilt as a rugged crag with its lava pool on the summit.
+
+**Studs everywhere:** all crag blocks and ramps have Studs on the top, every side and the slope (Inlet on the bottom). `studPass` now also puts Studs on the **side faces** of every continent block and wedge (cliff faces of the ground bands included), not just the tops.
+
+**Kept:**
+- Altar1 is on the Snowpeak summit, and the summit tier is wider so the altar fits.
+- Spawns are computed on the real crag tier tops (`cragLedge`), then FixSpawns still snaps them to the ground.
+- Footprint reservations are enlarged so dressing, roads and the lava river stay clear, and the foothill boulders are moved out to match.
+- All code-required names and folders are unchanged.
+
+**New paths:** `Map/Continent/Crags/Snowpeak`, `Peak1`…`Peak5`, `Caldera`, `AshCone` (Models; parts named `<Crag>T<tier>`, `…Spur±1`, `…Rock<k>`, `…Ramp<k>`, `…Ice<t>`, `Rim<k>`), plus `Map/Decor/LavaStreaks`.
+**Not changed:** the Grand Mesa (plateau landmark with ruins on top) and the round hills/mushrooms are still cylinders. Say if the director wants these converted too.
+
+**Please check:**
+1. A long view of the mountain range and the volcano, and player-height views; studs visible on the cliff and slope faces.
+2. Climbing the Snowpeak to Altar1 while carrying a cloud (4-stud steps, ramps).
+3. That no spawn, road end or the lava river is buried. The road at 60° ends near the Snowpeak foot, so please check it there.
+4. Part count and FPS (estimate: +~800 parts).
+5. Any red lines in F9 or Output.

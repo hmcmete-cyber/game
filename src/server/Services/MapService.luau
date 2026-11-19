@@ -264,7 +264,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.6"
+local MAP_VERSION = "2.7"
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
 -- v2.2 CLASSIC STUDDED STYLE PASS over the whole generated map: every solid
@@ -285,6 +285,23 @@ local function studPass(root: Instance): number
 				p.TopSurface = Enum.SurfaceType.Studs
 				p.BottomSurface = Enum.SurfaceType.Inlet
 				studded += 1
+			end
+		end
+	end
+	-- v2.7 (director: "classic texture everywhere", incl. cliff and slope
+	-- faces): continent blocks and wedges get studs on their side faces too
+	local continent = root:FindFirstChild("Continent")
+	if continent then
+		for _, p in continent:GetDescendants() do
+			if (p:IsA("WedgePart") or (p:IsA("Part") and p.Shape == Enum.PartType.Block))
+				and p.Material == Enum.Material.Plastic and p.Transparency < 0.5 and math.min(p.Size.X, p.Size.Y, p.Size.Z) >= 2 then
+				p.FrontSurface = Enum.SurfaceType.Studs
+				p.BackSurface = Enum.SurfaceType.Studs
+				p.LeftSurface = Enum.SurfaceType.Studs
+				p.RightSurface = Enum.SurfaceType.Studs
+				if p:IsA("WedgePart") then
+					p.TopSurface = Enum.SurfaceType.Studs -- the slope
+				end
 			end
 		end
 	end

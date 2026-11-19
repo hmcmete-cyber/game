@@ -532,10 +532,10 @@ function ContinentBuilder.Build(ctx)
 		end
 	end
 	for _, c in {
-		{ 175, 60, 82 }, { 115, 42, 44 }, { 225, 78, 52 }, { 130, 84, 35 }, { 235, 38, 38 }, { 160, 35, 30 }, -- peaks
+		{ 175, 60, 92 }, { 115, 42, 50 }, { 225, 78, 58 }, { 130, 84, 40 }, { 235, 38, 42 }, { 160, 35, 34 }, -- peaks (v2.7 crags)
 		{ 130, 105, 36 }, { 205, 128, 36 }, { 150, 142, 36 }, { 100, 140, 36 }, { 240, 100, 36 }, { 185, 95, 36 }, -- shroom stairs
 		{ 205, 110, 42 }, { 200, 12, 52 }, { 258, 66, 26 }, { 225, 192, 14 }, -- elder, mesa, lake, tower
-		{ 180, 300, 74 }, { 115, 285, 40 }, { 130, 220, 9 }, { 150, 238, 22 }, { 200, 222, 22 }, { 120, 255, 22 }, -- volcanoes, canyon
+		{ 180, 300, 82 }, { 115, 285, 46 }, { 130, 220, 9 }, { 150, 238, 22 }, { 200, 222, 22 }, { 120, 255, 22 }, -- volcanoes, canyon
 		{ 292, 90, 9 }, { 282, 180, 10 }, { 240, 326, 10 }, -- lighthouse, altars
 	} do
 		reserve(A(c[1], c[2], UP), c[3])
@@ -608,43 +608,200 @@ function ContinentBuilder.Build(ctx)
 	------------------------------------------------------------------
 	-- MOUNTAINS & SNOWPEAKS (30-90): 4-stud terraces (jumpable while carrying)
 	------------------------------------------------------------------
-	local function peak(name: string, center: Vector3, radius: number, tiers: number, snowFrom: number, iceFrom: number)
-		-- v2.6 (snowy-peak reference): a sharper pyramid profile — wide dark
-		-- rock base narrowing faster toward a pointed summit, snow on the upper half
-		for t = 1, tiers do
-			local frac = (t - 1) / tiers
-			local r = 6 + (radius - 6) * (1 - frac) ^ 1.35
-			local top = UP + t * 4
-			local snowy = t >= snowFrom
-			local rockShade = Color3.fromRGB(85, 82, 90):Lerp(rock, frac * 0.7)
-			disc(continent, name .. "Tier" .. t, center, r, 4, top, snowy and Color3.fromRGB(240, 246, 255) or rockShade,
-				snowy and Enum.Material.Snow or Enum.Material.Rock, snowy and Z.Snow or Z.Mountains)
-			if t >= iceFrom then
-				local ice = newPart(continent, name .. "Ice" .. t, Vector3.new(0.2, r * 2, r * 2), CFrame.new(center.X, top + 0.1, center.Z) * CFrame.Angles(0, 0, math.pi / 2),
-					Color3.fromRGB(215, 240, 255), { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Glacier, Transparency = 0.25 })
-				hazardFlag(ice, "Ice")
+	------------------------------------------------------------------
+	-- v2.7 CRAG: blocky, asymmetric mountain (director: no stacked cylinders).
+	-- Every 4-stud tier is a rotated core block stretched along a ridge axis
+	-- plus offset satellite blocks (spurs, shoulders, outcrops), all
+	-- full-height columns from the ground (no overhangs, solid collision),
+	-- studs on every visible face, and wedge ramps for angled rock faces.
+	-- The tier centres drift sideways so the summit sits off-centre.
+	------------------------------------------------------------------
+	local cragFolder = Instance.new("Folder")
+	cragFolder.Name = "Crags"
+	cragFolder.Parent = continent
+	local function allStuds(p: BasePart)
+		p.Material = Enum.Material.Plastic
+		p.TopSurface = Enum.SurfaceType.Studs
+		p.FrontSurface = Enum.SurfaceType.Studs
+		p.BackSurface = Enum.SurfaceType.Studs
+		p.LeftSurface = Enum.SurfaceType.Studs
+		p.RightSurface = Enum.SurfaceType.Studs
+		p.BottomSurface = Enum.SurfaceType.Inlet
+		p.CastShadow = false
+	end
+	-- crag record: { model, blocks = { { cf, half, top } }, centers, tops, summit, radius }
+	local BASE_Y = UP - 2
+	local function cragBlock(c: any, name: string, pos: Vector2, yaw: number, sx: number, sz: number, top: number, color: Color3, z)
+		local h = top - BASE_Y
+		local cf = CFrame.new(pos.X, BASE_Y + h / 2, pos.Y) * CFrame.Angles(0, yaw, 0)
+		local p = newPart(c.model, name, Vector3.new(sx, h, sz), cf, color, {})
+		allStuds(p)
+		if z then
+			tag(p, z)
+		end
+		table.insert(c.blocks, { cf = cf, half = Vector3.new(sx / 2, h / 2, sz / 2), top = top })
+		return p, cf
+	end
+	-- ramp leaning against the face of a block that points most along `out`
+	local function cragRamp(c: any, name: string, cf: CFrame, sx: number, sz: number, top: number, out: Vector3, color: Color3, z)
+		local axes = { { cf.RightVector, sx / 2, sz }, { -cf.RightVector, sx / 2, sz }, { cf.LookVector, sz / 2, sx }, { -cf.LookVector, sz / 2, sx } }
+		local best = axes[1]
+		for _, a in axes do
+			if a[1]:Dot(out) > best[1]:Dot(out) then
+				best = a
 			end
 		end
-		return Vector3.new(center.X, UP + tiers * 4, center.Z)
+		local dir, halfD, width = best[1], best[2], best[3]
+		local height = math.min(4, top - UP)
+		if height < 1 then
+			return
+		end
+		local depth = height * 1.4
+		local centre = Vector3.new(cf.Position.X, top - height / 2, cf.Position.Z) + dir * (halfD + depth / 2)
+		local zAxis = -dir -- tall face against the block, slope runs down and outward
+		local xAxis = Vector3.yAxis:Cross(zAxis)
+		local w = Instance.new("WedgePart")
+		w.Name = name
+		w.Anchored = true
+		w.Size = Vector3.new(width, height, depth)
+		w.CFrame = CFrame.fromMatrix(centre, xAxis, Vector3.yAxis, zAxis)
+		w.Color = color
+		allStuds(w)
+		if z then
+			tag(w, z)
+		end
+		w.Parent = c.model
 	end
-	local function ledge(center: Vector3, radius: number, tiers: number, t: number, around: number): Vector3
-		local rT = radius - (t - 1) * (radius - 6) / tiers
-		local rN = radius - t * (radius - 6) / tiers
-		local p = polar((rT + rN) / 2, around, 0)
-		return Vector3.new(center.X + p.X, UP + 4 * t + 3, center.Z + p.Z)
+	-- height of the crag's top surface at (x, z) (nil = not on the crag)
+	local function cragTopAt(c: any, x: number, zz: number): number?
+		local best
+		for _, b in c.blocks do
+			local l = b.cf:PointToObjectSpace(Vector3.new(x, b.cf.Position.Y, zz))
+			if math.abs(l.X) <= b.half.X - 0.5 and math.abs(l.Z) <= b.half.Z - 0.5 and (best == nil or b.top > best) then
+				best = b.top
+			end
+		end
+		return best
+	end
+	-- a point standing on tier t, searched around the angle `around` (spawns)
+	local function cragLedge(c: any, t: number, around: number): Vector3?
+		local want = c.tops[t]
+		for k = 0, 11 do
+			local deg = around + (k % 2 == 0 and 1 or -1) * math.floor((k + 1) / 2) * 30
+			local dir = polar(1, deg, 0)
+			local hits = {}
+			for d = 2, c.radius * 1.2, 1.5 do
+				local q = c.centers[t] + dir * d
+				local top = cragTopAt(c, q.X, q.Z)
+				if top and math.abs(top - want) < 0.1 then
+					table.insert(hits, q)
+				end
+			end
+			if #hits > 0 then
+				local q = hits[math.ceil(#hits / 2)]
+				return Vector3.new(q.X, want + 3, q.Z)
+			end
+		end
+		return nil
+	end
+	--[[ opts:
+		Radius, Tiers, MinR (top tier radius), Power (profile curve),
+		Ridge (deg of the ridge axis), Stretch (ridge elongation),
+		Drift (summit offset in studs), DriftDeg, Seed,
+		Color(t, frac, isSatellite) -> Color3, Zone(t, frac) -> zone table
+	]]
+	local function crag(name: string, center: Vector3, o): any
+		local model = Instance.new("Model")
+		model.Name = name
+		model.Parent = cragFolder
+		local c = { model = model, blocks = {}, centers = {}, tops = {}, summit = center, radius = o.Radius }
+		local cr = Random.new(o.Seed or 7)
+		local ridgeYaw = math.rad(o.Ridge or 0)
+		local driftDir = polar(1, o.DriftDeg or 0, 0)
+		local ridgeDir = polar(1, o.Ridge or 0, 0)
+		for t = 1, o.Tiers do
+			local frac = (t - 1) / o.Tiers
+			local r = o.MinR + (o.Radius - o.MinR) * (1 - frac) ^ (o.Power or 1)
+			local top = UP + t * 4
+			local ct = center + driftDir * ((o.Drift or 0) * frac ^ 1.3)
+			c.centers[t] = Vector3.new(ct.X, top, ct.Z)
+			c.tops[t] = top
+			local z = o.Zone(t, frac)
+			local col = o.Color(t, frac, false)
+			local stretch = 1 + ((o.Stretch or 1.3) - 1) * (1 - frac * 0.6)
+			local yaw = ridgeYaw + math.rad(cr:NextNumber(-10, 10))
+			cragBlock(c, name .. "T" .. t, Vector2.new(ct.X, ct.Z), -yaw, r * 1.35 * stretch, r * 1.35, top, col, z)
+			-- spurs: continue the ridgeline beyond both ends of the core
+			for _, sgn in { 1, -1 } do
+				if cr:NextNumber() < 0.75 then
+					local off = ridgeDir * sgn * r * cr:NextNumber(0.65, 0.8) + polar(1, (o.Ridge or 0) + 90, 0) * r * cr:NextNumber(-0.15, 0.15)
+					local w = r * cr:NextNumber(0.35, 0.5)
+					local sTop = top - (cr:NextNumber() < 0.5 and 2 or 0)
+					local sp = ct + off
+					local _, scf = cragBlock(c, name .. "T" .. t .. "Spur" .. sgn, Vector2.new(sp.X, sp.Z), -yaw + math.rad(cr:NextNumber(-20, 20)), w * 1.4, w, sTop, o.Color(t, frac, true), z)
+					if cr:NextNumber() < 0.6 then
+						cragRamp(c, name .. "T" .. t .. "SpurRamp" .. sgn, scf, w * 1.4, w, sTop, ridgeDir * sgn, o.Color(t, frac, true), z)
+					end
+				end
+			end
+			-- shoulders/outcrops on the flanks, at uneven angles and heights
+			local n = cr:NextInteger(2, 3)
+			local a0 = cr:NextNumber(0, 360)
+			for k = 1, n do
+				local deg = a0 + k * 360 / n + cr:NextNumber(-35, 35)
+				local out = polar(1, deg, 0)
+				local w = r * cr:NextNumber(0.4, 0.6)
+				local sp = ct + out * r * cr:NextNumber(0.4, 0.55)
+				local sTop = top - (cr:NextNumber() < 0.4 and 2 or 0)
+				local sx, sz = w * cr:NextNumber(0.9, 1.3), w
+				local _, scf = cragBlock(c, name .. "T" .. t .. "Rock" .. k, Vector2.new(sp.X, sp.Z), math.rad(cr:NextNumber(0, 90)), sx, sz, sTop, o.Color(t, frac, true), z)
+				if cr:NextNumber() < 0.55 then
+					cragRamp(c, name .. "T" .. t .. "Ramp" .. k, scf, sx, sz, sTop, out, o.Color(t, frac, true), z)
+				end
+			end
+		end
+		c.summit = c.centers[o.Tiers]
+		return c
+	end
+
+	------------------------------------------------------------------
+	-- MOUNTAINS & SNOWPEAKS (30-90): 4-stud terraces (jumpable while carrying)
+	------------------------------------------------------------------
+	local SNOW = Color3.fromRGB(240, 246, 255)
+	local function peak(name: string, center: Vector3, radius: number, tiers: number, snowFrom: number, iceFrom: number, o): any
+		-- sharp snowy peak reference: dark rock base, lighter rock higher up,
+		-- snow on the upper tiers, ice sheets near the top
+		local c = crag(name, center, {
+			Radius = radius, Tiers = tiers, MinR = o.MinR or 7, Power = o.Power or 1.25,
+			Ridge = o.Ridge, Stretch = o.Stretch or 1.35, Drift = o.Drift or radius * 0.35, DriftDeg = o.DriftDeg, Seed = o.Seed,
+			Color = function(t, frac, sat)
+				if t >= snowFrom then
+					return sat and SNOW:Lerp(Color3.fromRGB(205, 215, 230), 0.4) or SNOW
+				end
+				local shade = Color3.fromRGB(78, 74, 84):Lerp(rock, frac * 0.8)
+				return sat and shade:Lerp(Color3.new(0, 0, 0), 0.12) or shade
+			end,
+			Zone = function(t)
+				return t >= snowFrom and Z.Snow or Z.Mountains
+			end,
+		})
+		for t = iceFrom, tiers do
+			local b = c.blocks[1]
+			for _, blk in c.blocks do
+				if blk.top == c.tops[t] then
+					b = blk
+					break
+				end
+			end
+			local ice = newPart(c.model, name .. "Ice" .. t, Vector3.new(b.half.X * 1.2, 0.2, b.half.Z * 1.2), b.cf.Rotation + Vector3.new(b.cf.X, c.tops[t] + 0.1, b.cf.Z),
+				Color3.fromRGB(215, 240, 255), { Material = Enum.Material.Glacier, Transparency = 0.25, CastShadow = false })
+			hazardFlag(ice, "Ice")
+		end
+		return c
 	end
 	local mainC = A(175, 60, UP)
-	local summit = peak("Snowpeak", mainC, 80, 20, 10, 14)
-	-- four rock ridges running down the main peak, snow-covered on the upper half
-	for k, ang in { 30, 120, 210, 300 } do
-		local dir = Vector3.new(math.cos(math.rad(ang)), 0, math.sin(math.rad(ang)))
-		for t = 1, 20, 2 do
-			local frac = (t - 1) / 20
-			local r = 6 + (80 - 6) * (1 - frac) ^ 1.35
-			local pos = mainC + dir * (r - 1.2) + Vector3.new(0, t * 4 + 1, 0)
-			newPart(decor, "Ridge" .. k .. "_" .. t, Vector3.new(3, 6, 4), CFrame.lookAt(pos, pos + dir) * CFrame.Angles(math.rad(-25), 0, 0),
-				t >= 10 and Color3.fromRGB(245, 248, 255) or Color3.fromRGB(70, 68, 76), { Material = Enum.Material.Plastic, CanCollide = false, CastShadow = false })
-		end
+	local function toward(from: Vector3, to: Vector3): number
+		return math.deg(math.atan2(to.Z - from.Z, to.X - from.X))
 	end
 	local peaks = {
 		{ A(115, 42, UP), 42, 10 },
@@ -653,17 +810,27 @@ function ContinentBuilder.Build(ctx)
 		{ A(235, 38, UP), 36, 9 },
 		{ A(160, 35, UP), 28, 7 },
 	}
+	-- the main peak's ridge runs between its two biggest neighbours (one range)
+	local mainCrag = peak("Snowpeak", mainC, 80, 20, 10, 14, {
+		Ridge = toward(peaks[1][1], peaks[2][1]), DriftDeg = toward(mainC, peaks[2][1]) + 40, Drift = 18, Seed = 11, MinR = 12,
+	})
+	local summit = mainCrag.summit
+	local peakCrags = {}
 	for i, p in peaks do
-		peak("Peak" .. i, p[1], p[2], p[3], 5, 7)
+		-- each ridge points at the main peak so the ranges read as connected
+		peakCrags[i] = peak("Peak" .. i, p[1], p[2], p[3], 5, 7, {
+			Ridge = toward(p[1], mainC) + (i % 2 == 0 and 12 or -12), DriftDeg = toward(p[1], mainC) + 180 + i * 25,
+			Drift = p[2] * 0.3, Seed = 20 + i, Stretch = 1.25 + (i % 3) * 0.12, Power = 1.1 + (i % 2) * 0.3,
+		})
 	end
 	ctx.altar(decor, altars, "Altar1", summit)
 	altars:FindFirstChild("Altar1"):SetAttribute("Biome", "Mountains")
 	for _, pos in {
 		summit + Vector3.new(0, 3, 0),
-		ledge(mainC, 80, 20, 3, 200), ledge(mainC, 80, 20, 6, 20), ledge(mainC, 80, 20, 9, 120), ledge(mainC, 80, 20, 12, 300),
-		ledge(mainC, 80, 20, 16, 60), ledge(mainC, 80, 20, 18, 240),
-		ledge(peaks[1][1], 42, 10, 4, 250), ledge(peaks[2][1], 50, 12, 5, 150), ledge(peaks[4][1], 36, 9, 3, 330),
-		ledge(peaks[5][1], 28, 7, 3, 90), A(180, 50, UP + 3), A(140, 70, UP + 3),
+		cragLedge(mainCrag, 3, 200), cragLedge(mainCrag, 6, 20), cragLedge(mainCrag, 9, 120), cragLedge(mainCrag, 12, 300),
+		cragLedge(mainCrag, 16, 60), cragLedge(mainCrag, 18, 240),
+		cragLedge(peakCrags[1], 4, 250), cragLedge(peakCrags[2], 5, 150), cragLedge(peakCrags[4], 3, 330),
+		cragLedge(peakCrags[5], 3, 90), A(180, 50, UP + 3), A(140, 70, UP + 3),
 		A(95, 60, UP + 3), A(250, 55, UP + 3),
 	} do
 		spawnPoint(pos, "Mountains")
@@ -838,12 +1005,34 @@ function ContinentBuilder.Build(ctx)
 	local calderaC = A(180, 300, UP)
 	-- v2.6 (erupting volcano reference): a tall cone of 8 tiers narrowing to a
 	-- glowing crater, lava streaks pouring down the sides, eruption sparks + smoke
-	local tiers, calR = 8, 70
-	for t = 1, tiers do
-		local r = calR - (t - 1) * 6.5
-		disc(continent, "Caldera" .. t, calderaC, r, 4, UP + t * 4, t == tiers and Color3.fromRGB(45, 35, 35) or basalt, Enum.Material.Basalt, Z.Volcanic)
-	end
+	-- v2.7: broken, rugged crag (shoulders, spurs, ramps) instead of a disc stack;
+	-- the summit sits off-centre, the crater rim is uneven
+	local tiers = 8
+	local volcano = crag("Caldera", calderaC, {
+		Radius = 70, Tiers = tiers, MinR = 17, Power = 0.9, Ridge = 340, Stretch = 1.3, Drift = 10, DriftDeg = 250, Seed = 31,
+		Color = function(t, frac, sat)
+			local c = Color3.fromRGB(58, 48, 50):Lerp(Color3.fromRGB(40, 32, 34), frac)
+			return sat and c:Lerp(Color3.fromRGB(95, 60, 45), 0.25) or c
+		end,
+		Zone = function()
+			return Z.Volcanic
+		end,
+	})
+	local craterC = volcano.summit
 	local lakeTop = UP + tiers * 4
+	-- uneven crater rim: broken blocks of different heights with gaps
+	for k = 1, 9 do
+		if k ~= 4 then -- one gap where the lava spills out
+			local a = k * 40 + rng:NextNumber(-8, 8)
+			local pos = craterC + polar(rng:NextNumber(11.5, 13.5), a, 0)
+			local h = rng:NextNumber(2, 7)
+			local p = newPart(volcano.model, "Rim" .. k, Vector3.new(rng:NextNumber(4, 7), h + 2, rng:NextNumber(3, 5)),
+				CFrame.new(pos.X, lakeTop + h / 2 - 1, pos.Z) * CFrame.Angles(0, -math.rad(a) + math.rad(rng:NextNumber(-15, 15)), math.rad(rng:NextNumber(-8, 8))),
+				Color3.fromRGB(35, 28, 30), {})
+			allStuds(p)
+			tag(p, Z.Volcanic)
+		end
+	end
 	local function lava(name: string, pos: Vector3, size: Vector3)
 		local p = newPart(decor, name, size, CFrame.new(pos), Color3.fromRGB(255, 110, 30), {
 			Material = Enum.Material.Neon, CanCollide = false, CanQuery = true, CastShadow = false,
@@ -868,7 +1057,7 @@ function ContinentBuilder.Build(ctx)
 		hazardFlag(h, "Lava")
 		return p
 	end
-	local lake = lava("LavaLake", Vector3.new(calderaC.X, lakeTop + 0.1, calderaC.Z), Vector3.new(18, 0.4, 18))
+	local lake = lava("LavaLake", Vector3.new(craterC.X, lakeTop + 0.1, craterC.Z), Vector3.new(18, 0.4, 18))
 	local erupt = Instance.new("ParticleEmitter")
 	erupt.Name = "Eruption"
 	erupt.Color = ColorSequence.new(Color3.fromRGB(255, 230, 120), Color3.fromRGB(255, 70, 20))
@@ -896,15 +1085,32 @@ function ContinentBuilder.Build(ctx)
 	fire.Size = 25
 	fire.Heat = 20
 	fire.Parent = lake
-	-- lava streaks: glowing pieces down the outer edge of each tier
-	for k, ang in { 15, 75, 140, 200, 260, 320 } do
-		local dir = Vector3.new(math.cos(math.rad(ang)), 0, math.sin(math.rad(ang)))
-		local reach = (k % 2 == 0) and 1 or 3 -- some streaks stop higher up
-		for t = tiers, reach, -1 do
-			local r = calR - (t - 1) * 6.5
-			local pos = calderaC + dir * (r - 0.4) + Vector3.new(0, UP - calderaC.Y + t * 4 - 2, 0)
-			newPart(decor, "LavaStreak" .. k .. "_" .. t, Vector3.new(1.8, 4.2, 1.2), CFrame.lookAt(pos, pos + dir) * CFrame.Angles(math.rad(-12), 0, 0),
-				t > tiers - 2 and Color3.fromRGB(255, 200, 80) or Color3.fromRGB(255, 100, 30), { Material = Enum.Material.Neon, CanCollide = false, CastShadow = false })
+	-- lava streaks follow the real contours: they run over each step's top and
+	-- drip down every drop, starting at the crater and cooling as they go
+	local streaks = Instance.new("Folder")
+	streaks.Name = "LavaStreaks"
+	streaks.Parent = decor
+	for k, ang in { 160, 15, 75, 215, 275, 330 } do
+		local dir = polar(1, ang, 0)
+		local reach = (k % 2 == 0) and 0.55 or 1 -- some streaks stop higher up
+		local prevTop, prevQ = nil, nil
+		for d = 9, volcano.radius * 1.15 * reach, 3 do
+			local q = craterC + dir * d
+			local top = cragTopAt(volcano, q.X, q.Z)
+			if not top then
+				break
+			end
+			local heat = math.clamp((top - UP) / (tiers * 4), 0, 1)
+			local col = Color3.fromRGB(230, 60, 20):Lerp(Color3.fromRGB(255, 210, 90), heat)
+			newPart(streaks, "Flow" .. k .. "_" .. d, Vector3.new(2.4, 0.3, 3.2), CFrame.lookAt(Vector3.new(q.X, top + 0.15, q.Z), Vector3.new(q.X, top + 0.15, q.Z) + dir),
+				col, { Material = Enum.Material.Neon, CanCollide = false, CanQuery = false, CastShadow = false })
+			if prevTop and prevTop - top > 0.5 then
+				local drop = prevTop - top
+				local e = (prevQ + q) / 2
+				newPart(streaks, "Drip" .. k .. "_" .. d, Vector3.new(2.2, drop + 0.3, 0.6), CFrame.lookAt(Vector3.new(e.X, top + drop / 2, e.Z), Vector3.new(e.X, top + drop / 2, e.Z) + dir),
+					col, { Material = Enum.Material.Neon, CanCollide = false, CanQuery = false, CastShadow = false })
+			end
+			prevTop, prevQ = top, q
 		end
 	end
 	for i = 1, 12 do
@@ -924,7 +1130,7 @@ function ContinentBuilder.Build(ctx)
 	local altar3 = ctx.altar(decor, altars, "Altar3", A(240, 326, UP))
 	altar3:SetAttribute("Biome", "Volcanic")
 	for _, pos in {
-		calderaC + polar(55, 0, 15), calderaC + polar(45, 120, 19), calderaC + polar(30, 240, 31),
+		cragLedge(volcano, 3, 0), cragLedge(volcano, 4, 120), cragLedge(volcano, 7, 240),
 		A(100, 285, UP + 3), A(150, 325, UP + 3), A(230, 280, UP + 3), A(240, 300, UP + 3), A(120, 310, UP + 3),
 	} do
 		spawnPoint(pos, "Volcanic")
@@ -1103,11 +1309,21 @@ function ContinentBuilder.Build(ctx)
 
 	-- VOLCANIC: Ash Cone (second volcano) + lava river with an obsidian bridge
 	local ashC = A(115, 285, UP)
-	for t = 1, 6 do
-		disc(continent, "AshCone" .. t, ashC, 42 - t * 5, 4, UP + t * 4, Color3.fromRGB(70, 60, 60), Enum.Material.Basalt, Z.Volcanic)
+	local ash = crag("AshCone", ashC, {
+		Radius = 40, Tiers = 6, MinR = 10, Power = 0.85, Ridge = 30, Stretch = 1.4, Drift = 6, DriftDeg = 120, Seed = 41,
+		Color = function(t, frac, sat)
+			local c = Color3.fromRGB(78, 68, 68):Lerp(Color3.fromRGB(55, 46, 48), frac)
+			return sat and c:Lerp(Color3.new(0, 0, 0), 0.15) or c
+		end,
+		Zone = function()
+			return Z.Volcanic
+		end,
+	})
+	lava("AshLava", Vector3.new(ash.summit.X, UP + 24.1, ash.summit.Z), Vector3.new(10, 0.4, 10))
+	local ashSpawn = cragLedge(ash, 4, 0)
+	if ashSpawn then
+		spawnPoint(ashSpawn, "Volcanic")
 	end
-	lava("AshLava", Vector3.new(ashC.X, UP + 24.1, ashC.Z), Vector3.new(10, 0.4, 10))
-	spawnPoint(ashC + Vector3.new(9, 23, 0), "Volcanic")
 	-- winding river: bright yellow-orange core over a wider red glow edge,
 	-- dark crust lumps on both banks
 	local SEGS = 24
@@ -1372,7 +1588,7 @@ function ContinentBuilder.Build(ctx)
 		return A(rng:NextNumber(268, 298), rng:NextNumber(0, 360), UP - 0.5)
 	end, function(i, p) dressRocks("ShoreRocks" .. i, p, Color3.fromRGB(175, 165, 150), "Coast") end)
 	-- foothills: boulder clusters around the base of every peak
-	for i, spec in { { 175, 60, 82 }, { 115, 42, 44 }, { 225, 78, 52 }, { 130, 84, 35 }, { 235, 38, 38 }, { 160, 35, 30 } } do
+	for i, spec in { { 175, 60, 92 }, { 115, 42, 50 }, { 225, 78, 58 }, { 130, 84, 40 }, { 235, 38, 42 }, { 160, 35, 34 } } do
 		local c = A(spec[1], spec[2], UP)
 		for k = 1, 3 do
 			local a = k * 2.1 + i

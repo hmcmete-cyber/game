@@ -1557,3 +1557,178 @@ NOTES: Screenshots are in the director's ChatGPT message only; textual observati
 Status: clarification
 
 Clarification to the 22:10 pet request: every pet must do **both** jobs: help the player in combat and grant the player a meaningful buff (passive or activated). Do not make pets attack-only. Each pet's player buff should be distinct and clearly documented in the 50+ roster table, with rarity-based strength and sensible equip/stack limits so buffs do not become overpowered when combined.
+
+### [2026-11-19 Istanbul] Claude → Director/Astra — v2.12/2.13: unique deaths, boss eggs, pets (56), huts, stronger monsters, map fixes, distinct clouds — code done, UNTESTED
+Status: done in code (MapVersion **2.13**) / needs Studio test + screenshots from you (I cannot run Studio).
+
+**1) Unique deaths** (`ServerScriptService/Server/Services/MonsterDeaths`). There is no shared dissolve any more. Every species has its own sequence, built from different moves (freeze/shatter, melt/sink, deflate, float away, topple, flip, spin, recolor to stone/ice/ash) plus element particles:
+
+| Species | Death |
+|---|---|
+| Prismaw | turns to glass, shatters into shards |
+| Frostback | hides in its shell, the shell ices over and bursts into snow |
+| Voltwraith | overload bolts, then a white flash out |
+| Cyclonox | spins up, pieces whirl away |
+| Cindermaw | cools to stone, last embers, crumbles |
+| Smoldlet | fizzles; black puff and coal lumps are left |
+| Capstride | droops forward, spore puff, sinks into the soil |
+| Sporeback | bursts into a pink spore cloud |
+| Rubbleye | eye goes dark, orbit rocks drop, core crumbles |
+| Bristlehulk | topples like a felled tree, leaves scatter |
+| Gulpvine | withers brown and sinks |
+| Mossgrave | crumbles to rubble; flowers bloom where it fell |
+| Gnashgut | wobbles, deflates, pops |
+| Skyfin | flips belly-up and floats away with bubbles |
+| Puffhorn | its wool poofs off |
+| Snowpeck | feather burst, spins into a snowball, melts |
+| Glowmoth | glow drains into rising motes |
+| Croakle | last zap, then a puddle plop |
+| Geoscuttle | flips on its back, crystals pop off |
+| Scorchtail | flame burst, melts into lava |
+| Octoblob | squishes flat with an ink splash |
+| Shroomling | tiny spore pop |
+
+**Bosses** play 4 beats:
+1. **Stagger:** shake, sparks, shockwave rings.
+2. **Collapse:** kneels, its colour blazes, light flash.
+3. **Species defeat moment:**
+   - Mesa Colossus slumps into a rubble mesa;
+   - Frostpeak Warden turns into an ice statue, then a snowstorm explosion;
+   - Mycelium Monarch's giant spore bloom leaves a fairy ring of mushrooms;
+   - Bogstorm Croaker's sac overcharges into a bolt storm, then it deflates;
+   - Prism Sovereign implodes, then a crystal supernova;
+   - Caldera Titan erupts, hardens to obsidian and crumbles;
+   - Tidebreaker's shell cracks, tidal splash rings, sinks into foam.
+4. **Reward:** golden light pillar, confetti and sparkle rain, and the egg drop.
+
+All bosses also carry aura particles, emitters on their signature part, glow emitters on every neon detail, and a light.
+
+**Caldera Titan redesigned:** it is now a **lava tortoise carrying an erupting volcano** (hex basalt shell rim, 3-tier cone with lava rivers and a crater, vents, a serpent neck and horned dragon head, 4 pillar legs with claws, magma tail; gait Plod). It no longer resembles Cindermaw.
+
+**2) Stronger enemies** (MonsterDefs + MonsterService):
+- **Numbers:** normal monsters have HP ×1.9 and damage ×1.4; bosses HP ×1.6 and damage ×1.25. All monsters move 8 % faster, notice you from 10 studs farther, and have 15 % shorter ability cooldowns.
+- **Behaviour:**
+  - **Enrage** below 40 % HP: red glow, ×1.25 speed, ×0.7 cooldowns.
+  - **Pack alert:** hitting a monster pulls in nearby monsters of the same habitat.
+  - **Recovery window:** after every special ability the monster stands still for 0.9 s (a fair counter-attack moment).
+- All telegraphs are kept.
+
+**3) Boss eggs → nursery → hatch** (`EggService`):
+- **Drop:** the boss drops a big blocky studded themed egg at `workspace.EggDrops.<Biome>Egg`, with a light, sparkles and the prompt "Take Egg". Everyone with ≥5 % of the damage, or the final hit, can take one.
+- **The 7 eggs:** Meadow, Frost, Spore, Storm, Crystal, Magma, Tide. Each is a stack of studded blocks in the biome colours with a band and spots.
+- **Incubator:**
+  - At your base's **Egg Nursery**, press "Incubate". A **100-minute** countdown shows on the sign; the pet Hatch buff shortens it.
+  - It is saved as `Data.Incubator = { Egg, ReadyAt = os.time() }`, so rejoining keeps the remaining time.
+  - When the time is up, the prompt reads "Hatch!".
+- **Hatch reveal:** the egg wobbles, grows and glows once per rarity step (Common 2 pulses … Legendary 6, in rarity colour). Then the shell bursts and the pet pops out spinning.
+- **Announce:** a **Legendary** hatch is announced to the whole server.
+- **QA:** **"QA Instant Hatch (test only)"** goes only to UserId **2459147914**, only in Studio or a private server. It grants an egg if you have none, incubates it and hatches it at once.
+
+**4) Pet Hut and Egg Nursery at every base** (`HutBuilder`):
+- **Pet Hut:** `Map/Expansion/PetHut<i>` on the existing ExpansionPad<i>. It is a cosy cloud cottage:
+  - puffy walls and a puffy roof with a coloured ridge, a chimney with smoke;
+  - a round door, round windows, a paw emblem, a fence, a bowl and cushions;
+  - 6 `PetSpot`s; your unequipped pets idle there (in `Residents`);
+  - a "Pets" prompt that opens the pet panel.
+- **Egg Nursery:** `Map/Expansion/IncubatorHut<i>` on the new `NurseryPad<i>`:
+  - an octagonal low wall, a glass dome on 8 posts, a heat lamp, a straw cradle;
+  - an `EggSpot` where your incubating egg shows;
+  - a `TimerBoard` with a BillboardGui `Timer` showing mm:ss / READY!, and the `IncubatorPrompt`.
+- **Placement note:** the pad mirrored to the other side of the base would overlap the neighbouring base's pet hut (bases are only ~72 studs apart). So the nursery is **across the base from the bridge** (outward), with its own link.
+
+**5) Pets — 56 distinct pets, 7 eggs × 8 rarity slots** (`Shared/PetDefs` for data, `PetModels` for builds, `PetService` for behaviour).
+- **Equip limit: 3 pets.** The rest idle at the Pet Hut. The panel lists name, rarity, buff and attack, with Equip/Unequip.
+- **Every pet fights and buffs:**
+  - **Fighting:** each pet attacks monsters that hunt or are fought by its owner. The 6 attack kinds are Bite, Bolt, Lob, Pulse, Chain and Mend; the effects are Slow, Burn, Shock, Knock and Expose (+25 % damage taken).
+  - **Damage by rarity:** 8 / 11 / 15 / 21 / 30.
+  - **Buffing:** each pet has a **unique (buff kind, condition) pair**. There are 21 kinds and 5 conditions (always / carrying / below half HP / 6 s after a kill / in its home biome). Conditional buffs are ×1.6-1.8 stronger.
+- **Team caps (no stacking abuse):** speed 30 %, jump 40 %, resist 35 %, damage 50 %, crit 25 %, lifesteal 15 %, haste 30 %, XP/coins 60 %, regen 3 HP/s, and so on.
+- **Distinct looks:** 20 body plans (Quad, Biped, Bird, Fish, Bug, Blob, Turtle, Snail, Shroom, Orb, Puff, Flower, Frog, Lizard, Crab, Crystal, Jelly, Drake, Star, Octo) × about 90 silhouette features (ears, horns, wings, tails, shells, crowns, crystals, flames, tentacles…). No pet shares another's look. Higher rarity means slightly bigger, and Rare+ sparkle.
+- **Paths:** live pets at `workspace.Pets.<PlayerName>.<PetId>`; storage in `Data.Pets` / `Data.Equipped`.
+
+**Full roster:**
+| # | Pet | Egg | Rarity | Body plan · design hook | Player buff | Combat move |
+|---|---|---|---|---|---|---|
+| 1 | **Pebblepup** | Meadow (Mesa Colossus) | Common | Quad · a puppy made of round pebbles | -3% damage taken | Bite + Knock (8 dmg) |
+| 2 | **Clovercub** | Meadow (Mesa Colossus) | Common | Quad · bear cub with a four-leaf clover sprouting on its head | +0.4 HP/s | Bolt + Slow (8 dmg) |
+| 3 | **Dandefluff** | Meadow (Mesa Colossus) | Uncommon | Puff · a dandelion puffball that drifts after you | +9% jump | Lob + Slow (11 dmg) |
+| 4 | **Hayhopper** | Meadow (Mesa Colossus) | Uncommon | Bug · grasshopper with a straw-bale body | +6% walk speed | Bite + Knock (11 dmg) |
+| 5 | **Mesa Mole** | Meadow (Mesa Colossus) | Rare | Quad · a mole wearing a tiny grassy mesa as a hat | +12% coins | Pulse + Knock (15 dmg) |
+| 6 | **Sunbloom** | Meadow (Mesa Colossus) | Rare | Flower · a walking sunflower that fires sunbeams | +12% XP | Bolt + Burn (15 dmg) |
+| 7 | **Rune Golem** | Meadow (Mesa Colossus) | Epic | Biped · a pocket ruin golem with a glowing rune chest | +15% attack damage | Pulse + Expose (21 dmg) |
+| 8 | **Colossus Jr** | Meadow (Mesa Colossus) | Legendary | Biped · a mini Mesa Colossus with a grassy tableland back | shield every 7s | Lob + Knock (30 dmg) |
+| 9 | **Snowbun** | Frost (Frostpeak Warden) | Common | Quad · a snow bunny with long floppy ears | never slips on ice | Bite + Slow (8 dmg) |
+| 10 | **Pinecone Pip** | Frost (Frostpeak Warden) | Common | Blob · a round pinecone that flicks needles | +0.7 HP/s below half HP | Bolt + Slow (8 dmg) |
+| 11 | **Icicle Imp** | Frost (Frostpeak Warden) | Uncommon | Biped · a cheeky imp with icicle horns | -8% damage taken below half HP | Bolt + Slow (11 dmg) |
+| 12 | **Yakling** | Frost (Frostpeak Warden) | Uncommon | Quad · a shaggy baby yak with a snowy mane | +14% speed while carrying while carrying | Bite + Knock (11 dmg) |
+| 13 | **Aurora Owl** | Frost (Frostpeak Warden) | Rare | Bird · a snowy owl trailing aurora light | monsters notice you 16% later | Chain + Slow (15 dmg) |
+| 14 | **Glacier Turtle** | Frost (Frostpeak Warden) | Rare | Turtle · a turtle carrying a little glacier | -20% knockback | Pulse + Slow (15 dmg) |
+| 15 | **Peak Ram** | Frost (Frostpeak Warden) | Epic | Quad · a mountain ram with huge spiral horns | +29% jump while carrying | Bite + Knock (21 dmg) |
+| 16 | **Warden Cub** | Frost (Frostpeak Warden) | Legendary | Biped · a tiny yeti knight with an ice shield | debuffs 48% shorter | Pulse + Slow (30 dmg) |
+| 17 | **Sporelet** | Spore (Mycelium Monarch) | Common | Shroom · a toddling red-capped mushroom | +0.7 HP/s 6s after a kill | Lob + Slow (8 dmg) |
+| 18 | **Mossnail** | Spore (Mycelium Monarch) | Common | Snail · a snail with a mossy, flowering shell | eggs hatch 4% faster | Bite + Slow (8 dmg) |
+| 19 | **Glowcap** | Spore (Mycelium Monarch) | Uncommon | Shroom · a mushroom with a glowing teal cap | +16% XP 6s after a kill | Bolt + Expose (11 dmg) |
+| 20 | **Truffle Pig** | Spore (Mycelium Monarch) | Uncommon | Quad · a piglet with a truffle growing on its back | +16% coins 6s after a kill | Bite + Knock (11 dmg) |
+| 21 | **Fairy Ringling** | Spore (Mycelium Monarch) | Rare | Orb · a fairy orb circled by tiny mushrooms | 6% lifesteal | Chain + Slow (15 dmg) |
+| 22 | **Moth Sprite** | Spore (Mycelium Monarch) | Rare | Bug · a fluffy moth with glowing wing spots | immune to blinding | Pulse + Slow (15 dmg) |
+| 23 | **Myco Knight** | Spore (Mycelium Monarch) | Epic | Biped · a mushroom knight with a cap helmet and twig sword | +27% attack damage below half HP | Bite + Expose (21 dmg) |
+| 24 | **Monarch Spawn** | Spore (Mycelium Monarch) | Legendary | Shroom · a baby Mycelium Monarch wearing a crown cap | -16% attack cooldown | Lob + Expose (30 dmg) |
+| 25 | **Tadbolt** | Storm (Bogstorm Croaker) | Common | Fish · a tadpole with a lightning-bolt tail | immune to shocks | Chain + Shock (8 dmg) |
+| 26 | **Reedrat** | Storm (Bogstorm Croaker) | Common | Quad · a marsh rat chewing a reed | monsters notice you 13% later while carrying | Bite + Slow (8 dmg) |
+| 27 | **Bubblefrog** | Storm (Bogstorm Croaker) | Uncommon | Frog · a frog that blows soap-bubble shots | +16% jump 6s after a kill | Lob + Slow (11 dmg) |
+| 28 | **Lily Turtle** | Storm (Bogstorm Croaker) | Uncommon | Turtle · a turtle wearing a lily pad with a flower | +1.0 HP/s in its home biome | Pulse + Knock (11 dmg) |
+| 29 | **Zap Dragonfly** | Storm (Bogstorm Croaker) | Rare | Bug · a dragonfly with four crackling wings | +14% walk speed 6s after a kill | Chain + Shock (15 dmg) |
+| 30 | **Mudpuddle** | Storm (Bogstorm Croaker) | Rare | Blob · a happy living mud puddle | immune to slows | Pulse + Slow (15 dmg) |
+| 31 | **Thunder Newt** | Storm (Bogstorm Croaker) | Epic | Lizard · a storm newt with a glowing crest | 9% crit chance | Chain + Shock (21 dmg) |
+| 32 | **Croaker King** | Storm (Bogstorm Croaker) | Legendary | Frog · a crowned toad with a storm-glowing throat | +36% attack damage 6s after a kill | Pulse + Shock (30 dmg) |
+| 33 | **Shardling** | Crystal (Prism Sovereign) | Common | Crystal · a walking crystal cluster | 5% crit chance below half HP | Bolt + Slow (8 dmg) |
+| 34 | **Geode Crab** | Crystal (Prism Sovereign) | Common | Crab · a crab whose shell is a split geode | -5% damage taken while carrying | Bite + Knock (8 dmg) |
+| 35 | **Prism Bat** | Crystal (Prism Sovereign) | Uncommon | Bird · a bat with prism-glass wings | +10% walk speed in its home biome | Bolt + Expose (11 dmg) |
+| 36 | **Quartz Tortoise** | Crystal (Prism Sovereign) | Uncommon | Turtle · a tortoise with a quartz-point shell | shield every 12s while carrying | Pulse + Knock (11 dmg) |
+| 37 | **Echo Fox** | Crystal (Prism Sovereign) | Rare | Quad · a fox with huge ears and a crystal tail tip | -14% attack cooldown 6s after a kill | Bite + Expose (15 dmg) |
+| 38 | **Lumen Jelly** | Crystal (Prism Sovereign) | Rare | Jelly · a floating glow-jelly | +1.3 HP/s while carrying | Chain + Slow (15 dmg) |
+| 39 | **Sapphire Drake** | Crystal (Prism Sovereign) | Epic | Drake · a baby crystal dragon | +29% XP in its home biome | Bolt + Expose (21 dmg) |
+| 40 | **Sovereign Shard** | Crystal (Prism Sovereign) | Legendary | Orb · a floating heart of the Prism Sovereign with orbiting shards | 19% crit chance while carrying | Chain + Expose (30 dmg) |
+| 41 | **Emberkit** | Magma (Caldera Titan) | Common | Quad · a soot kitten with a flame tail | immune to burning | Bolt + Burn (8 dmg) |
+| 42 | **Cinder Beetle** | Magma (Caldera Titan) | Common | Bug · a beetle with a glowing ember shell | +8% attack damage while carrying | Bite + Burn (8 dmg) |
+| 43 | **Ashbat** | Magma (Caldera Titan) | Uncommon | Bird · a smoky bat with ember eyes | monsters notice you 22% later 6s after a kill | Bolt + Burn (11 dmg) |
+| 44 | **Magma Slime** | Magma (Caldera Titan) | Uncommon | Blob · a bubbling magma slime | 8% lifesteal 6s after a kill | Lob + Burn (11 dmg) |
+| 45 | **Obsidian Hound** | Magma (Caldera Titan) | Rare | Quad · a glassy black hound with lava seams | +14% walk speed below half HP | Bite + Burn (15 dmg) |
+| 46 | **Lava Koi** | Magma (Caldera Titan) | Rare | Fish · a koi that swims through the air on heat | +19% XP while carrying | Bolt + Burn (15 dmg) |
+| 47 | **Pyro Salamander** | Magma (Caldera Titan) | Epic | Lizard · a salamander wrapped in flames | -19% attack cooldown while carrying | Pulse + Burn (21 dmg) |
+| 48 | **Titan Hatchling** | Magma (Caldera Titan) | Legendary | Turtle · a baby lava tortoise with a tiny erupting volcano | shield every 4s 6s after a kill | Lob + Burn (30 dmg) |
+| 49 | **Shellby** | Tide (Tidebreaker) | Common | Snail · a hermit snail in a pink spiral shell | +10% coins while carrying | Bite + Slow (8 dmg) |
+| 50 | **Puffer Pal** | Tide (Tidebreaker) | Common | Fish · a spiky pufferfish that puffs up | -5% damage taken 6s after a kill | Pulse + Knock (8 dmg) |
+| 51 | **Seagullet** | Tide (Tidebreaker) | Uncommon | Bird · a seagull chick that dives at monsters | +9% speed while carrying | Bolt + Knock (11 dmg) |
+| 52 | **Starfin** | Tide (Tidebreaker) | Uncommon | Star · a starfish that spins like a throwing star | +16% jump below half HP | Bolt + Slow (11 dmg) |
+| 53 | **Inkling** | Tide (Tidebreaker) | Rare | Octo · a baby octopus that squirts ink | monsters notice you 29% later below half HP | Lob + Slow (15 dmg) |
+| 54 | **Coral Crab** | Tide (Tidebreaker) | Rare | Crab · a crab growing a coral crown | -14% attack cooldown below half HP | Bite + Expose (15 dmg) |
+| 55 | **Narwhalo** | Tide (Tidebreaker) | Epic | Fish · a little narwhal with a spiral horn | +19% walk speed while carrying | Bite + Knock (21 dmg) |
+| 56 | **Tide Guardian** | Tide (Tidebreaker) | Legendary | Biped · a tiny sea knight in shell armour with a trident | debuffs 77% shorter while carrying | Pulse + Knock (30 dmg) |
+**6) Map fixes:**
+- **Storm cloud:** the big blue storm-cloud cluster beside the mountain is removed (the decorative StormCloud model is no longer built).
+- **Canyon river:** the straight, striped river ring in Crystal Canyon is replaced by a **continuous meandering crystal river** (`Map/Continent/CanyonRiver`). Its width breathes, it bends, broken crystal-rock ledges line both banks, and glowing shards sit in the shallows. There are no gaps or stripes.
+
+**7) Distinct clouds (all 106 types):**
+- **Silhouette:** each type gets its **own silhouette** from a stable per-type hash: proportions stretched wide/flat, tall/narrow or deep, and some lobes dropped or mirrored. It is the same every time for that type.
+- **Signature features:** each type gets **1-3 signature features** that match its name or element. The library is about 70 features: happy, sleepy, grumpy, angry, puffing, shivering, hiccup, sick, mischief and spooky faces; raindrops, frost fringe, ice balls, a lightning core in a glass lobe, an anvil top, horns, crown, halo, wings, a rainbow arc, coins, gems, clock hands, an eye, teeth, flames, petals, mushrooms, a moon, a planet ring, stars, bubbles, a wave crest, a top hat, a jester hat, a satchel, a geyser and more.
+- **Examples:**
+  - common Cumulus: happy face with blush;
+  - storm Thunder: anvil top, lightning core, angry brows;
+  - rare Blossom: floating petals;
+  - Chrono: clock dial;
+  - Void: a single big eye;
+  - Eclipse: a dark disc with a corona.
+
+**Please test and report:**
+1. The map rebuilds as v2.13: part count and any F9 or Output red lines.
+2. One death of each monster species, and one boss death through to the egg drop.
+3. Take the egg → Incubate → leave and rejoin (the timer must continue) → QA Instant Hatch → the hatch reveal.
+4. Pet follow and attack, the Pet Hut residents, and Equip/Unequip in the panel.
+5. Buffs: check the speed and jump change; with a Hatch pet, check the nursery time.
+6. The new Caldera Titan.
+7. Cloud examples (a common, a storm and a rare) up close and far away.
+8. FPS.
+9. Screenshots of all of the above, please.
+
+**Animation note:** the new Caldera Titan rig changed (gait Plod), so its 6 clips must be exported again. MonsterAnims now exports 28 monsters.

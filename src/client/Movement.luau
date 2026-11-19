@@ -69,21 +69,28 @@ local function applySpeed()
 		return
 	end
 	local speed = baseSpeed()
-	if onIceRoad then
+	-- v2.13 theft rule (director, like Steal a Brainrot): while carrying a
+	-- cloud ALL buffs are off (perks, upgrades, potions, nitro, ice road,
+	-- pets) and you walk at the slow carry speed; only debuffs still apply.
+	-- The server enforces it too (WeatherService speed check).
+	local carryingNow = player:GetAttribute("Carrying") ~= nil
+	if onIceRoad and not carryingNow then
 		speed += Config.IceBoost
 	end
-	if active("NitroUntil") then
+	if active("NitroUntil") and not carryingNow then
 		speed += Config.NitroBoost
 	end
-	speed *= player:GetAttribute("PerkSpeed") or 1
-	speed *= player:GetAttribute("UpgradeSpeed") or 1 -- Aurelius
+	if not carryingNow then
+		speed *= player:GetAttribute("PerkSpeed") or 1
+		speed *= player:GetAttribute("UpgradeSpeed") or 1 -- Aurelius
+	end
 	if active("LaserSlowUntil") then
 		speed *= Config.LaserSlow -- hit by a Laser Gun
 	end
 	if active("ShockedUntil") and not player:GetAttribute("ElectricImmune") then
 		speed *= Config.StormAuraSlow -- someone's Thunder Storm static field
 	end
-	if active("SpeedUntil") then
+	if active("SpeedUntil") and not carryingNow then
 		speed *= player:GetAttribute("SpeedMult") or 1
 	end
 	if active("MonsterSlowUntil") then
@@ -98,19 +105,20 @@ local function applySpeed()
 	end
 
 	local carrying = player:GetAttribute("Carrying") ~= nil
-	local jump = (carrying and Config.CarryJumpHeight or 7.2) * (player:GetAttribute("PerkJump") or 1)
-		* (player:GetAttribute("UpgradeJump") or 1)
-	if active("JumpUntil") then
+	local jump = (carrying and Config.CarryJumpHeight or 7.2)
+	if not carrying then
+		jump *= (player:GetAttribute("PerkJump") or 1) * (player:GetAttribute("UpgradeJump") or 1)
+	end
+	if active("JumpUntil") and not carrying then
 		jump *= player:GetAttribute("JumpMult") or 1
 	end
 	if active("RootedUntil") then
 		speed, jump = 0, 0 -- held by roots / a bite
 	end
 	-- pet buffs (PetService sets these player attributes)
-	speed *= 1 + (player:GetAttribute("PetSpeed") or 0)
-	jump *= 1 + (player:GetAttribute("PetJump") or 0)
-	if carrying then
-		speed *= 1 + (player:GetAttribute("PetCarrySpeed") or 0)
+	if not carrying then
+		speed *= 1 + (player:GetAttribute("PetSpeed") or 0)
+		jump *= 1 + (player:GetAttribute("PetJump") or 0)
 	end
 	-- TEST ONLY: director's QA speed tool (server sets QaSpeed only for the QA account)
 	local qa = player:GetAttribute("QaSpeed")

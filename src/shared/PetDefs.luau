@@ -26,7 +26,7 @@ PetDefs.RARITY = {
 PetDefs.AnnounceRarity = "Legendary"
 
 -- buff kinds: base value per Power point and the team cap
---   Speed/Jump/CarrySpeed  walk / jump / walk-while-carrying multiplier bonus
+--   Speed/Jump  walk / jump multiplier bonus (no pet buff works while carrying a cloud)
 --   Resist      less damage taken            KnockResist  less knockback
 --   Regen       health per second            Damage       more attack damage
 --   XP / Coins  more XP / coins              Crit         chance of double damage
@@ -60,7 +60,7 @@ PetDefs.BUFF = {
 }
 PetDefs.WHEN = {
 	Always = { Mult = 1, Label = "" },
-	Carrying = { Mult = 1.6, Label = " while carrying a cloud" },
+	NearBase = { Mult = 1.6, Label = " near your base" }, -- v2.13: no pet buffs while carrying a cloud
 	LowHP = { Mult = 1.8, Label = " below half health" },
 	AfterKill = { Mult = 1.8, Label = " for 6s after a kill" },
 	InHome = { Mult = 1.6, Label = " in its home biome" },
@@ -95,10 +95,10 @@ local LIST = {
 	{ "Snowbun", "Snowbun", "Mountains", "Common", "Quad", { "EarsLong", "TailPuff" }, { RGB(250, 250, 255), RGB(220, 225, 240), RGB(255, 170, 190) }, { "SlipImmune", "Always" }, { "Bite", "Slow" }, "a snow bunny with long floppy ears" },
 	{ "Pineconepip", "Pinecone Pip", "Mountains", "Common", "Blob", { "Scales", "Sprig" }, { RGB(150, 100, 60), RGB(110, 70, 40), RGB(60, 130, 70) }, { "Regen", "LowHP" }, { "Bolt", "Slow" }, "a round pinecone that flicks needles" },
 	{ "Icicleimp", "Icicle Imp", "Mountains", "Uncommon", "Biped", { "HornsIce", "Crystals" }, { RGB(170, 220, 255), RGB(120, 170, 230), RGB(240, 250, 255) }, { "Resist", "LowHP" }, { "Bolt", "Slow" }, "a cheeky imp with icicle horns" },
-	{ "Yakling", "Yakling", "Mountains", "Uncommon", "Quad", { "HornsCurved", "Mane", "Shaggy" }, { RGB(120, 95, 75), RGB(230, 225, 215), RGB(200, 200, 210) }, { "CarrySpeed", "Carrying" }, { "Bite", "Knock" }, "a shaggy baby yak with a snowy mane" },
+	{ "Yakling", "Yakling", "Mountains", "Uncommon", "Quad", { "HornsCurved", "Mane", "Shaggy" }, { RGB(120, 95, 75), RGB(230, 225, 215), RGB(200, 200, 210) }, { "KnockResist", "NearBase" }, { "Bite", "Knock" }, "a shaggy baby yak with a snowy mane" },
 	{ "Auroraowl", "Aurora Owl", "Mountains", "Rare", "Bird", { "Tufts", "Halo", "BigEyes" }, { RGB(235, 240, 255), RGB(140, 160, 200), RGB(120, 255, 200) }, { "Stealth", "Always" }, { "Chain", "Slow" }, "a snowy owl trailing aurora light" },
 	{ "Glacierturtle", "Glacier Turtle", "Mountains", "Rare", "Turtle", { "IceShell", "Crystals" }, { RGB(120, 170, 140), RGB(200, 235, 255), RGB(150, 210, 255) }, { "KnockResist", "Always" }, { "Pulse", "Slow" }, "a turtle carrying a little glacier" },
-	{ "Peakram", "Peak Ram", "Mountains", "Epic", "Quad", { "HornsRam", "Shaggy", "Hooves" }, { RGB(235, 230, 220), RGB(140, 130, 120), RGB(120, 170, 230) }, { "Jump", "Carrying" }, { "Bite", "Knock" }, "a mountain ram with huge spiral horns" },
+	{ "Peakram", "Peak Ram", "Mountains", "Epic", "Quad", { "HornsRam", "Shaggy", "Hooves" }, { RGB(235, 230, 220), RGB(140, 130, 120), RGB(120, 170, 230) }, { "Jump", "NearBase" }, { "Bite", "Knock" }, "a mountain ram with huge spiral horns" },
 	{ "Wardencub", "Warden Cub", "Mountains", "Legendary", "Biped", { "Helm", "Shield", "Shaggy" }, { RGB(245, 248, 255), RGB(120, 170, 230), RGB(150, 230, 255) }, { "Cleanse", "Always" }, { "Pulse", "Slow" }, "a tiny yeti knight with an ice shield" },
 	-- MUSHROOM (Spore Egg)
 	{ "Sporelet", "Sporelet", "Mushroom", "Common", "Shroom", { "CapSpots", "Feet" }, { RGB(230, 90, 100), RGB(245, 235, 215), RGB(255, 255, 255) }, { "Regen", "AfterKill" }, { "Lob", "Slow" }, "a toddling red-capped mushroom" },
@@ -111,7 +111,7 @@ local LIST = {
 	{ "Monarchspawn", "Monarch Spawn", "Mushroom", "Legendary", "Shroom", { "Crown", "GlowCap", "Beard" }, { RGB(170, 70, 190), RGB(240, 228, 205), RGB(255, 220, 90) }, { "Haste", "Always" }, { "Lob", "Expose" }, "a baby Mycelium Monarch wearing a crown cap" },
 	-- MARSH (Storm Egg)
 	{ "Tadbolt", "Tadbolt", "Marsh", "Common", "Fish", { "TailFin", "Bolt" }, { RGB(70, 90, 80), RGB(120, 150, 130), RGB(220, 245, 255) }, { "ElectricImmune", "Always" }, { "Chain", "Shock" }, "a tadpole with a lightning-bolt tail" },
-	{ "Reedrat", "Reedrat", "Marsh", "Common", "Quad", { "EarsRound", "TailLong", "Reed" }, { RGB(140, 120, 90), RGB(100, 85, 65), RGB(110, 160, 90) }, { "Stealth", "Carrying" }, { "Bite", "Slow" }, "a marsh rat chewing a reed" },
+	{ "Reedrat", "Reedrat", "Marsh", "Common", "Quad", { "EarsRound", "TailLong", "Reed" }, { RGB(140, 120, 90), RGB(100, 85, 65), RGB(110, 160, 90) }, { "Stealth", "NearBase" }, { "Bite", "Slow" }, "a marsh rat chewing a reed" },
 	{ "Bubblefrog", "Bubblefrog", "Marsh", "Uncommon", "Frog", { "BigEyes", "Bubble" }, { RGB(100, 180, 110), RGB(220, 230, 170), RGB(170, 230, 255) }, { "Jump", "AfterKill" }, { "Lob", "Slow" }, "a frog that blows soap-bubble shots" },
 	{ "Lilyturtle", "Lily Turtle", "Marsh", "Uncommon", "Turtle", { "LilyPad", "Flower" }, { RGB(110, 160, 110), RGB(80, 130, 90), RGB(255, 200, 230) }, { "Regen", "InHome" }, { "Pulse", "Knock" }, "a turtle wearing a lily pad with a flower" },
 	{ "Zapfly", "Zap Dragonfly", "Marsh", "Rare", "Bug", { "Wings4", "LongTail" }, { RGB(80, 200, 220), RGB(40, 90, 120), RGB(220, 245, 255) }, { "Speed", "AfterKill" }, { "Chain", "Shock" }, "a dragonfly with four crackling wings" },
@@ -120,31 +120,31 @@ local LIST = {
 	{ "Croakerking", "Croaker King", "Marsh", "Legendary", "Frog", { "Crown", "Sac", "BigEyes" }, { RGB(80, 120, 70), RGB(200, 210, 150), RGB(150, 220, 255) }, { "Damage", "AfterKill" }, { "Pulse", "Shock" }, "a crowned toad with a storm-glowing throat" },
 	-- CANYON (Crystal Egg)
 	{ "Shardling", "Shardling", "Canyon", "Common", "Crystal", { "Shards", "Feet" }, { RGB(120, 170, 255), RGB(80, 120, 220), RGB(200, 230, 255) }, { "Crit", "LowHP" }, { "Bolt", "Slow" }, "a walking crystal cluster" },
-	{ "Geodecrab", "Geode Crab", "Canyon", "Common", "Crab", { "Pincers", "Geode" }, { RGB(150, 120, 110), RGB(190, 140, 255), RGB(220, 200, 255) }, { "Resist", "Carrying" }, { "Bite", "Knock" }, "a crab whose shell is a split geode" },
+	{ "Geodecrab", "Geode Crab", "Canyon", "Common", "Crab", { "Pincers", "Geode" }, { RGB(150, 120, 110), RGB(190, 140, 255), RGB(220, 200, 255) }, { "Resist", "NearBase" }, { "Bite", "Knock" }, "a crab whose shell is a split geode" },
 	{ "Prismbat", "Prism Bat", "Canyon", "Uncommon", "Bird", { "BatWings", "EarsPointy" }, { RGB(120, 90, 170), RGB(80, 60, 120), RGB(150, 220, 255) }, { "Speed", "InHome" }, { "Bolt", "Expose" }, "a bat with prism-glass wings" },
-	{ "Quartztortoise", "Quartz Tortoise", "Canyon", "Uncommon", "Turtle", { "QuartzShell" }, { RGB(170, 140, 200), RGB(240, 230, 255), RGB(200, 160, 255) }, { "Shield", "Carrying" }, { "Pulse", "Knock" }, "a tortoise with a quartz-point shell" },
+	{ "Quartztortoise", "Quartz Tortoise", "Canyon", "Uncommon", "Turtle", { "QuartzShell" }, { RGB(170, 140, 200), RGB(240, 230, 255), RGB(200, 160, 255) }, { "Shield", "NearBase" }, { "Pulse", "Knock" }, "a tortoise with a quartz-point shell" },
 	{ "Echofox", "Echo Fox", "Canyon", "Rare", "Quad", { "EarsBig", "TailFluffy", "CrystalTail" }, { RGB(150, 130, 220), RGB(240, 235, 255), RGB(120, 200, 255) }, { "Haste", "AfterKill" }, { "Bite", "Expose" }, "a fox with huge ears and a crystal tail tip" },
-	{ "Lumenjelly", "Lumen Jelly", "Canyon", "Rare", "Jelly", { "Tentacles", "Glow" }, { RGB(170, 200, 255), RGB(230, 190, 255), RGB(150, 230, 255) }, { "Regen", "Carrying" }, { "Chain", "Slow" }, "a floating glow-jelly" },
+	{ "Lumenjelly", "Lumen Jelly", "Canyon", "Rare", "Jelly", { "Tentacles", "Glow" }, { RGB(170, 200, 255), RGB(230, 190, 255), RGB(150, 230, 255) }, { "Regen", "NearBase" }, { "Chain", "Slow" }, "a floating glow-jelly" },
 	{ "Sapphiredrake", "Sapphire Drake", "Canyon", "Epic", "Drake", { "Wings", "HornsBack" }, { RGB(70, 110, 230), RGB(150, 190, 255), RGB(200, 240, 255) }, { "XP", "InHome" }, { "Bolt", "Expose" }, "a baby crystal dragon" },
-	{ "Sovereignshard", "Sovereign Shard", "Canyon", "Legendary", "Orb", { "CrystalRing", "Crown" }, { RGB(80, 160, 255), RGB(150, 130, 255), RGB(170, 230, 255) }, { "Crit", "Carrying" }, { "Chain", "Expose" }, "a floating heart of the Prism Sovereign with orbiting shards" },
+	{ "Sovereignshard", "Sovereign Shard", "Canyon", "Legendary", "Orb", { "CrystalRing", "Crown" }, { RGB(80, 160, 255), RGB(150, 130, 255), RGB(170, 230, 255) }, { "Crit", "NearBase" }, { "Chain", "Expose" }, "a floating heart of the Prism Sovereign with orbiting shards" },
 	-- VOLCANIC (Magma Egg)
 	{ "Emberkit", "Emberkit", "Volcanic", "Common", "Quad", { "EarsPointy", "FlameTail" }, { RGB(70, 55, 55), RGB(255, 120, 40), RGB(255, 200, 90) }, { "FireImmune", "Always" }, { "Bolt", "Burn" }, "a soot kitten with a flame tail" },
-	{ "Cinderbeetle", "Cinder Beetle", "Volcanic", "Common", "Bug", { "GlowShell", "Horn" }, { RGB(50, 40, 45), RGB(255, 110, 40), RGB(255, 200, 90) }, { "Damage", "Carrying" }, { "Bite", "Burn" }, "a beetle with a glowing ember shell" },
+	{ "Cinderbeetle", "Cinder Beetle", "Volcanic", "Common", "Bug", { "GlowShell", "Horn" }, { RGB(50, 40, 45), RGB(255, 110, 40), RGB(255, 200, 90) }, { "Damage", "NearBase" }, { "Bite", "Burn" }, "a beetle with a glowing ember shell" },
 	{ "Ashbat", "Ashbat", "Volcanic", "Uncommon", "Bird", { "BatWings", "EarsPointy", "Smoke" }, { RGB(90, 85, 85), RGB(60, 55, 55), RGB(255, 140, 60) }, { "Stealth", "AfterKill" }, { "Bolt", "Burn" }, "a smoky bat with ember eyes" },
 	{ "Magmaslime", "Magma Slime", "Volcanic", "Uncommon", "Blob", { "Glow", "Drips" }, { RGB(255, 110, 40), RGB(200, 70, 30), RGB(255, 210, 100) }, { "Lifesteal", "AfterKill" }, { "Lob", "Burn" }, "a bubbling magma slime" },
 	{ "Obsidianhound", "Obsidian Hound", "Volcanic", "Rare", "Quad", { "Spikes", "EarsPointy", "Glow" }, { RGB(30, 25, 35), RGB(60, 50, 60), RGB(255, 120, 40) }, { "Speed", "LowHP" }, { "Bite", "Burn" }, "a glassy black hound with lava seams" },
-	{ "Lavakoi", "Lava Koi", "Volcanic", "Rare", "Fish", { "TailFin", "Whiskers", "Glow" }, { RGB(255, 140, 50), RGB(255, 240, 220), RGB(255, 80, 40) }, { "XP", "Carrying" }, { "Bolt", "Burn" }, "a koi that swims through the air on heat" },
-	{ "Pyrosalamander", "Pyro Salamander", "Volcanic", "Epic", "Lizard", { "Flame", "Spots" }, { RGB(255, 90, 40), RGB(255, 200, 60), RGB(255, 240, 160) }, { "Haste", "Carrying" }, { "Pulse", "Burn" }, "a salamander wrapped in flames" },
+	{ "Lavakoi", "Lava Koi", "Volcanic", "Rare", "Fish", { "TailFin", "Whiskers", "Glow" }, { RGB(255, 140, 50), RGB(255, 240, 220), RGB(255, 80, 40) }, { "XP", "NearBase" }, { "Bolt", "Burn" }, "a koi that swims through the air on heat" },
+	{ "Pyrosalamander", "Pyro Salamander", "Volcanic", "Epic", "Lizard", { "Flame", "Spots" }, { RGB(255, 90, 40), RGB(255, 200, 60), RGB(255, 240, 160) }, { "Haste", "NearBase" }, { "Pulse", "Burn" }, "a salamander wrapped in flames" },
 	{ "Titanhatchling", "Titan Hatchling", "Volcanic", "Legendary", "Turtle", { "VolcanoShell", "HornsBack" }, { RGB(70, 58, 56), RGB(48, 40, 42), RGB(255, 110, 40) }, { "Shield", "AfterKill" }, { "Lob", "Burn" }, "a baby lava tortoise with a tiny erupting volcano" },
 	-- COAST (Tide Egg)
-	{ "Shellby", "Shellby", "Coast", "Common", "Snail", { "SpiralShell" }, { RGB(240, 200, 170), RGB(250, 230, 200), RGB(255, 150, 160) }, { "Coins", "Carrying" }, { "Bite", "Slow" }, "a hermit snail in a pink spiral shell" },
+	{ "Shellby", "Shellby", "Coast", "Common", "Snail", { "SpiralShell" }, { RGB(240, 200, 170), RGB(250, 230, 200), RGB(255, 150, 160) }, { "Coins", "NearBase" }, { "Bite", "Slow" }, "a hermit snail in a pink spiral shell" },
 	{ "Pufferpal", "Puffer Pal", "Coast", "Common", "Fish", { "Spikes", "Round" }, { RGB(250, 220, 120), RGB(255, 250, 230), RGB(255, 160, 80) }, { "Resist", "AfterKill" }, { "Pulse", "Knock" }, "a spiky pufferfish that puffs up" },
-	{ "Seagullet", "Seagullet", "Coast", "Uncommon", "Bird", { "Beak", "Wings" }, { RGB(250, 250, 255), RGB(160, 165, 175), RGB(255, 190, 60) }, { "CarrySpeed", "Always" }, { "Bolt", "Knock" }, "a seagull chick that dives at monsters" },
+	{ "Seagullet", "Seagullet", "Coast", "Uncommon", "Bird", { "Beak", "Wings" }, { RGB(250, 250, 255), RGB(160, 165, 175), RGB(255, 190, 60) }, { "KnockResist", "AfterKill" }, { "Bolt", "Knock" }, "a seagull chick that dives at monsters" },
 	{ "Starfin", "Starfin", "Coast", "Uncommon", "Star", { "Arms5", "Face" }, { RGB(255, 140, 120), RGB(255, 200, 170), RGB(255, 255, 255) }, { "Jump", "LowHP" }, { "Bolt", "Slow" }, "a starfish that spins like a throwing star" },
 	{ "Inkling", "Inkling", "Coast", "Rare", "Octo", { "Tentacles", "BigEyes" }, { RGB(150, 90, 170), RGB(200, 140, 220), RGB(40, 30, 60) }, { "Stealth", "LowHP" }, { "Lob", "Slow" }, "a baby octopus that squirts ink" },
 	{ "Coralcrab", "Coral Crab", "Coast", "Rare", "Crab", { "Pincers", "Coral" }, { RGB(220, 90, 70), RGB(180, 60, 55), RGB(255, 130, 160) }, { "Haste", "LowHP" }, { "Bite", "Expose" }, "a crab growing a coral crown" },
-	{ "Narwhalo", "Narwhalo", "Coast", "Epic", "Fish", { "Horn", "TailFin", "Spots" }, { RGB(130, 170, 220), RGB(240, 245, 255), RGB(255, 255, 220) }, { "Speed", "Carrying" }, { "Bite", "Knock" }, "a little narwhal with a spiral horn" },
-	{ "Tideguardian", "Tide Guardian", "Coast", "Legendary", "Biped", { "ShellArmor", "Trident" }, { RGB(80, 170, 220), RGB(240, 225, 195), RGB(255, 220, 120) }, { "Cleanse", "Carrying" }, { "Pulse", "Knock" }, "a tiny sea knight in shell armour with a trident" },
+	{ "Narwhalo", "Narwhalo", "Coast", "Epic", "Fish", { "Horn", "TailFin", "Spots" }, { RGB(130, 170, 220), RGB(240, 245, 255), RGB(255, 255, 220) }, { "Speed", "NearBase" }, { "Bite", "Knock" }, "a little narwhal with a spiral horn" },
+	{ "Tideguardian", "Tide Guardian", "Coast", "Legendary", "Biped", { "ShellArmor", "Trident" }, { RGB(80, 170, 220), RGB(240, 225, 195), RGB(255, 220, 120) }, { "Cleanse", "NearBase" }, { "Pulse", "Knock" }, "a tiny sea knight in shell armour with a trident" },
 }
 
 PetDefs.Types = {}

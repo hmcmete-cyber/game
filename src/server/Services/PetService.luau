@@ -399,15 +399,24 @@ local function buffTick(player: Player)
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
 	local totals = {}
 	local flags = {}
-	if root and hum and hum.Health > 0 then
-		local carrying = player:GetAttribute("Carrying") ~= nil
+	-- v2.13 theft rule: while carrying a cloud no pet buff is active (the
+	-- check runs here on the server, so re-equipping mid-carry changes nothing)
+	if root and hum and hum.Health > 0 and player:GetAttribute("Carrying") == nil then
+		local nearBase = false
+		local roofs = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Rooftops")
+		for _, roof in roofs and roofs:GetChildren() or {} do
+			local nest = roof:GetAttribute("OwnerUserId") == player.UserId and roof:FindFirstChild("Nest", true)
+			if nest and (nest.Position - root.Position).Magnitude < 80 then
+				nearBase = true
+			end
+		end
 		local low = hum.Health < hum.MaxHealth * 0.5
 		local afterKill = now() - (player:GetAttribute("LastKillAt") or -100) < 6
 		local here = biomeUnder(root)
 		for _, lp in live[player] or {} do
 			local def = lp.Def
 			local when = def.Buff.When
-			local on = when == "Always" or (when == "Carrying" and carrying) or (when == "LowHP" and low)
+			local on = when == "Always" or (when == "NearBase" and nearBase) or (when == "LowHP" and low)
 				or (when == "AfterKill" and afterKill) or (when == "InHome" and here == def.Egg)
 			if on then
 				local v = PetDefs.BuffValue(def)

@@ -7,7 +7,7 @@ local Config = {
 
 	-- Movement
 	WalkSpeed = 16,
-	CarrySpeed = 14, -- walking speed while carrying weather
+	CarrySpeed = 11, -- walking speed while carrying weather (v2.13: noticeably slow, no buffs)
 
 	-- Wild weather spawning
 	SpawnInterval = 1, -- seconds between spawns

@@ -96,9 +96,7 @@ end
 
 -- Speed + jump. Carrying = slower and lower jumps.
 local function setMovement(player: Player, speed: number, carrying: boolean)
-	if carrying then
-		speed += player:GetAttribute("CarryBonus") or 0 -- Aurelius "Strong Grip"
-	end
+	-- v2.13 theft rule: no carry bonuses any more (all buffs off while carrying)
 	player:SetAttribute("BaseSpeed", speed)
 	local _, hum = getRoot(player)
 	if hum then
@@ -576,12 +574,15 @@ local function startCarry(player: Player, root: BasePart, sphere: BasePart, type
 	}
 	player:SetAttribute("Carrying", typeName)
 	player:SetAttribute("CarryingStolen", victim ~= nil)
-
-	if typeName == "Thunder" then
-		setMovement(player, Config.ThunderCarrySpeed, true)
-	else
-		setMovement(player, Config.CarrySpeed, true)
+	-- v2.13 theft rule: timed boosts end the moment you pick a cloud up
+	for _, attr in { "SpeedUntil", "JumpUntil", "NitroUntil" } do
+		if player:GetAttribute(attr) then
+			player:SetAttribute(attr, 0)
+		end
 	end
+	carriers[player].Checked = os.clock()
+
+	setMovement(player, Config.CarrySpeed, true) -- one slow carry speed for every cloud
 	if victim then
 		setHighlight(player, THIEF_COLOR)
 	elseif typeName == "Thunder" then
@@ -1371,6 +1372,35 @@ function WeatherService.OnPlayerRemoving(player: Player)
 end
 
 function WeatherService.Start(mapService, dataService, remotes)
+	-- v2.13 theft rule, server side: a carrier moving much faster than the
+	-- carry speed for 2 s (speed hacks, client buff tricks) loses the cloud.
+	-- Knockbacks and updraft launches are short, so they never trigger it.
+	-- Exception: the director's QA speed tool (QA account, Studio/private).
+	task.spawn(function()
+		local RunService = game:GetService("RunService")
+		while true do
+			task.wait(0.25)
+			for player, c in carriers do
+				local root = getRoot(player)
+				local qa = player.UserId == 2459147914 and (player:GetAttribute("QaSpeed") or 1) > 1
+					and (RunService:IsStudio() or game.PrivateServerId ~= "")
+				if root and not qa then
+					local v = root.AssemblyLinearVelocity
+					local flat = Vector2.new(v.X, v.Z).Magnitude
+					if flat > Config.CarrySpeed * 1.6 + 3 then
+						c.FastTime = (c.FastTime or 0) + 0.25
+					else
+						c.FastTime = 0
+					end
+					if c.FastTime >= 2 then
+						c.FastTime = 0
+						clearCarry(player, true)
+						hint(player, "Too fast while carrying: the cloud slipped away!", 4)
+					end
+				end
+			end
+		end
+	end)
 	MapService = mapService
 	DataService = dataService
 	Remotes = remotes

@@ -77,6 +77,21 @@ local OUTFIT = {
 		for i = -1, 1 do
 			block(model, torso, "Jar" .. (i + 2), Vector3.new(0.35, 0.5, 0.35), CFrame.new(i * 0.45, 1.0, 0.95), Color3.fromRGB(170, 235, 255), Enum.Material.Neon)
 		end
+		-- v2.5: tool belt with pouches, work gloves, a wrench in hand
+		block(model, torso, "ToolBelt", Vector3.new(2.05, 0.3, 1.1), CFrame.new(0, -0.8, 0), Color3.fromRGB(120, 80, 50))
+		block(model, torso, "PouchL", Vector3.new(0.45, 0.5, 0.35), CFrame.new(-0.75, -0.95, -0.6), Color3.fromRGB(150, 100, 60))
+		block(model, torso, "PouchR", Vector3.new(0.45, 0.5, 0.35), CFrame.new(0.75, -0.95, -0.6), Color3.fromRGB(150, 100, 60))
+		for _, handName in { "LeftHand", "RightHand" } do
+			local hand = model:FindFirstChild(handName) :: BasePart?
+			if hand then
+				block(model, hand, "Glove" .. handName, hand.Size * 1.15, CFrame.new(), Color3.fromRGB(240, 200, 70))
+			end
+		end
+		local rh = model:FindFirstChild("RightHand") :: BasePart?
+		if rh then
+			block(model, rh, "Wrench", Vector3.new(0.25, 1.4, 0.25), CFrame.new(0, -0.5, -0.3) * CFrame.Angles(math.rad(70), 0, 0), Color3.fromRGB(170, 175, 185))
+			block(model, rh, "WrenchHead", Vector3.new(0.6, 0.3, 0.3), CFrame.new(0, -0.8, -0.95), Color3.fromRGB(170, 175, 185))
+		end
 	end,
 	-- Aurelius: royal upgrade master — square crown with prongs, cape, gold belt
 	Aurelius = function(model: Model, head: BasePart, torso: BasePart)
@@ -89,6 +104,21 @@ local OUTFIT = {
 		block(model, torso, "Cape", Vector3.new(1.9, 2.6, 0.18), CFrame.new(0, -0.6, 0.6), purple, Enum.Material.Fabric)
 		block(model, torso, "CapeTrim", Vector3.new(1.95, 0.22, 0.2), CFrame.new(0, 0.62, 0.62), gold)
 		block(model, torso, "Belt", Vector3.new(2.05, 0.3, 1.1), CFrame.new(0, -0.75, 0), gold)
+		-- v2.5: robe front panel, beard block, and a staff topped with a cloud gem
+		block(model, torso, "RobePanel", Vector3.new(1, 1.8, 0.15), CFrame.new(0, -0.3, -0.56), purple:Lerp(Color3.new(1, 1, 1), 0.15))
+		block(model, head, "Beard", Vector3.new(0.9, 0.7, 0.3), CFrame.new(0, -0.55, -0.55), Color3.fromRGB(240, 240, 245))
+		local rh = model:FindFirstChild("RightHand") :: BasePart?
+		if rh then
+			block(model, rh, "Staff", Vector3.new(0.3, 5, 0.3), CFrame.new(0, 1, -0.2), Color3.fromRGB(120, 80, 50))
+			local gem = Instance.new("Part")
+			gem.Name = "StaffGem"
+			gem.Shape = Enum.PartType.Ball
+			gem.Size = Vector3.one * 0.8
+			gem.Color = Color3.fromRGB(150, 220, 255)
+			gem.Material = Enum.Material.Neon
+			gem.CastShadow = false
+			weldTo(gem, rh, CFrame.new(0, 3.7, -0.2), model)
+		end
 	end,
 }
 

@@ -26,7 +26,7 @@ local DARK_ROCK = Color3.fromRGB(85, 72, 66)
 local SPHERE = Color3.fromRGB(200, 230, 255)
 
 local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, props: { [string]: any }?)
-	local p = Instance.new("Part")
+	local p = Instance.new(props and props.Class or "Part") :: Part
 	p.Name = name
 	p.Size = size
 	p.CFrame = cf
@@ -36,7 +36,9 @@ local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, c
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	if props then
 		for k, v in props do
-			(p :: any)[k] = v
+			if k ~= "Class" then
+				(p :: any)[k] = v
+			end
 		end
 	end
 	p.Parent = parent
@@ -272,6 +274,35 @@ function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent:
 	part(decor, "VaultRing", Vector3.new(0.1, 17, 17), topCF * CFrame.new(0, 0.13, 0) * CFrame.Angles(0, 0, math.pi / 2), accent, {
 		Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, Transparency = 0.75, CanCollide = false, CanQuery = false, CastShadow = false,
 	})
+
+	-- v2.5 STRUCTURE: plinth trim under the deck edge, round support pillars
+	-- down into the rock, a little storage shed on the back-left with a
+	-- sloped roof, door and window, and a stack of supply crates by it
+	local wood, roofC, trim = Color3.fromRGB(170, 120, 80), accent:Lerp(Color3.fromRGB(60, 60, 70), 0.35), Color3.fromRGB(235, 238, 248)
+	for i = 0, 5 do
+		local theta = math.rad(30 + 60 * i)
+		part(decor, "Plinth" .. i, Vector3.new(0.8, 1, R), topCF * CFrame.new(math.cos(theta) * (apothem + 0.2), -1.4, math.sin(theta) * (apothem + 0.2)) * CFrame.Angles(0, -theta, 0),
+			trim, { Material = Enum.Material.Plastic, CastShadow = false })
+		local corner = math.rad(60 * i)
+		part(decor, "Pillar" .. i, Vector3.new(6, 1.4, 1.4), topCF * CFrame.new(math.cos(corner) * (R - 2.5), -4.5, math.sin(corner) * (R - 2.5)) * CFrame.Angles(0, 0, math.pi / 2),
+			trim, { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Plastic, CastShadow = false })
+	end
+	-- at the +X corner (free of vaults, lamps, rails and both entrances), door facing the nest
+	local shedCF = topCF * CFrame.new(8.4, 0, 0) * CFrame.Angles(0, math.rad(90), 0)
+	part(decor, "ShedFloor", Vector3.new(4.2, 0.4, 3.6), shedCF * CFrame.new(0, 0.2, 0), wood, { Material = Enum.Material.Plastic })
+	part(decor, "ShedBack", Vector3.new(4.2, 3.4, 0.4), shedCF * CFrame.new(0, 2.1, 1.6), wood, { Material = Enum.Material.Plastic })
+	part(decor, "ShedLeft", Vector3.new(0.4, 3.4, 3.6), shedCF * CFrame.new(-1.9, 2.1, 0), wood, { Material = Enum.Material.Plastic })
+	part(decor, "ShedRight", Vector3.new(0.4, 3.4, 3.6), shedCF * CFrame.new(1.9, 2.1, 0), wood, { Material = Enum.Material.Plastic })
+	part(decor, "ShedFrontL", Vector3.new(1.3, 3.4, 0.4), shedCF * CFrame.new(-1.45, 2.1, -1.6), wood, { Material = Enum.Material.Plastic })
+	part(decor, "ShedFrontR", Vector3.new(1.3, 3.4, 0.4), shedCF * CFrame.new(1.45, 2.1, -1.6), wood, { Material = Enum.Material.Plastic })
+	part(decor, "ShedLintel", Vector3.new(1.6, 0.8, 0.4), shedCF * CFrame.new(0, 3.4, -1.6), wood, { Material = Enum.Material.Plastic })
+	part(decor, "ShedDoor", Vector3.new(1.5, 2.6, 0.2), shedCF * CFrame.new(0, 1.7, -1.75), Color3.fromRGB(110, 75, 50), { Material = Enum.Material.Plastic, CanCollide = false })
+	part(decor, "ShedWindow", Vector3.new(0.2, 1, 1.2), shedCF * CFrame.new(1.95, 2.4, 0), Color3.fromRGB(150, 210, 255), { Material = Enum.Material.Glass, Transparency = 0.3 })
+	part(decor, "RoofL", Vector3.new(2.4, 1.2, 4.4), shedCF * CFrame.new(-1.1, 4.4, 0) * CFrame.Angles(0, math.rad(-90), 0), roofC, { Class = "WedgePart", Material = Enum.Material.Plastic })
+	part(decor, "RoofR", Vector3.new(2.4, 1.2, 4.4), shedCF * CFrame.new(1.1, 4.4, 0) * CFrame.Angles(0, math.rad(90), 0), roofC, { Class = "WedgePart", Material = Enum.Material.Plastic })
+	for k, off in { Vector3.new(-3.4, 0.7, -0.4), Vector3.new(-3.4, 2.1, -0.4), Vector3.new(-4.6, 0.7, 0.8) } do
+		part(decor, "Crate" .. k, Vector3.new(1.4, 1.4, 1.4), shedCF * CFrame.new(off) * CFrame.Angles(0, k * 0.4, 0), Color3.fromRGB(200, 150, 90), { Material = Enum.Material.Plastic })
+	end
 
 	base.PrimaryPart = deck
 	base.Parent = parent

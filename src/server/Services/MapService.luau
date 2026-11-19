@@ -242,6 +242,20 @@ local function shopStall(parent: Instance, name: string, floor: Vector3, facing:
 		light.Color = Color3.fromRGB(255, 215, 165)
 		light.Parent = lamp
 	end
+	-- v2.5 shop dressing: eave trim, supply crates, barrels and a potted
+	-- plant (all beside the stall, the walk-up area in front stays clear)
+	newPart(stall, "EaveFront", Vector3.new(17, 0.5, 0.6), cf * CFrame.new(0, 8.6, -5.6), accent, {})
+	newPart(stall, "EaveBack", Vector3.new(17, 0.5, 0.6), cf * CFrame.new(0, 10.1, 5.6), accent, {})
+	for k, off in { Vector3.new(-9.6, 0.9, 2.5), Vector3.new(-9.6, 2.6, 2.5), Vector3.new(-9.4, 0.9, 0.6) } do
+		newPart(stall, "Crate" .. k, Vector3.new(1.8, 1.8, 1.8), cf * CFrame.new(off) * CFrame.Angles(0, k * 0.3, 0), Color3.fromRGB(205, 150, 90), {})
+	end
+	for k, off in { Vector3.new(9.6, 1.2, 2.6), Vector3.new(9.4, 1.2, 0.4) } do
+		newPart(stall, "Barrel" .. k, Vector3.new(2.4, 1.8, 1.8), cf * CFrame.new(off) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(150, 100, 65), { Shape = Enum.PartType.Cylinder })
+		newPart(stall, "BarrelBand" .. k, Vector3.new(0.3, 1.95, 1.95), cf * CFrame.new(off) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(90, 90, 100), { Shape = Enum.PartType.Cylinder })
+	end
+	newPart(stall, "Pot", Vector3.new(1.6, 1.4, 1.6), cf * CFrame.new(9.2, 0.7, -3.4), Color3.fromRGB(200, 110, 80), {})
+	newPart(stall, "Plant", Vector3.one * 2.2, cf * CFrame.new(9.2, 2.3, -3.4), Color3.fromRGB(90, 175, 90), { Shape = Enum.PartType.Ball })
+
 	local spot = newPart(stall, vendor .. "Spot", Vector3.one, cf * CFrame.new(0, 0.4, 0), Color3.new(1, 1, 1), MARKER)
 	spot:SetAttribute("Npc", vendor)
 	stall.Parent = parent
@@ -250,7 +264,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.4"
+local MAP_VERSION = "2.5"
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
 -- v2.2 CLASSIC STUDDED STYLE PASS over the whole generated map: every solid
@@ -369,6 +383,22 @@ local function buildPlaceholder(): Instance
 	hubZone:SetAttribute("ZoneName", "Hexagon Hub")
 	hubZone:SetAttribute("ZoneColor", Color3.fromRGB(200, 230, 255))
 	zoneSign(signs, "HubSign", Vector3.new(0, Y + 30, 0), "STEAL A CLOUD", Color3.fromRGB(255, 255, 255))
+	-- v2.5 hub dressing: benches + planters between the spawn ring and the rim
+	for i = 0, 5 do
+		local a = math.rad(i * 60)
+		if i ~= 0 and i ~= 3 then -- keep the two shop corners clear
+			local pos = Vector3.new(math.cos(a) * 40, Y, math.sin(a) * 40)
+			local face = CFrame.lookAt(pos, Vector3.new(0, Y, 0))
+			newPart(decor, "BenchSeat" .. i, Vector3.new(5, 0.5, 1.6), face * CFrame.new(0, 1.3, 0), Color3.fromRGB(170, 120, 80), {})
+			newPart(decor, "BenchBack" .. i, Vector3.new(5, 1.4, 0.4), face * CFrame.new(0, 2.2, 0.7), Color3.fromRGB(170, 120, 80), {})
+			for k = -1, 1, 2 do
+				newPart(decor, "BenchLeg" .. i .. k, Vector3.new(0.4, 1.1, 1.4), face * CFrame.new(k * 2.1, 0.55, 0), Color3.fromRGB(90, 90, 100), {})
+			end
+			local pp = Vector3.new(math.cos(a + 0.22) * 44, Y, math.sin(a + 0.22) * 44)
+			newPart(decor, "Planter" .. i, Vector3.new(3, 1.6, 3), CFrame.new(pp + Vector3.new(0, 0.8, 0)), Color3.fromRGB(225, 225, 235), {})
+			newPart(decor, "PlanterBush" .. i, Vector3.one * 3, CFrame.new(pp + Vector3.new(0, 2.4, 0)), Color3.fromRGB(100, 185, 95), { Shape = Enum.PartType.Ball })
+		end
+	end
 
 	shopStall(decor, "ItemShop", Vector3.new(-44, Y, 0), Vector3.new(0, Y, 0), "Tayron", "ITEM SHOP", Color3.fromRGB(120, 200, 255))
 	shopStall(decor, "UpgradeShop", Vector3.new(44, Y, 0), Vector3.new(0, Y, 0), "Aurelius", "UPGRADES", Color3.fromRGB(255, 205, 90))
@@ -386,7 +416,14 @@ local function buildPlaceholder(): Instance
 		local center = dir * 140 + Vector3.new(0, Y, 0)
 		BaseBuilder.Build(roofs, "Rooftop" .. i, center, Color3.fromHSV((i - 1) / 12, 0.45, 1), Vector3.new(0, Y, 0))
 		local mid = dir * 92 + Vector3.new(0, Y - 0.5, 0)
-		newPart(route, "BaseBridge" .. i, Vector3.new(6, 1, 78), CFrame.lookAt(mid, mid + dir), hubColor, { Material = Enum.Material.Marble })
+		local bridge = newPart(route, "BaseBridge" .. i, Vector3.new(6, 1, 78), CFrame.lookAt(mid, mid + dir), hubColor, { Material = Enum.Material.Marble })
+		-- v2.5: posts + handrails on both sides (path stays 6 wide)
+		for side = -1, 1, 2 do
+			for k = -3, 3 do
+				newPart(decor, "BridgePost" .. i .. "_" .. side .. "_" .. k, Vector3.new(0.6, 2.4, 0.6), bridge.CFrame * CFrame.new(side * 3.2, 1.6, k * 12.5), Color3.fromRGB(235, 238, 248), {})
+			end
+			newPart(decor, "BridgeRail" .. i .. "_" .. side, Vector3.new(0.4, 0.4, 76), bridge.CFrame * CFrame.new(side * 3.2, 2.7, 0), Color3.fromHSV((i - 1) / 12, 0.45, 1), {})
+		end
 		-- expansion pad (empty) + short connector
 		local padPos = center + side * 30 + Vector3.new(0, -0.5, 0)
 		local pad = newPart(expansion, "ExpansionPad" .. i, Vector3.new(20, 1, 20), CFrame.lookAt(padPos, padPos + dir), Color3.fromRGB(220, 225, 235), {

@@ -88,6 +88,186 @@ function ContinentBuilder.Build(ctx)
 		return nil
 	end
 
+	------------------------------------------------------------------
+	-- v2.5 DRESSING KIT (purposeful detail; every prop is a small Model in
+	-- Map/Decor/Dressing/<Habitat>, anchored, no scripts)
+	------------------------------------------------------------------
+	local dressRoot = Instance.new("Folder")
+	dressRoot.Name = "Dressing"
+	dressRoot.Parent = decor
+	local function dressFolder(habitat: string): Folder
+		local f = dressRoot:FindFirstChild(habitat)
+		if not f then
+			f = Instance.new("Folder")
+			f.Name = habitat
+			f.Parent = dressRoot
+		end
+		return f :: Folder
+	end
+	local dressTree: (string, Vector3) -> ()
+	local function piece(model: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, shape: string?, collide: boolean?)
+		local p = newPart(model, name, size, cf, color, {
+			Material = Enum.Material.Plastic, CastShadow = false, CanCollide = collide == true,
+			Shape = shape and Enum.PartType[shape] or nil,
+		})
+		return p
+	end
+	local function upright(c: Vector3, h: number): CFrame
+		return CFrame.new(c + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	end
+	-- leafy tree: root flare, trunk, two branches, four-ball canopy
+	dressTree = function(name: string, c: Vector3)
+		local m = Instance.new("Model")
+		m.Name = name
+		local h = rng:NextNumber(9, 13)
+		local bark, leaf = Color3.fromRGB(125, 88, 60), Color3.fromRGB(85, 170, 85)
+		piece(m, "Flare", Vector3.new(1.2, 3.4, 3.4), upright(c, 1.2), bark:Lerp(Color3.new(0, 0, 0), 0.15), "Cylinder", true)
+		piece(m, "Trunk", Vector3.new(h, 2, 2), upright(c, h), bark, "Cylinder", true)
+		for k = -1, 1, 2 do
+			piece(m, "Branch" .. k, Vector3.new(0.8, 4, 0.8), CFrame.new(c + Vector3.new(k * 1.4, h * 0.65, 0)) * CFrame.Angles(0, rng:NextNumber(0, 1), math.rad(-k * 45)), bark)
+		end
+		local top = c + Vector3.new(0, h + 1.5, 0)
+		local main = piece(m, "Canopy", Vector3.one * 9, CFrame.new(top), leaf, "Ball")
+		main:SetAttribute("Shelter", true)
+		for k = 1, 3 do
+			local a = k * 2.1 + rng:NextNumber(0, 1)
+			piece(m, "Leaves" .. k, Vector3.one * rng:NextNumber(5, 6.5), CFrame.new(top + Vector3.new(math.cos(a) * 3.4, rng:NextNumber(-1.5, 0.5), math.sin(a) * 3.4)),
+				leaf:Lerp(Color3.fromRGB(140, 210, 100), k / 4), "Ball")
+		end
+		m.Parent = dressFolder("Plateau")
+	end
+	-- snowy pine: trunk + three stacked shrinking tiers with snow caps
+	local function dressPine(name: string, c: Vector3)
+		local m = Instance.new("Model")
+		m.Name = name
+		piece(m, "Trunk", Vector3.new(4, 1.4, 1.4), upright(c, 4), Color3.fromRGB(110, 80, 55), "Cylinder", true)
+		for t = 0, 2 do
+			local rT = 4.5 - t * 1.3
+			local y = 3 + t * 2.6
+			piece(m, "Tier" .. t, Vector3.new(2.6, rT * 2, rT * 2), CFrame.new(c + Vector3.new(0, y + 1.3, 0)) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(45, 120, 70), "Cylinder")
+			piece(m, "Snow" .. t, Vector3.new(0.5, rT * 1.4, rT * 1.4), CFrame.new(c + Vector3.new(0, y + 2.85, 0)) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(245, 250, 255), "Cylinder")
+		end
+		m.Parent = dressFolder("Mountains")
+	end
+	-- rock cluster: one big tilted block, two medium balls, two pebbles
+	local function dressRocks(name: string, c: Vector3, base: Color3, habitat: string)
+		local m = Instance.new("Model")
+		m.Name = name
+		local s = rng:NextNumber(0.8, 1.4)
+		piece(m, "Big", Vector3.new(5, 3.4, 4) * s, CFrame.new(c + Vector3.new(0, 1.3 * s, 0)) * CFrame.Angles(rng:NextNumber(-0.2, 0.2), rng:NextNumber(0, 3), rng:NextNumber(-0.2, 0.2)), base, nil, true)
+		piece(m, "MidA", Vector3.one * 3 * s, CFrame.new(c + Vector3.new(2.8, 0.9, 1.2) * s), base:Lerp(Color3.new(1, 1, 1), 0.08), "Ball", true)
+		piece(m, "MidB", Vector3.one * 2.4 * s, CFrame.new(c + Vector3.new(-2.6, 0.7, -1) * s), base:Lerp(Color3.new(0, 0, 0), 0.1), "Ball", true)
+		piece(m, "PebbleA", Vector3.one * 1.1 * s, CFrame.new(c + Vector3.new(1.2, 0.4, -2.4) * s), base, "Ball")
+		piece(m, "PebbleB", Vector3.one * 0.9 * s, CFrame.new(c + Vector3.new(-1.5, 0.35, 2.3) * s), base, "Ball")
+		m.Parent = dressFolder(habitat)
+	end
+	-- flower patch: five stems with coloured heads + two leaves
+	local function dressFlowers(name: string, c: Vector3)
+		local m = Instance.new("Model")
+		m.Name = name
+		local colors = { Color3.fromRGB(255, 110, 140), Color3.fromRGB(255, 220, 80), Color3.fromRGB(150, 130, 255), Color3.fromRGB(255, 255, 255) }
+		for k = 1, 5 do
+			local off = Vector3.new(rng:NextNumber(-2, 2), 0, rng:NextNumber(-2, 2))
+			piece(m, "Stem" .. k, Vector3.new(0.25, 1.4, 0.25), CFrame.new(c + off + Vector3.new(0, 0.7, 0)), Color3.fromRGB(70, 150, 70))
+			piece(m, "Bloom" .. k, Vector3.one * 0.8, CFrame.new(c + off + Vector3.new(0, 1.5, 0)), colors[k % #colors + 1], "Ball")
+		end
+		m.Parent = dressFolder("Plateau")
+	end
+	-- small cheap mushroom for groves: stem, gills, cap, dome, two spots
+	local function miniShroom(m: Instance, name: string, c: Vector3, h: number, r: number, color: Color3)
+		piece(m, name .. "Stem", Vector3.new(h, r * 0.5, r * 0.5), upright(c, h), Color3.fromRGB(240, 230, 210), "Cylinder")
+		piece(m, name .. "Gills", Vector3.new(0.3, r * 1.7, r * 1.7), CFrame.new(c + Vector3.new(0, h - 0.05, 0)) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(225, 200, 180), "Cylinder")
+		piece(m, name .. "Cap", Vector3.new(0.6, r * 2, r * 2), CFrame.new(c + Vector3.new(0, h + 0.4, 0)) * CFrame.Angles(0, 0, math.pi / 2), color, "Cylinder")
+		piece(m, name .. "Dome", Vector3.new(0.5, r * 1.3, r * 1.3), CFrame.new(c + Vector3.new(0, h + 0.9, 0)) * CFrame.Angles(0, 0, math.pi / 2), color:Lerp(Color3.new(1, 1, 1), 0.1), "Cylinder")
+		for k = 1, 2 do
+			local a = k * 2.6
+			piece(m, name .. "Spot" .. k, Vector3.new(0.15, r * 0.4, r * 0.4), CFrame.new(c + Vector3.new(math.cos(a) * r * 0.75, h + 0.72, math.sin(a) * r * 0.75)) * CFrame.Angles(0, 0, math.pi / 2),
+				Color3.fromRGB(255, 252, 245), "Cylinder")
+		end
+	end
+	local function dressGrove(name: string, c: Vector3)
+		local m = Instance.new("Model")
+		m.Name = name
+		local palette = { Color3.fromRGB(230, 80, 90), Color3.fromRGB(170, 110, 230), Color3.fromRGB(250, 170, 80), Color3.fromRGB(90, 170, 240) }
+		local n = rng:NextInteger(3, 5)
+		for k = 1, n do
+			local a = k / n * math.pi * 2 + rng:NextNumber(0, 0.6)
+			local d = k == 1 and 0 or rng:NextNumber(2, 4)
+			miniShroom(m, "Shroom" .. k, c + Vector3.new(math.cos(a) * d, 0, math.sin(a) * d), k == 1 and rng:NextNumber(3, 4.5) or rng:NextNumber(1.2, 2.6),
+				k == 1 and rng:NextNumber(1.8, 2.4) or rng:NextNumber(0.8, 1.4), palette[(k + n) % #palette + 1])
+		end
+		for k = 1, 2 do
+			local a = k * 3
+			piece(m, "Root" .. k, Vector3.new(0.6, 0.5, 4), CFrame.new(c + Vector3.new(math.cos(a) * 1.5, 0.2, math.sin(a) * 1.5)) * CFrame.Angles(0, a, math.rad(8)), Color3.fromRGB(150, 120, 100))
+		end
+		m.Parent = dressFolder("Mushroom")
+	end
+	-- reed bed: six thin stalks with brown cattail tips + a lily leaf
+	local function dressReeds(name: string, c: Vector3)
+		local m = Instance.new("Model")
+		m.Name = name
+		for k = 1, 6 do
+			local off = Vector3.new(rng:NextNumber(-1.8, 1.8), 0, rng:NextNumber(-1.8, 1.8))
+			local h = rng:NextNumber(3, 5.5)
+			piece(m, "Reed" .. k, Vector3.new(0.25, h, 0.25), CFrame.new(c + off + Vector3.new(0, h / 2, 0)) * CFrame.Angles(rng:NextNumber(-0.15, 0.15), 0, rng:NextNumber(-0.15, 0.15)), Color3.fromRGB(110, 150, 90))
+			if k % 2 == 0 then
+				piece(m, "Cattail" .. k, Vector3.new(0.5, 1.1, 0.5), CFrame.new(c + off + Vector3.new(0, h + 0.3, 0)), Color3.fromRGB(120, 80, 50))
+			end
+		end
+		m.Parent = dressFolder("Marsh")
+	end
+	-- fallen log with a bark ring and a tiny mushroom
+	local function dressLog(name: string, c: Vector3)
+		local m = Instance.new("Model")
+		m.Name = name
+		local yaw = rng:NextNumber(0, 3)
+		piece(m, "Log", Vector3.new(9, 2, 2), CFrame.new(c + Vector3.new(0, 1, 0)) * CFrame.Angles(0, yaw, 0), Color3.fromRGB(95, 75, 60), "Cylinder", true)
+		piece(m, "EndRing", Vector3.new(0.2, 1.6, 1.6), CFrame.new(c + Vector3.new(0, 1, 0)) * CFrame.Angles(0, yaw, 0) * CFrame.new(4.55, 0, 0), Color3.fromRGB(190, 160, 120), "Cylinder")
+		miniShroom(m, "Shroom", c + Vector3.new(0, 2, 0), 0.8, 0.6, Color3.fromRGB(230, 80, 90))
+		m.Parent = dressFolder("Marsh")
+	end
+	-- crystal group: four tilted crystals of different heights on a rock base
+	local function dressCrystals(name: string, c: Vector3)
+		local m = Instance.new("Model")
+		m.Name = name
+		piece(m, "Base", Vector3.new(4, 1, 3.4), CFrame.new(c + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, rng:NextNumber(0, 3), 0), Color3.fromRGB(140, 100, 130), nil, true)
+		local colors = { Color3.fromRGB(255, 140, 230), Color3.fromRGB(130, 230, 255), Color3.fromRGB(190, 150, 255) }
+		for k = 1, 4 do
+			local h = rng:NextNumber(2.5, 6)
+			local off = Vector3.new(rng:NextNumber(-1.3, 1.3), 0, rng:NextNumber(-1.1, 1.1))
+			newPart(m, "Crystal" .. k, Vector3.new(h * 0.3, h, h * 0.3), CFrame.new(c + off + Vector3.new(0, h / 2 + 0.6, 0)) * CFrame.Angles(rng:NextNumber(-0.35, 0.35), rng:NextNumber(0, 6), rng:NextNumber(-0.35, 0.35)),
+				colors[k % #colors + 1], { Material = Enum.Material.Glass, Transparency = 0.1, CastShadow = false, CanCollide = false })
+		end
+		m.Parent = dressFolder("Canyon")
+	end
+	-- basalt columns: five hexagon-ish columns of mixed height, one glowing vent
+	local function dressBasalt(name: string, c: Vector3)
+		local m = Instance.new("Model")
+		m.Name = name
+		for k = 1, 5 do
+			local a = k / 5 * math.pi * 2
+			local h = rng:NextNumber(2, 7)
+			local pos = c + Vector3.new(math.cos(a) * 1.8, 0, math.sin(a) * 1.8)
+			piece(m, "Column" .. k, Vector3.new(h, 2, 2), upright(pos, h), Color3.fromRGB(55, 48, 50):Lerp(Color3.fromRGB(85, 75, 75), k / 5), "Cylinder", true)
+		end
+		newPart(m, "Vent", Vector3.new(0.3, 1.6, 1.6), CFrame.new(c + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(255, 120, 40),
+			{ Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, CanCollide = false, CastShadow = false })
+		m.Parent = dressFolder("Volcanic")
+	end
+	-- beach bits: a starfish (five arms) and a piece of driftwood
+	local function dressBeach(name: string, c: Vector3)
+		local m = Instance.new("Model")
+		m.Name = name
+		local star = Color3.fromRGB(255, 140, 90)
+		piece(m, "StarCore", Vector3.new(0.3, 1, 1), CFrame.new(c + Vector3.new(0, 0.15, 0)) * CFrame.Angles(0, 0, math.pi / 2), star, "Cylinder")
+		for k = 1, 5 do
+			local a = k / 5 * math.pi * 2
+			piece(m, "Arm" .. k, Vector3.new(0.5, 0.25, 1.3), CFrame.new(c + Vector3.new(math.cos(a) * 0.8, 0.15, math.sin(a) * 0.8)) * CFrame.Angles(0, -a + math.pi / 2, 0), star)
+		end
+		piece(m, "Driftwood", Vector3.new(5, 0.7, 0.7), CFrame.new(c + Vector3.new(3, 0.35, 1)) * CFrame.Angles(0, rng:NextNumber(0, 3), 0), Color3.fromRGB(190, 170, 140), "Cylinder")
+		m.Parent = dressFolder("Coast")
+	end
+
 	-- one slice of a ring (radii in authoring units, see R)
 	local function ring(name: string, deg: number, r0: number, r1: number, top: number, thick: number, color: Color3, material: Enum.Material, z)
 		r0, r1 = Wr(R(r0), deg), Wr(R(r1), deg)
@@ -334,12 +514,16 @@ function ContinentBuilder.Build(ctx)
 		reserve(A(c[1], c[2], UP), c[3])
 	end
 	-- roads, boardwalk and lava river: { angle, from studs, to studs }
+	local ROADS_FOR_DRESSING = {} -- filled below: { angle, from, to }
 	local ROAD_END = {
 		[0] = Wr(R(230), 0),
 		[120] = Wr(R(230), 120),
 		[300] = Wr(R(180), 300) - 76,
 		[60] = Wr(R(175), 60) - 86,
 	}
+	for _, deg in { 0, 120, 300, 60 } do
+		table.insert(ROADS_FOR_DRESSING, { deg, R(70), ROAD_END[deg] })
+	end
 	for _, line in {
 		{ 0, R(70), ROAD_END[0] }, { 120, R(70), ROAD_END[120] }, { 300, R(70), ROAD_END[300] }, { 60, R(70), ROAD_END[60] },
 		{ 180, R(70), Wr(R(250), 180) }, { 315, Wr(R(150), 315), Wr(R(250), 315) },
@@ -376,13 +560,7 @@ function ContinentBuilder.Build(ctx)
 		if not c then
 			continue
 		end
-		local h = rng:NextNumber(10, 16)
-		newPart(decor, "TreeTrunk" .. i, Vector3.new(2, h, 2), CFrame.new(c + Vector3.new(0, h / 2, 0)), Color3.fromRGB(120, 85, 60), {
-			Material = Enum.Material.Wood, CastShadow = false,
-		})
-		local leaves = newPart(decor, "TreeLeaves" .. i, Vector3.one * rng:NextNumber(10, 14), CFrame.new(c + Vector3.new(0, h + 2, 0)),
-			Color3.fromRGB(90, 170, 90), { Shape = Enum.PartType.Ball, Material = Enum.Material.Plastic, CanCollide = false }) -- round canopy
-		leaves:SetAttribute("Shelter", true)
+		dressTree("Tree" .. i, c)
 	end
 	for _ = 1, 16 do
 		local deg = (330 + rng:NextNumber(2, 58)) % 360
@@ -1045,6 +1223,67 @@ function ContinentBuilder.Build(ctx)
 	-- QA marker: centre of the canyon pit used by the QA "Death test"
 	local pitMarker = newPart(decor, "PitMarker", Vector3.one, CFrame.new(A(198, 250, UP + 5)), Color3.new(1, 0, 0), MARKER)
 	pitMarker:SetAttribute("QaPit", true)
+
+	------------------------------------------------------------------
+	-- v2.5 HABITAT DRESSING (placed through the footprint registry, so it
+	-- never lands on landmarks, roads or other props)
+	------------------------------------------------------------------
+	local dressCount = 0
+	local function scatter(n: number, radius: number, gen, fn)
+		for i = 1, n do
+			local pos = place(gen, radius)
+			if pos then
+				dressCount += 1
+				fn(i, pos)
+			end
+		end
+	end
+	scatter(12, 4, habGen(90, 250, 333, 387, "Plateau", UP), function(i, p) dressFlowers("Flowers" .. i, p) end)
+	scatter(6, 6, habGen(90, 250, 333, 387, "Plateau", UP), function(i, p) dressRocks("MeadowRocks" .. i, p, Color3.fromRGB(165, 160, 150), "Plateau") end)
+	scatter(18, 6, habGen(80, 255, 33, 87, "Mountains", UP), function(i, p) dressPine("Pine" .. i, p) end)
+	scatter(10, 7, habGen(80, 255, 33, 87, "Mountains", UP), function(i, p) dressRocks("MountainRocks" .. i, p, Color3.fromRGB(150, 148, 150), "Mountains") end)
+	scatter(14, 6, habGen(85, 250, 93, 147, "Mushroom", UP), function(i, p) dressGrove("Grove" .. i, p) end)
+	scatter(16, 4, habGen(80, 255, 153, 207, "Marsh", UP - 3), function(i, p) dressReeds("Reeds" .. i, p) end)
+	scatter(6, 6, habGen(80, 255, 153, 207, "Marsh", UP - 3), function(i, p) dressLog("Log" .. i, p) end)
+	scatter(14, 4, function()
+		local deg, r = rng:NextNumber(214, 266), rng:NextNumber(112, 218)
+		if inPit(deg, r - 6, r + 6) or habitatAt(deg, r) ~= "Canyon" then
+			return nil
+		end
+		return A(r, deg, UP - 12)
+	end, function(i, p) dressCrystals("CrystalGroup" .. i, p) end)
+	scatter(10, 5, habGen(85, 255, 273, 327, "Volcanic", UP), function(i, p) dressBasalt("Basalt" .. i, p) end)
+	scatter(6, 6, habGen(85, 255, 273, 327, "Volcanic", UP), function(i, p) dressRocks("AshRocks" .. i, p, Color3.fromRGB(70, 60, 60), "Volcanic") end)
+	scatter(12, 4, function()
+		return A(rng:NextNumber(266, 296), rng:NextNumber(0, 360), UP - 0.5)
+	end, function(i, p) dressBeach("Beach" .. i, p) end)
+	scatter(10, 6, function()
+		return A(rng:NextNumber(268, 298), rng:NextNumber(0, 360), UP - 0.5)
+	end, function(i, p) dressRocks("ShoreRocks" .. i, p, Color3.fromRGB(175, 165, 150), "Coast") end)
+	-- foothills: boulder clusters around the base of every peak
+	for i, spec in { { 175, 60, 82 }, { 115, 42, 44 }, { 225, 78, 52 }, { 130, 84, 35 }, { 235, 38, 38 }, { 160, 35, 30 } } do
+		local c = A(spec[1], spec[2], UP)
+		for k = 1, 3 do
+			local a = k * 2.1 + i
+			local pos = c + Vector3.new(math.cos(a) * (spec[3] + 6), 0, math.sin(a) * (spec[3] + 6))
+			if isFree(pos, 5) then
+				reserve(pos, 5)
+				dressCount += 1
+				dressRocks("Foothill" .. i .. "_" .. k, pos, Color3.fromRGB(150, 145, 140), "Mountains")
+			end
+		end
+	end
+	-- road edge stones along the four roads
+	for ri, road in ROADS_FOR_DRESSING do
+		for r = road[2] + 10, road[3] - 6, 14 do
+			for side = -1, 1, 2 do
+				local pos = polar(r, road[1], UP) + polar(6.5 * side, road[1] + 90, 0)
+				newPart(dressFolder("Roads"), "EdgeStone" .. ri .. "_" .. r .. "_" .. side, Vector3.new(1.4, 0.8, 1.4), CFrame.new(pos + Vector3.new(0, 0.4, 0)) * CFrame.Angles(0, math.rad(road[1]), 0),
+					Color3.fromRGB(215, 210, 200), { Material = Enum.Material.Plastic, CastShadow = false })
+			end
+		end
+	end
+	print(string.format("[MapCheck] dressing: %d prop groups", dressCount))
 
 	-- Biome signs
 	for key, deg in { Plateau = 0, Mountains = 60, Mushroom = 120, Marsh = 180, Canyon = 240, Volcanic = 300 } do

@@ -1039,3 +1039,32 @@ OBJECTS: Preserve existing code-required names/paths and report added/reworked m
 ANIMATIONS: Keep all revised monster structures rig-compatible and report any animation adjustments needed.
 ERRORS: No Studio QA performed for this art pass yet.
 NOTES: The director approves the classic Roblox appearance/stud texture. The requested change is structural richness and detail on every asset, particularly the currently two-shape-looking monsters; follow the ordered art plan above.
+
+### [2026-11-19 Istanbul] Claude → Astra — v2.5: structural detail pass (all phases) — code done, UNTESTED
+Status: done in code / needs your Studio screenshots (I cannot run Studio)
+
+Classic studded look kept as the base. MapVersion **2.5**. Code-required names/paths unchanged (Nest, LockPad, Vaults, Rooftops, Shell on Frostback, CatchPrompt etc.).
+
+**Phase 1 – detail standard** (used everywhere): (a) silhouette = body/head/limb masses; (b) secondary = chest/belly blocks, neck/shoulder/hip pieces, plates, jointed limbs; (c) tertiary = brows, pupils, teeth/claws, spots, gills, seams. New rig kit in `MonsterRigs`: `limb` (upper → lower → foot/hand, animated by the upper's role), `face` (EyeL/EyeR + brows; eyes get the cartoon white+pupil pass), `teeth` (rows of wedge teeth/claws), `crystalCluster` (3 crystals of different size/tilt), plus the v2.4 `capKit`/`sprout` mushroom kit. Representative pieces to check first: monster **Skyfin**, prop **Map/Decor/Dressing/Mushroom/GroveN**, structure **RooftopN/Decor/Shed***.
+
+**Phase 2 – monster roster (all 14 + Shroomling rebuilt, each its own recipe)**
+- Prismaw: lean quadruped, lavender chest, hips, angled neck, wedge snout + jaw with crystal fangs, brows, crystal ears, 3 crystal clusters + 2 shoulder shards, 4 jointed legs with paws, crystal tail.
+- Frostback: pale plastron belly, shell rim + dome + top + 6 shell plates, 3 ice clusters, thick neck, beaked head + jaw, brows, elephant legs with nail pads, leg ice, stubby tail.
+- Voltwraith: body of cloud lobes + glowing storm heart, cloud shoulders, hooded head with brow ridge, neon eyes + mouth, jointed arms with 3 lightning claws each, 3-lobe tail with a bolt.
+- Cyclonox: storm head with 5-lobe cloud crown, brows, howling mouth, 6-ring spinning funnel, jointed cloud arms + fists, orbiting debris + sparks.
+- Cindermaw: belt/torso/chest layers, magma core + seams, horned head (base + bone tip) with brows, fanged jaw, magma mouth, swept wing plates with seams, pauldrons, jointed arms + magma fists, digitigrade legs with claws, 3-segment tail with glowing tip.
+- Smoldlet: coal body, ember belly, 4 glowing cracks, cheeky face (brows + grin), stubby arms, feet with glowing toes, 3-tongue flame tuft.
+- Capstride: stalk + base + white ring, wide red domed cap (gills, spots), face with brows, mouth, blush, jointed arms with mitten hands, legs with feet and root toes, shoulder mushrooms.
+- Sporeback: hunched body, pale chest, hump, stalked pink dome cap, 3 back mushrooms, 3 spines, low head with brows, toothed jaw, spore cheeks, 4 jointed legs with claws, root tail.
+- Rubbleye: core with 4 rock plates, big eye (white + glowing iris + pupil), brow rock + lower lid, 3 glowing veins, 6 orbit boulders + 3 pebbles.
+- Bristlehulk: gorilla body, moss chest, heavy shoulders, head with brow, muzzle, tusks, leaf crown (4 leaves), long jointed arms with big fists, short legs with feet, 9 back bristle leaves in 3 rows.
+- Gulpvine: 5 roots, bulb base, 2-segment stalk with vein, maw with lips, 5+5 lightning teeth, glowing veins, eyes, 6 layered leaves with veins (2 sparking), 2 tendrils.
+- Mossgrave: waist + chest stack, chest moss, head with brow slab, glowing eyes, jaw rock, moss cap, shoulder boulders with flowers, jointed heavy arms with boulder fists, thick legs with slab feet, vines.
+- Gnashgut: round body, pale belly, upper lip/jaw, mouth inside + tongue, 2 big fangs + tooth row, big eyes with bushy brows, 5 warts, jointed arms with claws, stubby legs with feet.
+- Skyfin: blue upper + separate pale belly + back ridge, layered snout (2 wedges), jaw, mouth line, 5 teeth, dot eyes + brows, 3 gill slits per side, dorsal, pectoral + pelvic fins, 4 jointed legs with webbed feet, tail + stalk + crescent tail.
+- All rigs keep the same role names → gaits/anims still work (procedural clips adapt automatically; no published ids yet). Hitboxes: unchanged HumanoidRootPart; decorative parts are non-colliding/massless.
+
+**Phase 3 – mushrooms**: world shrooms + Elder Shroom use the v2.4 cap recipe; new `Dressing/Mushroom/GroveN` (14): 3-5 mini mushrooms of different heights/colours (stem, gills, cap, dome, spots) + surface roots.
+**Phase 4 – habitats** (`Map/Decor/Dressing/<Habitat>`, placed via the footprint registry, never on landmarks/roads): Plateau 30 leafy trees (root flare, trunk, 2 branches, 4-ball canopy) + 12 flower patches + 6 rock clusters; Mountains 18 snowy pines (3 tiers + snow caps) + 10 rock clusters + boulder foothills around all 6 peaks; Marsh 16 reed beds (cattails) + 6 fallen logs with a mushroom; Canyon 14 crystal groups on rock bases; Volcanic 10 basalt column groups with glowing vents + 6 ash rock clusters; Coast 12 starfish + driftwood, 10 shore rock clusters; Roads: edge stones every 14 studs both sides. Output `[MapCheck] dressing: N prop groups`.
+**Phase 5 – structures**: Bases (`RooftopN/Decor`): deck plinth trim, 6 round support pillars, a shed at the +X corner (floor, 3 walls, door, window, gable roof) + supply crates. Shops (`Map/Decor/ItemShop|UpgradeShop`): eave trims, crates, banded barrels, potted plant (walk-up area left clear). Bridges: 7 posts + a coloured handrail per side (path still 6 wide). Hub: 4 benches + 4 planters (shop corners and spawn ring clear). Vendors: Tayron tool belt + pouches + gloves + wrench; Aurelius robe panel, beard, staff with glowing gem.
+**Phase 6 – status / not done**: canyon cliff strata (stripes on the band walls) not added yet; no screenshots or FPS from me. Expected part count rises (≈ +1.5-2k for dressing, monsters ~40-60 parts each); everything decorative is anchored, script-free, grouped in Models/Folders. Please check: every species front/side/back walking + attacking (look for limbs bending oddly — the upper limb pieces carry the animation), mushroom groves, each habitat from player height, bases/shops/bridges, and FPS. Send screenshots + any red F9 lines.

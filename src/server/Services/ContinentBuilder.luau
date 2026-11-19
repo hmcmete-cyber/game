@@ -1306,12 +1306,45 @@ function ContinentBuilder.Build(ctx)
 			light.Parent = crystal
 		end
 	end
-	for k = 0, SEG - 1 do
-		local deg = (k + 0.5) * 360 / SEG
-		if deg > 211 and deg < 269 and not inPit(deg, 196, 206) and k % 3 ~= 0 then
-			local river = ring("CanyonRiver" .. k, deg, 196, 206, UP - 11.6, 0.8, Color3.fromRGB(80, 120, 240), Enum.Material.Glass)
-			river.Transparency = 0.3
-			hazardFlag(river, "River")
+	-- v2.12 (director: the straight striped river looked artificial): a
+	-- continuous MEANDERING crystal river in a natural channel. Its width
+	-- breathes, it bends in and out, crystal-rock banks of broken ledges
+	-- line both sides, and glowing shards sit in the shallows.
+	local riverFolder = Instance.new("Folder")
+	riverFolder.Name = "CanyonRiver"
+	riverFolder.Parent = continent
+	local function riverAt(deg: number): Vector3
+		local r = 201.5 + 3.6 * math.sin(deg * 0.23) + 2.2 * math.sin(deg * 0.61 + 1.3)
+		return A(r, deg, UP - 11.6)
+	end
+	local bankC = { Color3.fromRGB(120, 92, 165), Color3.fromRGB(96, 78, 145), Color3.fromRGB(150, 112, 195) }
+	local seg = 0
+	for deg = 211, 268.5, 1.5 do
+		local a1, b1 = riverAt(deg), riverAt(deg + 1.5)
+		local mid = (a1 + b1) / 2
+		local _, mr = BiomeMap.Polar(mid)
+		local md = math.deg(math.atan2(mid.Z, mid.X)) % 360
+		if habitatAt(md, mr) == "Canyon" and not inPit(md, mr - 4, mr + 4) then
+			seg += 1
+			local dir = (b1 - a1).Unit
+			local w = 20 + 7 * math.sin(deg * 0.4) + 3 * math.sin(deg * 1.1)
+			local cf = CFrame.lookAt(mid, mid + dir)
+			local water = newPart(riverFolder, "Water" .. seg, Vector3.new(w, 0.8, (b1 - a1).Magnitude + 1.5), cf, Color3.fromRGB(80, 130, 240),
+				{ Material = Enum.Material.Glass, Transparency = 0.3, CastShadow = false })
+			tag(water, Z.Canyon)
+			hazardFlag(water, "River")
+			for _, sgn in { -1, 1 } do
+				if rng:NextNumber() < 0.85 then
+					local h = rng:NextNumber(1.5, 4)
+					local bank = chunk(riverFolder, "Bank" .. seg .. "_" .. sgn, Vector3.new(rng:NextNumber(4, 7), h, rng:NextNumber(6, 10)),
+						(cf * CFrame.new(sgn * (w / 2 + rng:NextNumber(1, 2.5)), h / 2 - 0.4, 0)).Position, bankC[rng:NextInteger(1, #bankC)], 10, true)
+					tag(bank, Z.Canyon)
+				end
+			end
+			if seg % 4 == 0 then
+				crystalPrism(riverFolder, "Shard" .. seg, (cf * CFrame.new(rng:NextNumber(-w / 3, w / 3), -0.3, 0)).Position, rng:NextNumber(3, 6), 1.2,
+					CFrame.Angles(math.rad(rng:NextNumber(-25, 25)), 0, math.rad(rng:NextNumber(-25, 25))), CRYSTAL_BLUES[seg % #CRYSTAL_BLUES + 1])
+			end
 		end
 	end
 	local bridgeMid = A(166, 230, UP - 12.5)

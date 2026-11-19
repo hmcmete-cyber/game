@@ -808,6 +808,12 @@ local function setupStorm()
 		stormPos = Vector3.new(stormPos.X, highest + 22, stormPos.Z)
 	end
 
+	-- v2.12 director: the big blue storm-cloud cluster beside the mountain
+	-- looked misplaced; no decorative storm model any more (stormPos stays
+	-- for the code that uses it)
+	if true then
+		return
+	end
 	local storm = Instance.new("Model")
 	storm.Name = "StormCloud"
 	local puffs = {

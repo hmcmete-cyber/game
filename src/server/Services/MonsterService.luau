@@ -73,9 +73,10 @@ local function healthBar(info)
 	name.TextScaled = true
 	name.TextColor3 = Color3.new(1, 1, 1)
 	name.TextStrokeTransparency = 0.4
-	name.Text = info.Type .. "  -  " .. def.Title
+	name.Text = info.Type -- director: only the monster's name above its head
 	name.Parent = gui
 	local back = Instance.new("Frame")
+	back.Visible = false -- the health bar appears only once the monster is hurt
 	back.Position = UDim2.fromScale(0.1, 0.62)
 	back.Size = UDim2.fromScale(0.8, 0.22)
 	back.BackgroundColor3 = Color3.fromRGB(30, 20, 25)
@@ -91,6 +92,7 @@ local function healthBar(info)
 	gui.Parent = info.Root
 	table.insert(info.Conns, info.Hum.HealthChanged:Connect(function(hp)
 		fill.Size = UDim2.fromScale(math.clamp(hp / info.Hum.MaxHealth, 0, 1), 1)
+		back.Visible = hp < info.Hum.MaxHealth
 	end))
 end
 

@@ -152,3 +152,8 @@ The "Update" sections above are history. If they conflict with this section, thi
 **Monetization (later, no pay-to-win)**: cosmetics only (base themes, leash/jar looks, emotes, visual-only celebrations). Never sell luck, stealing power, immunity or stronger clouds.
 
 **Playtest questions**: Can a new player reach the continent and make the first delivery without help? Does a steal feel fair to both players? Do players come back for rarer clouds?
+
+## v2.6 additions
+- One extra monster per biome: Puffhorn (Plateau), Snowpeck (Mountains), Glowmoth (Mushroom), Croakle (Marsh), Geoscuttle (Canyon), Scorchtail (Volcanic), Octoblob (Coast).
+- Monster overhead label: name only; health bar shows only after damage.
+- Biome features: blue prism crystals, sharp snowy peaks with ridges, erupting 8-tier volcano with lava streaks, winding lava river with an obsidian bridge.

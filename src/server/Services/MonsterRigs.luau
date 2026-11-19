@@ -648,6 +648,205 @@ BUILD.Skyfin = function(s)
 	return r
 end
 
+-- ======================================================================
+-- v2.6 SECOND MONSTER PER HABITAT (each a different animal type)
+-- ======================================================================
+
+-- (o) Puffhorn — Plateau: a cloud-wool ram. Dark face and legs, a body of
+-- overlapping white wool puffs, big spiral horns, hooves, little tail puff
+BUILD.Puffhorn = function(s)
+	local r = rig("Puffhorn", s, 2.4)
+	local wool, woolShade, face_, horn = RGB(248, 248, 252), RGB(220, 222, 232), RGB(70, 60, 70), RGB(215, 185, 140)
+	add(r, "Body", "HumanoidRootPart", V(4, 3.2, 5.6), V(0, 0.9, 0), V(0, 0, 0), wool, { Role = "body" })
+	for i, spec in { { V(-1.6, 1.4, -1.6), 2.6 }, { V(1.5, 1.5, -1.4), 2.6 }, { V(0, 1.9, 0.2), 3 }, { V(-1.5, 1.2, 1.8), 2.4 }, { V(1.6, 1.3, 1.9), 2.4 }, { V(0, 0.6, 2.8), 2.2 } } do
+		add(r, "Wool" .. i, "Body", V(spec[2], spec[2], spec[2]), spec[1], V(0, 0, 0), i % 2 == 0 and woolShade or wool, { Shape = "Ball" })
+	end
+	add(r, "Neck", "Body", V(1.8, 1.8, 1.6), V(0, 1, -3), V(0, 0, 0.6), face_, {})
+	add(r, "Head", "Neck", V(2, 2.2, 2.4), V(0, 0.6, -0.9), V(0, -0.3, 1), face_, { Role = "head" })
+	add(r, "Muzzle", "Head", V(1.5, 1.1, 1), V(0, -0.5, -1.4), V(0, 0, 0), RGB(95, 85, 95), {})
+	add(r, "Forelock", "Head", V(1.8, 1, 1.4), V(0, 1.2, 0), V(0, 0, 0), wool, { Shape = "Ball" })
+	face(r, "Head", V(0, 0.35, -1.22), 0.6, V(0.45, 0.5, 0.2), RGB(40, 35, 40), 8)
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		add(r, "HornA" .. n, "Head", V(0.9, 0.9, 1.6), V(side * 1, 0.8, 0.2), V(0, 0, -0.6), horn, { Rot = A(rad(20), rad(side * 35), 0) })
+		add(r, "HornB" .. n, "HornA" .. n, V(0.75, 0.75, 1.4), V(side * 0.2, -0.3, 0.8), V(0, 0, -0.5), horn:Lerp(RGB(0, 0, 0), 0.08), { Rot = A(rad(70), rad(side * 25), 0) })
+		add(r, "HornTip" .. n, "HornB" .. n, V(0.55, 0.55, 1.1), V(0, -0.2, 0.6), V(0, 0, -0.4), horn:Lerp(RGB(255, 255, 255), 0.2), { Rot = A(rad(70), 0, 0) })
+		add(r, "Ear" .. n, "Head", V(1, 0.3, 0.6), V(side * 1.2, 0.3, 0.3), V(-side * 0.4, 0, 0), face_, { Rot = A(0, 0, rad(-side * 20)) })
+	end
+	for _, spec in { { "LegFL", -1.3, -1.8, "legA" }, { "LegFR", 1.3, -1.8, "legB" }, { "LegBL", -1.3, 2, "legB" }, { "LegBR", 1.3, 2, "legA" } } do
+		limb(r, spec[1], "Body", V(spec[2], -1.4, spec[3]), V(0.9, 1.4, 0.9), V(0.7, 1.2, 0.7), V(0.9, 0.5, 1.1), face_, RGB(40, 35, 40), spec[4])
+	end
+	add(r, "Tail", "Body", V(1.3, 1.3, 1.3), V(0, 0.8, 3.1), V(0, 0, -0.5), wool, { Role = "tail", Shape = "Ball" })
+	return r
+end
+
+-- (p) Snowpeck — Mountains: a huge snowy owl. Round white body with grey
+-- chevron marks, a facial disc with big eyes and a hooked beak, ear tufts,
+-- broad wings with grey flight feathers, a short tail fan and taloned feet
+BUILD.Snowpeck = function(s)
+	local r = rig("Snowpeck", s, 3)
+	local white, grey, beak = RGB(250, 250, 255), RGB(150, 155, 170), RGB(60, 55, 50)
+	add(r, "Body", "HumanoidRootPart", V(4.2, 5, 4), V(0, 1.4, 0), V(0, 0, 0), white, { Role = "body", Shape = "Ball" })
+	for i = 1, 4 do
+		add(r, "Chevron" .. i, "Body", V(0.8, 0.25, 0.3), V((i % 2 == 0) and 0.7 or -0.7, -0.4 + i * 0.4, -1.95), V(0, 0, 0), grey, { Rot = A(0, 0, rad((i % 2 == 0) and 20 or -20)) })
+	end
+	add(r, "Head", "Body", V(3.6, 3.2, 3.2), V(0, 2.6, -0.2), V(0, -1.4, 0), white, { Role = "head", Shape = "Ball" })
+	add(r, "FaceDisc", "Head", V(3, 2.4, 0.4), V(0, 0, -1.45), V(0, 0, 0), RGB(235, 235, 240), {})
+	face(r, "Head", V(0, 0.35, -1.7), 0.75, V(0.9, 0.9, 0.3), grey, 10)
+	add(r, "Beak", "Head", V(0.7, 0.9, 0.8), V(0, -0.45, -1.85), V(0, 0, 0), beak, { Class = "WedgePart", Rot = A(rad(180), 0, 0) })
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		add(r, "Tuft" .. n, "Head", V(0.6, 1.2, 0.8), V(side * 1.1, 1.5, 0), V(0, -0.6, 0), white, { Class = "WedgePart", Rot = A(0, 0, rad(-side * 20)) })
+		add(r, "Wing" .. n, "Body", V(0.6, 4.4, 3.2), V(side * 2.2, 0.8, 0.4), V(0, 2, 0), white, { Role = side < 0 and "armL" or "armR" })
+		for k = 1, 3 do
+			add(r, "Feather" .. n .. k, "Wing" .. n, V(0.65, 1.4, 0.9), V(0, -2.2, -1 + k * 0.85), V(0, 0.7, 0), grey, { Class = "WedgePart", Rot = A(rad(180), 0, 0) })
+		end
+		limb(r, "Leg" .. n, "Body", V(side * 0.9, -2.2, -0.2), V(0.8, 0.8, 0.8), V(0.6, 0.7, 0.6), V(1, 0.3, 1.3), white, beak, side < 0 and "legA" or "legB")
+		teeth(r, "Talon" .. n, "Leg" .. n .. "Tip", V(0, -0.15, -0.7), 3, 0.9, V(0.2, 0.3, 0.35), true, beak)
+	end
+	add(r, "TailFan", "Body", V(2.6, 0.4, 1.8), V(0, -1.4, 2), V(0, 0, -0.8), grey, { Role = "tail", Rot = A(rad(-25), 0, 0) })
+	return r
+end
+
+-- (q) Glowmoth — Mushroom: a giant fuzzy moth. Furry thorax with a fluffy
+-- collar, striped abdomen, feathery antennae, big dark eyes, and four broad
+-- wings dotted with glowing spore spots
+BUILD.Glowmoth = function(s)
+	local r = rig("Glowmoth", s, 4)
+	local fur, stripe, wing, glow = RGB(230, 215, 190), RGB(160, 120, 200), RGB(150, 110, 210), RGB(170, 255, 220)
+	add(r, "Body", "HumanoidRootPart", V(2.6, 2.6, 3), V(0, 1, 0), V(0, 0, 0), fur, { Role = "body", Shape = "Ball" })
+	add(r, "Collar", "Body", V(3.2, 1.6, 1.6), V(0, 0.6, -1.2), V(0, 0, 0), RGB(250, 245, 235), { Shape = "Ball" })
+	for i = 1, 3 do
+		add(r, "Abdomen" .. i, "Body", V(2.2 - i * 0.4, 2 - i * 0.35, 1.4), V(0, -0.3 - i * 0.2, 1.2 + i * 1.1), V(0, 0, 0), i % 2 == 0 and stripe or fur, { Shape = "Ball", Role = "tail" })
+	end
+	add(r, "Head", "Body", V(2, 1.8, 1.8), V(0, 0.9, -1.9), V(0, 0, 0.6), fur, { Role = "head", Shape = "Ball" })
+	add(r, "EyeL", "Head", V(0.8, 0.9, 0.4), V(-0.6, 0.1, -0.8), V(0, 0, 0), RGB(30, 30, 40), {})
+	add(r, "EyeR", "Head", V(0.8, 0.9, 0.4), V(0.6, 0.1, -0.8), V(0, 0, 0), RGB(30, 30, 40), {})
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		add(r, "Antenna" .. n, "Head", V(0.2, 2.2, 0.2), V(side * 0.4, 0.8, -0.3), V(0, -1.1, 0), RGB(120, 90, 60), { Rot = A(rad(-30), 0, rad(-side * 25)) })
+		for k = 1, 3 do
+			add(r, "Plume" .. n .. k, "Antenna" .. n, V(0.9, 0.12, 0.3), V(0, 0.2 + k * 0.4, 0), V(0, 0, 0), RGB(200, 170, 130), {})
+		end
+		add(r, "Wing" .. n, "Body", V(5.2, 0.3, 4), V(side * 1.3, 0.8, -0.4), V(-side * 2.6, 0, 0), wing, { Role = "wing", Rot = A(0, rad(side * 10), rad(side * 10)) })
+		add(r, "WingLow" .. n, "Body", V(3.6, 0.3, 2.8), V(side * 1.2, 0.5, 1.4), V(-side * 1.8, 0, 0), wing:Lerp(RGB(0, 0, 0), 0.12), { Role = "wing", Rot = A(0, rad(-side * 20), rad(side * 6)) })
+		for k = 1, 3 do
+			add(r, "SporeSpot" .. n .. k, "Wing" .. n, V(0.3, 0.9, 0.9), V(side * (0.6 + k * 1.1), 0.05, (k - 2) * 0.9), V(0, 0, 0), glow, { Shape = "Cylinder", Material = M.Neon, Rot = A(0, 0, rad(90)) })
+		end
+		for k = 1, 3 do
+			add(r, "Leg" .. n .. k, "Body", V(0.25, 1.4, 0.25), V(side * 0.9, -1, -0.8 + k * 0.6), V(0, 0.7, 0), RGB(120, 90, 60), { Role = k % 2 == 0 and "legA" or "legB", Rot = A(0, 0, rad(side * 20)) })
+		end
+	end
+	return r
+end
+
+-- (r) Croakle — Marsh: a storm frog. Wide squat body with a pale throat
+-- sac, lightning-stripe back, bulging eyes on top, wide mouth, strong folded
+-- back legs with webbed feet, short front arms
+BUILD.Croakle = function(s)
+	local r = rig("Croakle", s, 1.6)
+	local skin, throat, bolt = RGB(60, 120, 120), RGB(210, 230, 200), RGB(110, 240, 255)
+	add(r, "Body", "HumanoidRootPart", V(5, 2.8, 5), V(0, 0.8, 0), V(0, 0, 0), skin, { Role = "body", Shape = "Ball" })
+	add(r, "Throat", "Body", V(3.2, 1.8, 1.4), V(0, -0.5, -2), V(0, 0, 0), throat, { Shape = "Ball" })
+	add(r, "Head", "Body", V(4.4, 1.6, 3), V(0, 1, -1.4), V(0, -0.4, 1), skin, { Role = "jawTop" })
+	add(r, "MouthLine", "Head", V(4, 0.18, 0.2), V(0, -0.5, -1.45), V(0, 0, 0), RGB(30, 50, 50), {})
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		add(r, "EyeBump" .. n, "Head", V(1.3, 1.3, 1.3), V(side * 1.3, 0.8, -0.4), V(0, 0, 0), skin, { Shape = "Ball" })
+		add(r, "Eye" .. n, "EyeBump" .. n, V(0.7, 0.8, 0.3), V(0, 0.1, -0.6), V(0, 0, 0), RGB(30, 30, 30), {})
+		limb(r, "Leg" .. n, "Body", V(side * 2, -0.6, 1.4), V(1.4, 1.6, 2.2), V(1, 1.4, 1.8), V(1.8, 0.3, 2.2), skin, throat, side < 0 and "legA" or "legB", { Bend = 0.6 })
+		limb(r, "Arm" .. n, "Body", V(side * 1.6, -0.6, -1.6), V(0.7, 1, 0.7), V(0.6, 0.8, 0.6), V(1.1, 0.25, 1.2), skin, throat, side < 0 and "armL" or "armR")
+	end
+	for i = 1, 3 do
+		add(r, "BackBolt" .. i, "Body", V(0.3, 0.2, 1.4), V((i - 2) * 0.9, 1.35, 0.4 + (i % 2) * 0.4), V(0, 0, 0), bolt, { Material = M.Neon, Rot = A(0, rad((i - 2) * 30), 0) })
+	end
+	return r
+end
+
+-- (s) Geoscuttle — Canyon: a crystal scorpion-crab. Segmented shell with a
+-- pale underside, six jointed legs, two big pincers, eye stalks, and a
+-- curled segmented tail ending in a blue crystal stinger
+BUILD.Geoscuttle = function(s)
+	local r = rig("Geoscuttle", s, 1.6)
+	local shell, under, blue = RGB(120, 90, 140), RGB(210, 200, 220), RGB(90, 170, 255)
+	add(r, "Body", "HumanoidRootPart", V(5, 1.8, 4.4), V(0, 0.6, 0), V(0, 0, 0), shell, { Role = "body" })
+	add(r, "Underside", "Body", V(4.4, 0.6, 3.8), V(0, -1.1, 0), V(0, 0, 0), under, {})
+	add(r, "ShellTop", "Body", V(4, 0.8, 3.4), V(0, 1.2, 0), V(0, 0, 0), shell:Lerp(RGB(255, 255, 255), 0.08), {})
+	add(r, "Head", "Body", V(3, 1.2, 1.4), V(0, 0.1, -2.6), V(0, 0, 0.6), shell, { Role = "head" })
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		add(r, "EyeStalk" .. n, "Head", V(0.3, 1.2, 0.3), V(side * 0.7, 0.9, -0.2), V(0, -0.6, 0), shell, {})
+		add(r, "Eye" .. n, "EyeStalk" .. n, V(0.5, 0.5, 0.5), V(0, 0.75, 0), V(0, 0, 0), RGB(30, 30, 30), { Shape = "Ball" })
+		limb(r, "Claw" .. n, "Body", V(side * 2.2, 0, -2.4), V(1, 1, 2.2), V(1.2, 1, 1.6), nil, shell, nil, side < 0 and "armL" or "armR", { Bend = -0.5 })
+		add(r, "PincerTop" .. n, "Claw" .. n .. "Lower", V(1.2, 0.6, 1.6), V(0, 0.2, -1.4), V(0, 0, 0.6), blue, { Class = "WedgePart", Rot = A(0, math.pi, 0) })
+		add(r, "PincerLow" .. n, "Claw" .. n .. "Lower", V(1.1, 0.5, 1.3), V(0, -0.4, -1.3), V(0, 0, 0.5), under, { Class = "WedgePart", Rot = A(math.pi, 0, 0) })
+		for k = 1, 3 do
+			limb(r, "Leg" .. n .. k, "Body", V(side * 2.5, -0.4, -1.3 + k * 1.1), V(0.45, 1.3, 0.45), V(0.35, 1.3, 0.35), nil, shell, nil, (k % 2 == (side < 0 and 0 or 1)) and "legA" or "legB", { Bend = 0 })
+		end
+	end
+	local last = "Body"
+	for i = 1, 4 do
+		local nm = "TailSeg" .. i
+		add(r, nm, last, V(1.3 - i * 0.12, 1, 1.2), i == 1 and V(0, 0.4, 2.4) or V(0, 0.55, 0.5), V(0, 0, -0.5), shell:Lerp(RGB(0, 0, 0), i * 0.04), { Role = "tail", Rot = A(rad(-35), 0, 0) })
+		last = nm
+	end
+	add(r, "Stinger", last, V(0.7, 1.6, 0.7), V(0, 0.6, 0.2), V(0, -0.8, 0), blue, { Class = "WedgePart", Material = M.Glass, Rot = A(rad(-40), 0, 0) })
+	return r
+end
+
+-- (t) Scorchtail — Volcanic: a fast lava salamander. Long low body with a
+-- glowing spine ridge, wide flat head with a grin and glowing eyes, four
+-- splayed legs with toes, a long tapering tail ending in a flame
+BUILD.Scorchtail = function(s)
+	local r = rig("Scorchtail", s, 1.2)
+	local skin, belly, magma = RGB(45, 35, 35), RGB(255, 160, 80), RGB(255, 120, 40)
+	add(r, "Body", "HumanoidRootPart", V(2.6, 1.4, 5.4), V(0, 0.3, 0), V(0, 0, 0), skin, { Role = "body" })
+	add(r, "Belly", "Body", V(2.2, 0.4, 5), V(0, -0.8, 0), V(0, 0, 0), belly, {})
+	for i = 1, 5 do
+		add(r, "Spine" .. i, "Body", V(0.5, 0.6, 0.7), V(0, 0.9, -2 + i * 0.85), V(0, 0, 0), magma, { Class = "WedgePart", Material = M.Neon })
+	end
+	add(r, "Head", "Body", V(2.4, 1.2, 2.2), V(0, 0.2, -3.4), V(0, 0, 0.8), skin, { Role = "head" })
+	add(r, "Jaw", "Head", V(2.2, 0.4, 1.8), V(0, -0.7, -0.2), V(0, 0.15, 0.8), belly, { Role = "jawBot" })
+	add(r, "Grin", "Head", V(1.8, 0.15, 0.2), V(0, -0.4, -1.12), V(0, 0, 0), magma, { Material = M.Neon })
+	face(r, "Head", V(0, 0.45, -1.1), 0.65, V(0.45, 0.45, 0.2), RGB(25, 20, 20), 15)
+	for _, spec in { { "LegFL", -1.4, -1.6, "legA" }, { "LegFR", 1.4, -1.6, "legB" }, { "LegBL", -1.4, 1.8, "legB" }, { "LegBR", 1.4, 1.8, "legA" } } do
+		limb(r, spec[1], "Body", V(spec[2], -0.3, spec[3]), V(0.7, 1, 0.7), V(0.6, 0.9, 0.6), V(1.1, 0.25, 1.2), skin, magma, spec[4])
+	end
+	add(r, "Tail1", "Body", V(1.6, 1, 2.2), V(0, 0.1, 3.3), V(0, 0, -1), skin, { Role = "tail" })
+	add(r, "Tail2", "Tail1", V(1.1, 0.8, 2), V(0, 0, 1.1), V(0, 0, -0.9), skin, { Role = "tail" })
+	add(r, "Tail3", "Tail2", V(0.7, 0.6, 1.8), V(0, 0, 1), V(0, 0, -0.8), skin, { Role = "tail" })
+	local tip = add(r, "TailFlame", "Tail3", V(0.8, 1.2, 0.8), V(0, 0.4, 0.9), V(0, -0.5, 0), magma, { Material = M.Neon, Class = "WedgePart" })
+	local fire = Instance.new("Fire")
+	fire.Size = 2.5 * s
+	fire.Heat = 4
+	fire.Parent = tip
+	return r
+end
+
+-- (u) Octoblob — Coast: a little sea octopus. Round mantle with spots, big
+-- eyes with brows, a small beak, six curling tentacles with suckers
+BUILD.Octoblob = function(s)
+	local r = rig("Octoblob", s, 2)
+	local skin, spot, sucker = RGB(240, 120, 150), RGB(255, 170, 190), RGB(255, 225, 230)
+	add(r, "Body", "HumanoidRootPart", V(4, 3, 4), V(0, 0.8, 0), V(0, 0, 0), skin, { Role = "body", Shape = "Ball" })
+	add(r, "Mantle", "Body", V(3.6, 3.6, 3.6), V(0, 1.6, 0.6), V(0, 0, 0), skin, { Role = "head", Shape = "Ball" })
+	for i, p in { V(-0.9, 1.2, -0.9), V(1, 0.6, -1.1), V(0.2, 1.6, 0.6), V(-1.2, 0, 0.8) } do
+		add(r, "Spot" .. i, "Mantle", V(0.7, 0.7, 0.7), p, V(0, 0, 0), spot, { Shape = "Ball" })
+	end
+	face(r, "Body", V(0, 0.4, -1.85), 0.8, V(0.8, 0.9, 0.3), RGB(170, 70, 100), 12)
+	add(r, "Beak", "Body", V(0.5, 0.5, 0.4), V(0, -0.5, -1.95), V(0, 0, 0), RGB(80, 50, 60), { Class = "WedgePart", Rot = A(rad(180), 0, 0) })
+	for i = 1, 6 do
+		local a = i / 6 * math.pi * 2
+		local n = "Tentacle" .. i
+		local base = V(math.cos(a) * 1.4, -1.2, math.sin(a) * 1.4)
+		add(r, n, "Body", V(0.8, 1.6, 0.8), base, V(0, 0.8, 0), skin, { Role = i % 2 == 0 and "legA" or "legB", Rot = A(0, -a, rad(-25)) })
+		add(r, n .. "Mid", n, V(0.6, 1.4, 0.6), V(0, -0.8, 0), V(0, 0.7, 0), skin, { Rot = A(0, 0, rad(-25)) })
+		add(r, n .. "Curl", n .. "Mid", V(0.45, 1, 0.45), V(0, -0.7, 0), V(0, 0.5, 0), skin, { Rot = A(0, 0, rad(-40)) })
+		add(r, n .. "Sucker", n .. "Mid", V(0.3, 0.3, 0.3), V(0.3, 0, 0), V(0, 0, 0), sucker, { Shape = "Ball" })
+	end
+	return r
+end
+
 -- Sprout (Capstride's summon): a tiny walking mushroom — stalk with a
 -- face, orange spotted cap, two stubby feet
 BUILD.Shroomling = function(s)

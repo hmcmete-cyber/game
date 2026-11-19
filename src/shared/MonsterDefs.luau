@@ -21,6 +21,8 @@ local M = {}
 M.Order = {
 	"Prismaw", "Frostback", "Voltwraith", "Cyclonox", "Cindermaw", "Smoldlet", "Capstride",
 	"Sporeback", "Rubbleye", "Bristlehulk", "Gulpvine", "Mossgrave", "Gnashgut", "Skyfin",
+	-- v2.6 second monster per habitat
+	"Puffhorn", "Snowpeck", "Glowmoth", "Croakle", "Geoscuttle", "Scorchtail", "Octoblob",
 }
 
 M.Types = {
@@ -149,6 +151,70 @@ M.Types = {
 		Abilities = {
 			{ Id = "FinDive", Name = "Fin Dive", Cooldown = 10, Range = 45, Damage = 18, Radius = 8, Windup = 0.9 },
 			{ Id = "TailSpin", Name = "Tail Spin", Cooldown = 8, Range = 12, Damage = 12, Radius = 12, Knock = 60, Windup = 0.6 },
+		},
+	},
+	-- v2.6: a second, different animal for every habitat
+	Puffhorn = {
+		Title = "Cloud Ram", Gait = "Trot", Habitat = "Plateau", Count = 2, Respawn = 90,
+		HP = 150, Speed = 17, Scale = 1.1, XP = 55, Aggro = 55,
+		Melee = { Damage = 10, Range = 7, Cooldown = 1.4 },
+		Abilities = {
+			{ Id = "WoolBounce", Name = "Wool Bounce", Cooldown = 9, Range = 14, Damage = 14, Radius = 12, Knock = 50, Windup = 0.8 },
+			{ Id = "StaticFluff", Name = "Static Fluff", Cooldown = 10, Range = 14, Damage = 6, Radius = 14, Shock = 2 },
+		},
+	},
+	Snowpeck = {
+		Title = "Snow Owl", Gait = "Hover", Habitat = "Mountains", Count = 1, Respawn = 110,
+		HP = 190, Speed = 16, Scale = 1.1, XP = 80, Aggro = 65, Hover = 3,
+		Melee = { Damage = 12, Range = 8, Cooldown = 1.5 },
+		Abilities = {
+			{ Id = "SnowballBarrage", Name = "Snowball Barrage", Cooldown = 8, Range = 45, Damage = 10, Radius = 5, Balls = 3 },
+			{ Id = "WingGust", Name = "Wing Gust", Cooldown = 9, Range = 26, Damage = 6, Angle = 70, Knock = 80, Windup = 0.6 },
+		},
+	},
+	Glowmoth = {
+		Title = "Spore Moth", Gait = "Hover", Habitat = "Mushroom", Count = 2, Respawn = 100,
+		HP = 170, Speed = 15, Scale = 1, XP = 75, Aggro = 60, Hover = 4,
+		Melee = { Damage = 9, Range = 8, Cooldown = 1.4 },
+		Abilities = {
+			{ Id = "SporeSpiral", Name = "Spore Spiral", Cooldown = 8, Range = 28, Damage = 7, Spores = 10 },
+			{ Id = "LullabyDust", Name = "Lullaby Dust", Cooldown = 12, Range = 35, Radius = 7, RootTime = 1.5, Windup = 1 },
+		},
+	},
+	Croakle = {
+		Title = "Storm Frog", Gait = "Hop", Habitat = "Marsh", Count = 2, Respawn = 90,
+		HP = 160, Speed = 16, Scale = 1.1, XP = 65, Aggro = 55,
+		Melee = { Damage = 10, Range = 7, Cooldown = 1.4 },
+		Abilities = {
+			{ Id = "TongueLash", Name = "Tongue Lash", Cooldown = 8, Range = 28, Damage = 8, Pull = 65 },
+			{ Id = "ThunderCroak", Name = "Thunder Croak", Cooldown = 10, Range = 14, Damage = 12, Radius = 14, Windup = 0.7 },
+		},
+	},
+	Geoscuttle = {
+		Title = "Crystal Scuttler", Gait = "Trot", Habitat = "Canyon", Count = 2, Respawn = 110,
+		HP = 230, Speed = 14, Scale = 1.1, XP = 90, Aggro = 55,
+		Melee = { Damage = 12, Range = 8, Cooldown = 1.5 },
+		Abilities = {
+			{ Id = "PincerSnap", Name = "Pincer Snap", Cooldown = 7, Range = 9, Damage = 14, HoldTime = 1.2 },
+			{ Id = "CrystalSting", Name = "Crystal Sting", Cooldown = 8, Range = 40, Damage = 16, Slow = 0.5, SlowTime = 3 },
+		},
+	},
+	Scorchtail = {
+		Title = "Lava Salamander", Gait = "Swim", Habitat = "Volcanic", Count = 2, Respawn = 90,
+		HP = 140, Speed = 22, Scale = 1, XP = 70, Aggro = 60,
+		Melee = { Damage = 9, Range = 6, Cooldown = 1.2 },
+		Abilities = {
+			{ Id = "FlameDash", Name = "Flame Dash", Cooldown = 9, Range = 35, Damage = 8, Burn = 3 },
+			{ Id = "EmberSpit", Name = "Ember Spit", Cooldown = 7, Range = 38, Damage = 14, Radius = 6, Burn = 3 },
+		},
+	},
+	Octoblob = {
+		Title = "Tide Octopus", Gait = "Waddle", Habitat = "Coast", Count = 2, Respawn = 100,
+		HP = 180, Speed = 15, Scale = 1.1, XP = 75, Aggro = 55,
+		Melee = { Damage = 10, Range = 8, Cooldown = 1.4 },
+		Abilities = {
+			{ Id = "InkCloud", Name = "Ink Cloud", Cooldown = 11, Range = 16, Radius = 14, BlindTime = 3 },
+			{ Id = "TentacleSlam", Name = "Tentacle Slam", Cooldown = 9, Range = 13, Damage = 15, Radius = 13, Knock = 55, Stun = 0.6, Windup = 0.8 },
 		},
 	},
 	-- summoned by Capstride's Sprout Squad (not part of the habitat population)

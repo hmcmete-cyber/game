@@ -1068,3 +1068,30 @@ Classic studded look kept as the base. MapVersion **2.5**. Code-required names/p
 **Phase 4 – habitats** (`Map/Decor/Dressing/<Habitat>`, placed via the footprint registry, never on landmarks/roads): Plateau 30 leafy trees (root flare, trunk, 2 branches, 4-ball canopy) + 12 flower patches + 6 rock clusters; Mountains 18 snowy pines (3 tiers + snow caps) + 10 rock clusters + boulder foothills around all 6 peaks; Marsh 16 reed beds (cattails) + 6 fallen logs with a mushroom; Canyon 14 crystal groups on rock bases; Volcanic 10 basalt column groups with glowing vents + 6 ash rock clusters; Coast 12 starfish + driftwood, 10 shore rock clusters; Roads: edge stones every 14 studs both sides. Output `[MapCheck] dressing: N prop groups`.
 **Phase 5 – structures**: Bases (`RooftopN/Decor`): deck plinth trim, 6 round support pillars, a shed at the +X corner (floor, 3 walls, door, window, gable roof) + supply crates. Shops (`Map/Decor/ItemShop|UpgradeShop`): eave trims, crates, banded barrels, potted plant (walk-up area left clear). Bridges: 7 posts + a coloured handrail per side (path still 6 wide). Hub: 4 benches + 4 planters (shop corners and spawn ring clear). Vendors: Tayron tool belt + pouches + gloves + wrench; Aurelius robe panel, beard, staff with glowing gem.
 **Phase 6 – status / not done**: canyon cliff strata (stripes on the band walls) not added yet; no screenshots or FPS from me. Expected part count rises (≈ +1.5-2k for dressing, monsters ~40-60 parts each); everything decorative is anchored, script-free, grouped in Models/Folders. Please check: every species front/side/back walking + attacking (look for limbs bending oddly — the upper limb pieces carry the animation), mushroom groves, each habitat from player height, bases/shops/bridges, and FPS. Send screenshots + any red F9 lines.
+
+### [2026-11-19 Istanbul] Claude → Astra — v2.6: 7 new monsters (one per biome), name-only labels, reference biome features — code done, UNTESTED
+Status: done in code / needs your Studio check. MapVersion **2.6** (old maps rebuild automatically; maps with attribute `Custom` are kept).
+
+**Director request:** one more monster per biome, each different from the rest; only the name above monsters; 4 reference images (winding lava river, sharp snowy peak, erupting volcano, blue crystal cluster).
+
+**New monsters** (`workspace.Monsters.<Habitat>.<Name>`, studded classic style, same Motor6D/Role rig system):
+| Name | Habitat | Gait | Count | HP | XP | Abilities |
+|---|---|---|---|---|---|---|
+| Puffhorn (fluffy ram) | Plateau | Trot | 2 | 150 | 55 | WoolBounce, StaticFluff |
+| Snowpeck (snow owl) | Mountains | Hover | 1 | 190 | 80 | SnowballBarrage, WingGust |
+| Glowmoth (spore moth) | Mushroom | Hover | 2 | 170 | 75 | SporeSpiral, LullabyDust |
+| Croakle (storm frog) | Marsh | Hop | 2 | 160 | 65 | TongueLash, ThunderCroak |
+| Geoscuttle (crystal crab) | Canyon | Trot | 2 | 230 | 90 | PincerSnap, CrystalSting |
+| Scorchtail (fire salamander) | Volcanic | Swim | 2 | 140 | 70 | FlameDash, EmberSpit |
+| Octoblob (jelly octopus) | Coast | Waddle | 2 | 180 | 75 | InkCloud, TentacleSlam |
+Abilities reuse the existing statuses (slow, root, slip, blind, burn, knockback); see `MonsterAbilities`. Animations: procedural gaits like the others — still need publishing (MonsterAnimIds).
+
+**Labels:** the overhead billboard shows only the monster's name; the health bar appears only once the monster is damaged.
+
+**Biome features from references (ContinentBuilder):**
+- Blue crystals: new `crystalPrism` (45°-turned glass shaft + pointed 2-wedge tip, blue/violet). Used for Canyon crystal groups (on a frosty base), the canyon wall crystals, and the CrystalSpire (+4 leaning shards).
+- Snowy peaks: sharper pyramid profile, dark rock lower tiers, snow on the upper tiers; main Snowpeak has 4 rock/snow ridges down its sides.
+- Volcano: caldera is now an 8-tier cone (crater lake 18x18 at UP+32) with 6 glowing lava streaks down the sides, an eruption spark emitter, smoke and fire. Caldera spawn points raised to the new tiers.
+- Lava river: winding S-curve (±18 studs) along 315°, bright core over a wider red glow edge, dark crust lumps on the banks, 24 axis-aligned Lava hazard boxes; ObsidianBridge stays at the middle where the river crosses the axis.
+
+**Please check:** each new monster idle/walk/attack + abilities, name labels, crystal shapes (tips aligned), Snowpeak ridges, volcano emitters (FPS), lava river damage along the whole curve and that the bridge spans it. Red F9 lines + screenshots please.

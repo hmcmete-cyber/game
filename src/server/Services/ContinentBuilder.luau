@@ -226,17 +226,44 @@ function ContinentBuilder.Build(ctx)
 		miniShroom(m, "Shroom", c + Vector3.new(0, 2, 0), 0.8, 0.6, Color3.fromRGB(230, 80, 90))
 		m.Parent = dressFolder("Marsh")
 	end
+	-- v2.6 crystal (director's blue crystal reference): a faceted prism shaft
+	-- (turned 45°) with a pointed two-wedge tip, glassy and blue
+	local function crystalPrism(parent: Instance, name: string, base: Vector3, h: number, w: number, tilt: CFrame, color: Color3): BasePart
+		local root = CFrame.new(base) * tilt
+		local shaftH = h * 0.75
+		local shaft = newPart(parent, name, Vector3.new(w, shaftH, w), root * CFrame.new(0, shaftH / 2, 0) * CFrame.Angles(0, math.rad(45), 0), color,
+			{ Material = Enum.Material.Glass, Transparency = 0.12, CastShadow = false, CanCollide = false })
+		local tipH = h * 0.25
+		for k = 0, 1 do
+			local wedge = Instance.new("WedgePart")
+			wedge.Name = name .. "Tip" .. k
+			wedge.Anchored = true
+			wedge.CanCollide = false
+			wedge.CastShadow = false
+			wedge.Material = Enum.Material.Glass
+			wedge.Transparency = 0.08
+			wedge.Color = color:Lerp(Color3.new(1, 1, 1), 0.25)
+			wedge.Size = Vector3.new(w, tipH, w / 2)
+			wedge.CFrame = root * CFrame.new(0, shaftH + tipH / 2, 0) * CFrame.Angles(0, math.rad(45 + k * 180), 0) * CFrame.new(0, 0, -w / 4)
+			wedge.Parent = parent
+		end
+		return shaft
+	end
+	local CRYSTAL_BLUES = { Color3.fromRGB(80, 160, 255), Color3.fromRGB(120, 200, 255), Color3.fromRGB(60, 110, 230), Color3.fromRGB(150, 130, 255) }
 	-- crystal group: four tilted crystals of different heights on a rock base
 	local function dressCrystals(name: string, c: Vector3)
 		local m = Instance.new("Model")
 		m.Name = name
-		piece(m, "Base", Vector3.new(4, 1, 3.4), CFrame.new(c + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, rng:NextNumber(0, 3), 0), Color3.fromRGB(140, 100, 130), nil, true)
-		local colors = { Color3.fromRGB(255, 140, 230), Color3.fromRGB(130, 230, 255), Color3.fromRGB(190, 150, 255) }
-		for k = 1, 4 do
-			local h = rng:NextNumber(2.5, 6)
-			local off = Vector3.new(rng:NextNumber(-1.3, 1.3), 0, rng:NextNumber(-1.1, 1.1))
-			newPart(m, "Crystal" .. k, Vector3.new(h * 0.3, h, h * 0.3), CFrame.new(c + off + Vector3.new(0, h / 2 + 0.6, 0)) * CFrame.Angles(rng:NextNumber(-0.35, 0.35), rng:NextNumber(0, 6), rng:NextNumber(-0.35, 0.35)),
-				colors[k % #colors + 1], { Material = Enum.Material.Glass, Transparency = 0.1, CastShadow = false, CanCollide = false })
+		-- frosty base (pale blue-white lumps) like the reference
+		for k = 1, 3 do
+			piece(m, "Frost" .. k, Vector3.one * rng:NextNumber(2, 3.2), CFrame.new(c + Vector3.new(rng:NextNumber(-1.2, 1.2), 0.3, rng:NextNumber(-1, 1))), Color3.fromRGB(200, 225, 245), "Ball", true)
+		end
+		-- one tall main prism + three smaller ones leaning outward
+		crystalPrism(m, "Main", c + Vector3.new(0, 0.4, 0), rng:NextNumber(6, 8), 1.6, CFrame.Angles(math.rad(rng:NextNumber(-6, 6)), 0, math.rad(rng:NextNumber(-6, 6))), CRYSTAL_BLUES[1])
+		for k = 1, 3 do
+			local a = k * 2.1 + rng:NextNumber(0, 0.5)
+			local off = Vector3.new(math.cos(a) * 1.3, 0.3, math.sin(a) * 1.3)
+			crystalPrism(m, "Small" .. k, c + off, rng:NextNumber(2.2, 4), 0.9, CFrame.Angles(0, -a, math.rad(25)), CRYSTAL_BLUES[k % #CRYSTAL_BLUES + 1])
 		end
 		m.Parent = dressFolder("Canyon")
 	end
@@ -521,16 +548,27 @@ function ContinentBuilder.Build(ctx)
 		[300] = Wr(R(180), 300) - 76,
 		[60] = Wr(R(175), 60) - 86,
 	}
+	-- winding lava river (director's lava-river reference): S-curve along 315°,
+	-- swinging ±18 studs sideways, back on the axis at the middle (bridge)
+	local function lavaRiverAt(f: number): Vector3
+		local r0, r1 = Wr(R(150), 315), Wr(R(250), 315)
+		local side = polar(1, 45, 0)
+		return polar(r0 + f * (r1 - r0), 315, UP) + side * (18 * math.sin(f * math.pi * 2))
+	end
 	for _, deg in { 0, 120, 300, 60 } do
 		table.insert(ROADS_FOR_DRESSING, { deg, R(70), ROAD_END[deg] })
 	end
 	for _, line in {
 		{ 0, R(70), ROAD_END[0] }, { 120, R(70), ROAD_END[120] }, { 300, R(70), ROAD_END[300] }, { 60, R(70), ROAD_END[60] },
-		{ 180, R(70), Wr(R(250), 180) }, { 315, Wr(R(150), 315), Wr(R(250), 315) },
+		{ 180, R(70), Wr(R(250), 180) },
 	} do
 		for r = line[2], line[3], 18 do
 			reserve(polar(r, line[1], UP), 9)
 		end
+	end
+	-- v2.6 winding lava river: reserve along its curve (see lavaRiverAt below)
+	for f = 0, 1, 0.05 do
+		reserve(lavaRiverAt(f), 14)
 	end
 
 	-- Sky Heart: glowing ring around the updraft hole + beacon
@@ -571,11 +609,15 @@ function ContinentBuilder.Build(ctx)
 	-- MOUNTAINS & SNOWPEAKS (30-90): 4-stud terraces (jumpable while carrying)
 	------------------------------------------------------------------
 	local function peak(name: string, center: Vector3, radius: number, tiers: number, snowFrom: number, iceFrom: number)
+		-- v2.6 (snowy-peak reference): a sharper pyramid profile — wide dark
+		-- rock base narrowing faster toward a pointed summit, snow on the upper half
 		for t = 1, tiers do
-			local r = radius - (t - 1) * (radius - 6) / tiers
+			local frac = (t - 1) / tiers
+			local r = 6 + (radius - 6) * (1 - frac) ^ 1.35
 			local top = UP + t * 4
 			local snowy = t >= snowFrom
-			disc(continent, name .. "Tier" .. t, center, r, 4, top, snowy and Color3.fromRGB(235, 245, 255) or rock,
+			local rockShade = Color3.fromRGB(85, 82, 90):Lerp(rock, frac * 0.7)
+			disc(continent, name .. "Tier" .. t, center, r, 4, top, snowy and Color3.fromRGB(240, 246, 255) or rockShade,
 				snowy and Enum.Material.Snow or Enum.Material.Rock, snowy and Z.Snow or Z.Mountains)
 			if t >= iceFrom then
 				local ice = newPart(continent, name .. "Ice" .. t, Vector3.new(0.2, r * 2, r * 2), CFrame.new(center.X, top + 0.1, center.Z) * CFrame.Angles(0, 0, math.pi / 2),
@@ -593,6 +635,17 @@ function ContinentBuilder.Build(ctx)
 	end
 	local mainC = A(175, 60, UP)
 	local summit = peak("Snowpeak", mainC, 80, 20, 10, 14)
+	-- four rock ridges running down the main peak, snow-covered on the upper half
+	for k, ang in { 30, 120, 210, 300 } do
+		local dir = Vector3.new(math.cos(math.rad(ang)), 0, math.sin(math.rad(ang)))
+		for t = 1, 20, 2 do
+			local frac = (t - 1) / 20
+			local r = 6 + (80 - 6) * (1 - frac) ^ 1.35
+			local pos = mainC + dir * (r - 1.2) + Vector3.new(0, t * 4 + 1, 0)
+			newPart(decor, "Ridge" .. k .. "_" .. t, Vector3.new(3, 6, 4), CFrame.lookAt(pos, pos + dir) * CFrame.Angles(math.rad(-25), 0, 0),
+				t >= 10 and Color3.fromRGB(245, 248, 255) or Color3.fromRGB(70, 68, 76), { Material = Enum.Material.Plastic, CanCollide = false, CastShadow = false })
+		end
+	end
 	local peaks = {
 		{ A(115, 42, UP), 42, 10 },
 		{ A(225, 78, UP), 50, 12 },
@@ -746,9 +799,8 @@ function ContinentBuilder.Build(ctx)
 			continue
 		end
 		local h = rng:NextNumber(4, 11)
-		local crystal = newPart(decor, "Crystal" .. i, Vector3.new(h * 0.35, h, h * 0.35),
-			CFrame.new(base + Vector3.new(0, h / 2, 0)) * CFrame.Angles(math.rad(rng:NextNumber(-20, 20)), rng:NextNumber(0, 6), math.rad(rng:NextNumber(-20, 20))),
-			crystalC[i % #crystalC + 1], { Material = Enum.Material.Neon, Transparency = 0.15, CastShadow = false })
+		local crystal = crystalPrism(decor, "Crystal" .. i, base, h, h * 0.3,
+			CFrame.Angles(math.rad(rng:NextNumber(-20, 20)), rng:NextNumber(0, 6), math.rad(rng:NextNumber(-20, 20))), CRYSTAL_BLUES[i % #CRYSTAL_BLUES + 1])
 		if i % 4 == 0 then
 			local light = Instance.new("PointLight")
 			light.Range = 18
@@ -784,9 +836,11 @@ function ContinentBuilder.Build(ctx)
 	-- VOLCANIC CALDERA (270-330): crater with lava lake, lava pools, spires
 	------------------------------------------------------------------
 	local calderaC = A(180, 300, UP)
-	local tiers, calR = 4, 70
+	-- v2.6 (erupting volcano reference): a tall cone of 8 tiers narrowing to a
+	-- glowing crater, lava streaks pouring down the sides, eruption sparks + smoke
+	local tiers, calR = 8, 70
 	for t = 1, tiers do
-		local r = calR - (t - 1) * 10
+		local r = calR - (t - 1) * 6.5
 		disc(continent, "Caldera" .. t, calderaC, r, 4, UP + t * 4, t == tiers and Color3.fromRGB(45, 35, 35) or basalt, Enum.Material.Basalt, Z.Volcanic)
 	end
 	local lakeTop = UP + tiers * 4
@@ -814,7 +868,45 @@ function ContinentBuilder.Build(ctx)
 		hazardFlag(h, "Lava")
 		return p
 	end
-	lava("LavaLake", Vector3.new(calderaC.X, lakeTop + 0.1, calderaC.Z), Vector3.new(26, 0.4, 26))
+	local lake = lava("LavaLake", Vector3.new(calderaC.X, lakeTop + 0.1, calderaC.Z), Vector3.new(18, 0.4, 18))
+	local erupt = Instance.new("ParticleEmitter")
+	erupt.Name = "Eruption"
+	erupt.Color = ColorSequence.new(Color3.fromRGB(255, 230, 120), Color3.fromRGB(255, 70, 20))
+	erupt.LightEmission = 1
+	erupt.Size = NumberSequence.new(1.2, 0)
+	erupt.Lifetime = NumberRange.new(1.5, 2.5)
+	erupt.Rate = 35
+	erupt.Speed = NumberRange.new(45, 75)
+	erupt.SpreadAngle = Vector2.new(22, 22)
+	erupt.Acceleration = Vector3.new(0, -60, 0)
+	erupt.EmissionDirection = Enum.NormalId.Top
+	erupt.Parent = lake
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Name = "Smoke"
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Color = ColorSequence.new(Color3.fromRGB(70, 60, 60))
+	smoke.Size = NumberSequence.new(10, 30)
+	smoke.Transparency = NumberSequence.new(0.4, 1)
+	smoke.Lifetime = NumberRange.new(5, 8)
+	smoke.Rate = 6
+	smoke.Speed = NumberRange.new(10, 18)
+	smoke.EmissionDirection = Enum.NormalId.Top
+	smoke.Parent = lake
+	local fire = Instance.new("Fire")
+	fire.Size = 25
+	fire.Heat = 20
+	fire.Parent = lake
+	-- lava streaks: glowing pieces down the outer edge of each tier
+	for k, ang in { 15, 75, 140, 200, 260, 320 } do
+		local dir = Vector3.new(math.cos(math.rad(ang)), 0, math.sin(math.rad(ang)))
+		local reach = (k % 2 == 0) and 1 or 3 -- some streaks stop higher up
+		for t = tiers, reach, -1 do
+			local r = calR - (t - 1) * 6.5
+			local pos = calderaC + dir * (r - 0.4) + Vector3.new(0, UP - calderaC.Y + t * 4 - 2, 0)
+			newPart(decor, "LavaStreak" .. k .. "_" .. t, Vector3.new(1.8, 4.2, 1.2), CFrame.lookAt(pos, pos + dir) * CFrame.Angles(math.rad(-12), 0, 0),
+				t > tiers - 2 and Color3.fromRGB(255, 200, 80) or Color3.fromRGB(255, 100, 30), { Material = Enum.Material.Neon, CanCollide = false, CastShadow = false })
+		end
+	end
 	for i = 1, 12 do
 		local pos = place(habGen(90, 250, 275, 325, "Volcanic", UP + 0.1), 9)
 		if pos then
@@ -832,7 +924,7 @@ function ContinentBuilder.Build(ctx)
 	local altar3 = ctx.altar(decor, altars, "Altar3", A(240, 326, UP))
 	altar3:SetAttribute("Biome", "Volcanic")
 	for _, pos in {
-		calderaC + polar(55, 0, 11), calderaC + polar(45, 120, 15), calderaC + polar(30, 240, 19),
+		calderaC + polar(55, 0, 15), calderaC + polar(45, 120, 19), calderaC + polar(30, 240, 31),
 		A(100, 285, UP + 3), A(150, 325, UP + 3), A(230, 280, UP + 3), A(240, 300, UP + 3), A(120, 310, UP + 3),
 	} do
 		spawnPoint(pos, "Volcanic")
@@ -990,8 +1082,12 @@ function ContinentBuilder.Build(ctx)
 		end
 	end
 	local spireC = A(130, 220, UP - 12)
-	local spire = block(decor, "CrystalSpire", Vector3.new(12, 70, 12), CFrame.new(spireC + Vector3.new(0, 33, 0)) * CFrame.Angles(math.rad(8), math.rad(30), 0),
-		Color3.fromRGB(255, 140, 230), Enum.Material.Neon, nil, { Transparency = 0.2, CanCollide = false })
+	local spire = crystalPrism(decor, "CrystalSpire", spireC, 70, 12, CFrame.Angles(math.rad(8), math.rad(30), 0), CRYSTAL_BLUES[2])
+	for k = 1, 4 do
+		local a = k * 1.57 + 0.4
+		crystalPrism(decor, "SpireShard" .. k, spireC + Vector3.new(math.cos(a) * 7, 0, math.sin(a) * 7), rng:NextNumber(14, 26), 4.5,
+			CFrame.Angles(0, -a, math.rad(22)), CRYSTAL_BLUES[k % #CRYSTAL_BLUES + 1])
+	end
 	local sl = Instance.new("PointLight")
 	sl.Range = 60
 	sl.Brightness = 2
@@ -1012,15 +1108,30 @@ function ContinentBuilder.Build(ctx)
 	end
 	lava("AshLava", Vector3.new(ashC.X, UP + 24.1, ashC.Z), Vector3.new(10, 0.4, 10))
 	spawnPoint(ashC + Vector3.new(9, 23, 0), "Volcanic")
-	local riverMid = A(200, 315, UP + 0.1)
-	local rr0, rr1 = Wr(R(150), 315), Wr(R(250), 315)
-	newPart(decor, "LavaRiver", Vector3.new(10, 0.4, rr1 - rr0), CFrame.lookAt(riverMid, riverMid + polar(1, 315, 0)), Color3.fromRGB(255, 100, 30), {
-		Material = Enum.Material.Neon, CanCollide = false, CastShadow = false,
-	})
-	-- hazard pieces stay axis-aligned (the damage check is a flat box)
-	for k = 0, 9 do
-		local pos = polar(rr0 + (k + 0.5) * (rr1 - rr0) / 10, 315, UP + 0.3)
-		local h = newPart(hazards, "LavaRiver" .. k, Vector3.new(14, 0.2, 14), CFrame.new(pos), Color3.new(0, 0, 0), { Transparency = 1 })
+	-- winding river: bright yellow-orange core over a wider red glow edge,
+	-- dark crust lumps on both banks
+	local SEGS = 24
+	for k = 0, SEGS - 1 do
+		local a, b = lavaRiverAt(k / SEGS), lavaRiverAt((k + 1) / SEGS)
+		local mid = (a + b) / 2
+		local len = (b - a).Magnitude + 2
+		local cf = CFrame.lookAt(mid, mid + (b - a).Unit)
+		newPart(decor, "LavaEdge" .. k, Vector3.new(14, 0.3, len), cf + Vector3.new(0, 0.05, 0), Color3.fromRGB(200, 50, 20), {
+			Material = Enum.Material.Neon, CanCollide = false, CastShadow = false,
+		})
+		newPart(decor, "LavaRiver" .. k, Vector3.new(7, 0.3, len), cf + Vector3.new(0, 0.15, 0), Color3.fromRGB(255, 170, 50), {
+			Material = Enum.Material.Neon, CanCollide = false, CastShadow = false,
+		})
+		if k % 2 == 0 then
+			for _, sgn in { -1, 1 } do
+				local bank = mid + cf.RightVector * sgn * rng:NextNumber(8, 10)
+				newPart(decor, "Crust" .. k .. "_" .. sgn, Vector3.one * rng:NextNumber(2.5, 4.5), CFrame.new(bank), Color3.fromRGB(40, 32, 34), {
+					Shape = Enum.PartType.Ball, Material = Enum.Material.Basalt, CanCollide = false, CastShadow = false,
+				})
+			end
+		end
+		-- hazard boxes stay axis-aligned (the damage check is a flat box)
+		local h = newPart(hazards, "LavaHazard" .. k, Vector3.new(12, 0.2, 12), CFrame.new(mid + Vector3.new(0, 0.3, 0)), Color3.new(0, 0, 0), { Transparency = 1 })
 		hazardFlag(h, "Lava")
 	end
 	local bridgeC = A(200, 315, UP + 1)

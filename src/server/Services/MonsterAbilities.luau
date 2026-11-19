@@ -713,6 +713,235 @@ F.TailSpin = function(ctx, a)
 	end
 end
 
+-- ======================================================================
+-- v2.6 abilities of the second monster per habitat
+-- ======================================================================
+-- Puffhorn: bounces high on its wool and lands with a shockwave
+F.WoolBounce = function(ctx, a)
+	ctx.Play("Ability2")
+	local c = circle(ctx.Root.Position, a.Radius, ORANGE, a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	local base = ctx.Root.CFrame
+	for i = 1, 6 do
+		ctx.Model:PivotTo(base + Vector3.new(0, math.sin(i / 6 * math.pi) * 8, 0))
+		task.wait(0.04)
+	end
+	ctx.Model:PivotTo(base)
+	ring(c, a.Radius, Color3.fromRGB(250, 250, 255))
+	burst(c, Color3.fromRGB(250, 250, 255), 25)
+	for _, h in near(c, a.Radius) do
+		hurt(h[1], a.Damage)
+		knock(h[1], flatDir(c, h[2].Position) * a.Knock + Vector3.new(0, 30, 0))
+	end
+end
+-- Puffhorn: rubs its wool and zaps everyone close with static
+F.StaticFluff = function(ctx, a)
+	ctx.Play("Ability1")
+	task.wait(0.4)
+	if not ctx.Alive() then
+		return
+	end
+	for _, h in near(ctx.Root.Position, a.Radius) do
+		bolt(ctx.Root.Position + Vector3.new(0, 2, 0), h[2].Position)
+		if not h[1]:GetAttribute("ElectricImmune") then
+			hurt(h[1], a.Damage)
+			h[1]:SetAttribute("ShockedUntil", now() + a.Shock)
+		end
+	end
+	burst(ctx.Root.Position, Color3.fromRGB(255, 255, 160), 20)
+end
+-- Snowpeck: throws three snowballs that land around the target
+F.SnowballBarrage = function(ctx, a)
+	face(ctx, ctx.TargetRoot.Position)
+	ctx.Play("Ability1")
+	for i = 1, a.Balls do
+		if not ctx.Alive() then
+			return
+		end
+		local off = Vector3.new(math.random(-5, 5), 0, math.random(-5, 5))
+		lob(ctx.Root.Position + Vector3.new(0, 4, 0), ctx.TargetRoot.Position + off, 0.9, Color3.fromRGB(250, 252, 255), 1.6, function(g)
+			burst(g, Color3.fromRGB(255, 255, 255), 14)
+			for _, h in near(g, a.Radius) do
+				hurt(h[1], a.Damage)
+				slow(h[1], 0.6, 2)
+			end
+		end)
+		task.wait(0.25)
+	end
+end
+-- Snowpeck: one huge wing beat that blows players away in a cone
+F.WingGust = function(ctx, a)
+	face(ctx, ctx.TargetRoot.Position)
+	ctx.Play("Ability2")
+	task.wait(a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	local origin = ctx.Root.Position
+	local look = flatDir(origin, ctx.TargetRoot.Position)
+	for i = -2, 2 do
+		burst(origin + CFrame.Angles(0, math.rad(i * 15), 0):VectorToWorldSpace(look) * 10, Color3.fromRGB(230, 240, 255), 10)
+	end
+	for _, h in near(origin, a.Range) do
+		local d = flatDir(origin, h[2].Position)
+		if math.deg(math.acos(math.clamp(d:Dot(look), -1, 1))) <= a.Angle / 2 then
+			hurt(h[1], a.Damage)
+			knock(h[1], d * a.Knock + Vector3.new(0, 25, 0))
+		end
+	end
+end
+-- Glowmoth: a spinning ring of glowing spores flies outward
+F.SporeSpiral = function(ctx, a)
+	ctx.Play("Ability2")
+	task.wait(0.4)
+	local from = ctx.Root.Position + Vector3.new(0, 1, 0)
+	for i = 1, a.Spores do
+		local ang = i / a.Spores * math.pi * 2
+		projectile(from, Vector3.new(math.cos(ang), -0.15, math.sin(ang)).Unit, 40, a.Range, 2.5, Color3.fromRGB(170, 255, 220), Vector3.new(0.9, 0.9, 0.9), function(p)
+			if not p:GetAttribute("PoisonImmune") then
+				hurt(p, a.Damage)
+			end
+		end)
+		task.wait(0.03)
+	end
+end
+-- Glowmoth: sleepy dust falls on a circle; players inside doze (rooted)
+F.LullabyDust = function(ctx, a)
+	ctx.Play("Ability1")
+	local c = circle(ctx.TargetRoot.Position, a.Radius, Color3.fromRGB(200, 170, 255), a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	burst(c + Vector3.new(0, 3, 0), Color3.fromRGB(220, 200, 255), 30)
+	for _, h in near(c, a.Radius) do
+		rootIn(h[1], a.RootTime)
+		blind(h[1], a.RootTime)
+	end
+end
+-- Croakle: a long sticky tongue pulls the carrier in
+F.TongueLash = function(ctx, a)
+	face(ctx, ctx.TargetRoot.Position)
+	ctx.Play("Ability1")
+	task.wait(0.2)
+	local from = ctx.Root.Position + Vector3.new(0, 1.5, 0)
+	projectile(from, (ctx.TargetRoot.Position - from).Unit, 90, a.Range, 2.5, Color3.fromRGB(255, 120, 150), Vector3.new(0.6, 0.6, 3), function(p, root)
+		hurt(p, a.Damage)
+		knock(p, (ctx.Root.Position - root.Position).Unit * a.Pull + Vector3.new(0, 15, 0))
+	end)
+end
+-- Croakle: a booming croak sends a thunder ring out
+F.ThunderCroak = function(ctx, a)
+	ctx.Play("Ability2")
+	local c = circle(ctx.Root.Position, a.Radius, Color3.fromRGB(110, 240, 255), a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	ring(c, a.Radius, Color3.fromRGB(110, 240, 255))
+	for _, h in near(c, a.Radius) do
+		hurt(h[1], a.Damage)
+		if not h[1]:GetAttribute("ElectricImmune") then
+			h[1]:SetAttribute("ShockedUntil", now() + 2)
+		end
+		knock(h[1], flatDir(c, h[2].Position) * 35 + Vector3.new(0, 20, 0), 0.5)
+	end
+end
+-- Geoscuttle: snaps a pincer shut on a close carrier and holds on
+F.PincerSnap = function(ctx, a)
+	face(ctx, ctx.TargetRoot.Position)
+	ctx.Play("Ability1")
+	task.wait(0.25)
+	if ctx.Alive() and (ctx.TargetRoot.Position - ctx.Root.Position).Magnitude <= a.Range then
+		hurt(ctx.Target, a.Damage)
+		rootIn(ctx.Target, a.HoldTime)
+		burst(ctx.TargetRoot.Position, Color3.fromRGB(90, 170, 255), 12)
+	end
+end
+-- Geoscuttle: flicks its tail and fires a crystal stinger
+F.CrystalSting = function(ctx, a)
+	face(ctx, ctx.TargetRoot.Position)
+	ctx.Play("Ability2")
+	task.wait(0.35)
+	local from = ctx.Root.Position + Vector3.new(0, 4, 0)
+	projectile(from, (ctx.TargetRoot.Position - from).Unit, 75, a.Range, 2.5, Color3.fromRGB(90, 170, 255), Vector3.new(0.7, 0.7, 2.4), function(p)
+		hurt(p, a.Damage)
+		slow(p, a.Slow, a.SlowTime)
+	end)
+end
+-- Scorchtail: dashes at the carrier, leaving a burning trail behind it
+F.FlameDash = function(ctx, a)
+	face(ctx, ctx.TargetRoot.Position)
+	ctx.Play("Ability1")
+	local dir = flatDir(ctx.Root.Position, ctx.TargetRoot.Position)
+	local trail = {}
+	for _ = 1, 10 do
+		if not ctx.Alive() then
+			break
+		end
+		ctx.Model:PivotTo(ctx.Root.CFrame + dir * 3)
+		local g = ground(ctx.Root.Position)
+		fx(Vector3.new(0.2, 4, 4), CFrame.new(g + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.pi / 2), ORANGE, { Shape = Enum.PartType.Cylinder, Transparency = 0.3 }, 3)
+		table.insert(trail, g)
+		task.wait(0.05)
+	end
+	local t0 = os.clock()
+	while os.clock() - t0 < 3 do
+		for _, g in trail do
+			for _, h in near(g, 2.5) do
+				hurt(h[1], a.Damage * 0.25)
+				burn(h[1], a.Burn)
+			end
+		end
+		task.wait(0.5)
+	end
+end
+-- Scorchtail: spits a glob of embers that bursts into flames
+F.EmberSpit = function(ctx, a)
+	face(ctx, ctx.TargetRoot.Position)
+	ctx.Play("Ability2")
+	lob(ctx.Root.Position + Vector3.new(0, 2, 0), ctx.TargetRoot.Position, 0.9, ORANGE, 1.4, function(g)
+		burst(g, ORANGE, 25)
+		for _, h in near(g, a.Radius) do
+			hurt(h[1], a.Damage)
+			burn(h[1], a.Burn)
+		end
+	end)
+end
+-- Octoblob: squirts an ink cloud that blinds and slows
+F.InkCloud = function(ctx, a)
+	ctx.Play("Ability2")
+	local c = ctx.Root.Position
+	local cloud = fx(Vector3.one * 2, CFrame.new(c), Color3.fromRGB(30, 25, 50), { Transparency = 1 }, 4)
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	e.Color = ColorSequence.new(Color3.fromRGB(40, 30, 70))
+	e.Size = NumberSequence.new(6, 14)
+	e.Lifetime = NumberRange.new(2, 3)
+	e.Speed = NumberRange.new(4, 9)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Rate = 0
+	e.Parent = cloud
+	e:Emit(40)
+	for _, h in near(c, a.Radius) do
+		blind(h[1], a.BlindTime)
+		slow(h[1], 0.6, a.BlindTime)
+	end
+end
+-- Octoblob: slams all six tentacles down around itself
+F.TentacleSlam = function(ctx, a)
+	ctx.Play("Ability2")
+	local c = circle(ctx.Root.Position, a.Radius, RED, a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	ring(c, a.Radius, Color3.fromRGB(255, 150, 180))
+	for _, h in near(c, a.Radius) do
+		hurt(h[1], a.Damage)
+		knock(h[1], flatDir(c, h[2].Position) * a.Knock + Vector3.new(0, 25, 0), a.Stun)
+	end
+end
+
 Abilities.F = F
 Abilities.Burst = burst
 

@@ -1372,3 +1372,9 @@ OBJECTS: Preserve code-required map paths; add one named temple/boss arena per b
 ANIMATIONS: None requested in this pass.
 ERRORS: None reported by the director in this message.
 NOTES: User’s two reference screenshots are attached in the director’s message. Cloud design suggestion above is a proposal for discussion, not a final approval; the director wants to review ideas before committing to that visual direction.
+
+
+### [2026-11-19 21:47 Istanbul] Astra → Claude — screenshot access clarification
+Status: info
+
+The two screenshots themselves are in the director's ChatGPT message and are not embedded in COMMS.md. The written descriptions in my 21:45 request are the reference available here: screenshot 1 shows the current purple canyon/player view; screenshot 2 shows the “Watch the holes!” zone banner overlapping the HUD. Please use those observations unless the director forwards the images separately.

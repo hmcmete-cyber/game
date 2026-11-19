@@ -23,9 +23,78 @@ M.Order = {
 	"Sporeback", "Rubbleye", "Bristlehulk", "Gulpvine", "Mossgrave", "Gnashgut", "Skyfin",
 	-- v2.6 second monster per habitat
 	"Puffhorn", "Snowpeck", "Glowmoth", "Croakle", "Geoscuttle", "Scorchtail", "Octoblob",
+	-- v2.10 bosses (one per biome, spawn in Map/Temples/<Biome>/BossSpawn)
+	"MesaColossus", "FrostpeakWarden", "MyceliumMonarch", "BogstormCroaker", "PrismSovereign", "CalderaTitan", "Tidebreaker",
 }
 
 M.Types = {
+	-- ==================================================================
+	-- v2.10 BOSSES: Boss = true, Arena = temple biome, Tether = leash
+	-- around the arena. Abilities are big and telegraphed (circles/lines).
+	-- ==================================================================
+	MesaColossus = {
+		Title = "Mesa Colossus", Gait = "Stomp", Habitat = "Plateau", Arena = "Plateau", Boss = true, Count = 1, Respawn = 300,
+		HP = 4200, Speed = 11, Scale = 2.6, XP = 600, Aggro = 75, Tether = 60,
+		Melee = { Damage = 26, Range = 16, Cooldown = 2.2 },
+		Abilities = {
+			{ Id = "PillarRise", Name = "Pillar Rise", Cooldown = 9, Range = 70, Damage = 28, Radius = 7, Pillars = 5, Windup = 1.1 },
+			{ Id = "RidgeShockwave", Name = "Ridge Shockwave", Cooldown = 12, Range = 60, Damage = 32, Width = 10, Length = 70, Windup = 1.2 },
+		},
+	},
+	FrostpeakWarden = {
+		Title = "Frostpeak Warden", Gait = "Stomp", Habitat = "Mountains", Arena = "Mountains", Boss = true, Count = 1, Respawn = 300,
+		HP = 4000, Speed = 13, Scale = 2.5, XP = 600, Aggro = 75, Tether = 60,
+		Melee = { Damage = 24, Range = 15, Cooldown = 2 },
+		Abilities = {
+			{ Id = "AvalancheSweep", Name = "Avalanche Sweep", Cooldown = 10, Range = 60, Damage = 26, Width = 30, Length = 60, Boulders = 6, Windup = 1.2 },
+			{ Id = "IceRing", Name = "Ice Ring", Cooldown = 13, Range = 50, Damage = 24, Radius = 50, Windup = 1.3 },
+		},
+	},
+	MyceliumMonarch = {
+		Title = "Mycelium Monarch", Gait = "Stride", Habitat = "Mushroom", Arena = "Mushroom", Boss = true, Count = 1, Respawn = 300,
+		HP = 3800, Speed = 12, Scale = 2.4, XP = 600, Aggro = 75, Tether = 60,
+		Melee = { Damage = 22, Range = 14, Cooldown = 2 },
+		Abilities = {
+			{ Id = "SporeDoubles", Name = "Spore Doubles", Cooldown = 18, Range = 70, Doubles = 3, Life = 25 },
+			{ Id = "RootSnare", Name = "Root Snare", Cooldown = 10, Range = 60, Damage = 18, Radius = 8, Root = 2.5, Windup = 1 },
+		},
+	},
+	BogstormCroaker = {
+		Title = "Bogstorm Croaker", Gait = "Hop", Habitat = "Marsh", Arena = "Marsh", Boss = true, Count = 1, Respawn = 300,
+		HP = 3900, Speed = 14, Scale = 2.4, XP = 600, Aggro = 75, Tether = 60,
+		Melee = { Damage = 22, Range = 14, Cooldown = 2 },
+		Abilities = {
+			{ Id = "ThunderWave", Name = "Thunder Wave", Cooldown = 11, Range = 45, Damage = 26, Radius = 45, Shock = 2, Windup = 1.3 },
+			{ Id = "TongueSweep", Name = "Tongue Sweep", Cooldown = 9, Range = 55, Damage = 20, Width = 6, Length = 55, Pull = 70, Windup = 0.9 },
+		},
+	},
+	PrismSovereign = {
+		Title = "Prism Sovereign", Gait = "Hover", Habitat = "Canyon", Arena = "Canyon", Boss = true, Count = 1, Respawn = 300,
+		HP = 3600, Speed = 13, Scale = 2.4, XP = 600, Aggro = 80, Tether = 60, Hover = 5,
+		Melee = { Damage = 20, Range = 14, Cooldown = 1.8 },
+		Abilities = {
+			{ Id = "ShardBarrage", Name = "Refracting Shard Barrage", Cooldown = 8, Range = 75, Damage = 14, Waves = 3, Shards = 5, Spread = 14, Slow = 0.6, SlowTime = 2 },
+			{ Id = "CrystalWalls", Name = "Crystal-Wall Lanes", Cooldown = 14, Range = 60, Damage = 30, Lanes = 4, Width = 8, Length = 70, Windup = 1.4 },
+		},
+	},
+	CalderaTitan = {
+		Title = "Caldera Titan", Gait = "Stomp", Habitat = "Volcanic", Arena = "Volcanic", Boss = true, Count = 1, Respawn = 300,
+		HP = 4400, Speed = 11, Scale = 2.7, XP = 650, Aggro = 75, Tether = 60,
+		Melee = { Damage = 28, Range = 16, Cooldown = 2.2 },
+		Abilities = {
+			{ Id = "LavaLanes", Name = "Erupting Lava Lanes", Cooldown = 10, Range = 65, Damage = 24, Lanes = 5, Width = 7, Length = 65, Burn = 3, Windup = 1.2 },
+			{ Id = "CraterStomp", Name = "Crater Stomp", Cooldown = 14, Range = 34, Damage = 36, Radius = 34, Knock = 80, Windup = 1.6 },
+		},
+	},
+	Tidebreaker = {
+		Title = "Tidebreaker", Gait = "Waddle", Habitat = "Coast", Arena = "Coast", Boss = true, Count = 1, Respawn = 300,
+		HP = 4000, Speed = 12, Scale = 2.5, XP = 600, Aggro = 75, Tether = 60,
+		Melee = { Damage = 24, Range = 15, Cooldown = 2 },
+		Abilities = {
+			{ Id = "TideWall", Name = "Advancing Tide Wall", Cooldown = 12, Range = 60, Damage = 22, Width = 40, Length = 60, Knock = 70, Windup = 1.2 },
+			{ Id = "InkSweep", Name = "Ink Sweep", Cooldown = 10, Range = 40, Damage = 16, Radius = 40, Cone = 70, Blind = 3, Windup = 0.9 },
+		},
+	},
 	Prismaw = {
 		Title = "Crystal Stalker", Gait = "Trot", Habitat = "Canyon", Count = 2, Respawn = 90,
 		HP = 160, Speed = 17, Scale = 1, XP = 60, Aggro = 60,

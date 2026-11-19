@@ -942,6 +942,363 @@ F.TentacleSlam = function(ctx, a)
 	end
 end
 
+-- ======================================================================
+-- v2.10 BOSS ABILITIES (big, always telegraphed: circles, lines, cones)
+-- ======================================================================
+-- red/orange ground strip from `from` along `dir`; waits `time`
+local function lineTel(from: Vector3, dir: Vector3, length: number, width: number, color: Color3, time: number)
+	local g = ground(from)
+	local mid = g + dir * (length / 2) + Vector3.new(0, 0.15, 0)
+	local strip = fx(Vector3.new(width, 0.2, length), CFrame.lookAt(mid, mid + dir), color, { Transparency = 0.75 }, time + 0.3)
+	TweenService:Create(strip, TweenInfo.new(time), { Transparency = 0.25 }):Play()
+end
+-- players inside a strip (flat check)
+local function inStrip(from: Vector3, dir: Vector3, length: number, width: number)
+	local out = {}
+	for _, h in near(from, length + width) do
+		local rel = h[2].Position - from
+		local along = rel:Dot(dir)
+		local side = (rel - dir * along)
+		side = Vector3.new(side.X, 0, side.Z)
+		if along >= -2 and along <= length and side.Magnitude <= width / 2 + 1.5 then
+			table.insert(out, h)
+		end
+	end
+	return out
+end
+local function airborne(h): boolean
+	return h[3].FloorMaterial == Enum.Material.Air
+end
+local function bossRoar(ctx, color: Color3)
+	ctx.Play("Ability1")
+	ring(ctx.Root.Position - Vector3.new(0, 3, 0), 26, color)
+	burst(ctx.Root.Position, color, 30)
+end
+Abilities.BossRoar = function(model: Model, color: Color3)
+	local root = model.PrimaryPart
+	if root then
+		ring(root.Position - Vector3.new(0, 3, 0), 40, color)
+		burst(root.Position + Vector3.new(0, 4, 0), color, 60)
+	end
+end
+
+-- Mesa Colossus: stone pillars burst up under the target and around it
+F.PillarRise = function(ctx, a)
+	bossRoar(ctx, Color3.fromRGB(230, 190, 130))
+	local centre = ctx.TargetRoot.Position
+	local spots = { centre }
+	for k = 2, a.Pillars do
+		table.insert(spots, centre + Vector3.new(math.cos(k * 1.3) * 14, 0, math.sin(k * 1.3) * 14))
+	end
+	for _, p in spots do
+		task.spawn(circle, p, a.Radius, ORANGE, a.Windup)
+	end
+	task.wait(a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	for _, p in spots do
+		local g = ground(p)
+		local pillar = fx(Vector3.new(a.Radius * 1.3, 2, a.Radius * 1.3), CFrame.new(g), Color3.fromRGB(205, 160, 112), { Material = Enum.Material.Plastic, CanCollide = true }, 3)
+		TweenService:Create(pillar, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Size = Vector3.new(a.Radius * 1.3, 14, a.Radius * 1.3), CFrame = CFrame.new(g + Vector3.new(0, 7, 0)) }):Play()
+		burst(g, Color3.fromRGB(205, 160, 112), 14)
+		for _, h in near(g, a.Radius) do
+			hurt(h[1], a.Damage)
+			knock(h[1], Vector3.new(0, 70, 0) + flatDir(g, h[2].Position) * 20, 0.6)
+		end
+	end
+end
+-- Mesa Colossus: slams the ground; a ridge of rock races toward the target
+F.RidgeShockwave = function(ctx, a)
+	local from = ctx.Root.Position
+	local dir = flatDir(from, ctx.TargetRoot.Position)
+	face(ctx, ctx.TargetRoot.Position)
+	ctx.Play("Ability2")
+	lineTel(from, dir, a.Length, a.Width, RED, a.Windup)
+	task.wait(a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	for k = 1, 10 do
+		local p = ground(from + dir * (k * a.Length / 10))
+		local rock = fx(Vector3.new(a.Width * 0.8, 1, 4), CFrame.lookAt(p, p + dir), Color3.fromRGB(176, 128, 92), { Material = Enum.Material.Plastic }, 1.2)
+		TweenService:Create(rock, TweenInfo.new(0.12), { Size = Vector3.new(a.Width * 0.8, 7, 4), CFrame = CFrame.lookAt(p + Vector3.new(0, 3.5, 0), p + Vector3.new(0, 3.5, 0) + dir) }):Play()
+		task.wait(0.05)
+	end
+	for _, h in inStrip(from, dir, a.Length, a.Width) do
+		hurt(h[1], a.Damage)
+		knock(h[1], dir * 60 + Vector3.new(0, 45, 0), 0.8)
+	end
+end
+
+-- Frostpeak Warden: a wide cone of snow boulders rolls down at the players
+F.AvalancheSweep = function(ctx, a)
+	local from = ctx.Root.Position
+	local dir = flatDir(from, ctx.TargetRoot.Position)
+	face(ctx, ctx.TargetRoot.Position)
+	ctx.Play("Ability1")
+	lineTel(from, dir, a.Length, a.Width, ORANGE, a.Windup)
+	task.wait(a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	local right = dir:Cross(Vector3.yAxis)
+	for k = 1, a.Boulders do
+		local off = right * ((k - (a.Boulders + 1) / 2) * a.Width / a.Boulders)
+		projectile(from + off + Vector3.new(0, 2, 0), dir, 55, a.Length, 5, Color3.fromRGB(240, 248, 255), Vector3.new(6, 6, 6), function(p)
+			hurt(p, a.Damage)
+			slow(p, 0.5, 3)
+			slipNow(p)
+			knock(p, dir * 45 + Vector3.new(0, 25, 0))
+		end)
+	end
+end
+-- Frostpeak Warden: an expanding ring of ice; jump over it (airborne = safe)
+F.IceRing = function(ctx, a)
+	ctx.Play("Ability2")
+	local c = circle(ctx.Root.Position, 10, Color3.fromRGB(150, 220, 255), a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	local hit = {}
+	for k = 1, 10 do
+		local rad = a.Radius * k / 10
+		ring(c, rad, Color3.fromRGB(180, 235, 255))
+		for _, h in near(c, rad) do
+			if not hit[h[1]] and (h[2].Position - c).Magnitude > rad - a.Radius / 10 - 2 and not airborne(h) then
+				hit[h[1]] = true
+				hurt(h[1], a.Damage)
+				slow(h[1], 0.4, 3)
+				slipNow(h[1])
+			end
+		end
+		task.wait(0.07)
+	end
+end
+
+-- Mycelium Monarch: splits off spore doubles (little sprouts) around itself
+F.SporeDoubles = function(ctx, a)
+	bossRoar(ctx, Color3.fromRGB(200, 255, 220))
+	task.wait(0.6)
+	for k = 1, a.Doubles do
+		if not ctx.Alive() then
+			return
+		end
+		local p = ctx.Root.Position + Vector3.new(math.cos(k * 2.1) * 10, 0, math.sin(k * 2.1) * 10)
+		burst(p, Color3.fromRGB(200, 255, 220), 18)
+		ctx.Summon("Shroomling", ground(p), a.Life)
+		task.wait(0.2)
+	end
+end
+-- Mycelium Monarch: roots burst from the ground under every nearby player
+F.RootSnare = function(ctx, a)
+	ctx.Play("Ability2")
+	local targets = near(ctx.Root.Position, a.Range)
+	for _, h in targets do
+		task.spawn(circle, h[2].Position, a.Radius, Color3.fromRGB(160, 120, 90), a.Windup)
+	end
+	local spots = {}
+	for _, h in targets do
+		table.insert(spots, h[2].Position)
+	end
+	task.wait(a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	for _, p in spots do
+		local g = ground(p)
+		for k = 1, 5 do
+			local ang = k * 1.25
+			fx(Vector3.new(1, 6, 1), CFrame.new(g + Vector3.new(math.cos(ang) * 3, 3, math.sin(ang) * 3)) * CFrame.Angles(math.cos(ang) * 0.4, 0, math.sin(ang) * 0.4), Color3.fromRGB(150, 110, 80), { Material = Enum.Material.Plastic }, 2.5)
+		end
+		for _, h in near(g, a.Radius) do
+			hurt(h[1], a.Damage)
+			rootIn(h[1], a.Root)
+		end
+	end
+end
+
+-- Bogstorm Croaker: puffs its glowing throat sac and croaks a thunder wave
+F.ThunderWave = function(ctx, a)
+	ctx.Play("Ability1")
+	local c = circle(ctx.Root.Position, a.Radius, Color3.fromRGB(150, 230, 255), a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	ring(c, a.Radius, Color3.fromRGB(200, 240, 255))
+	burst(c, Color3.fromRGB(220, 245, 255), 40)
+	for _, h in near(c, a.Radius) do
+		bolt(ctx.Root.Position + Vector3.new(0, 6, 0), h[2].Position)
+		if not airborne(h) and not h[1]:GetAttribute("ElectricImmune") then
+			hurt(h[1], a.Damage)
+			h[1]:SetAttribute("ShockedUntil", now() + a.Shock)
+		end
+	end
+end
+-- Bogstorm Croaker: a long tongue lashes down a line and yanks players in
+F.TongueSweep = function(ctx, a)
+	local from = ctx.Root.Position
+	local dir = flatDir(from, ctx.TargetRoot.Position)
+	face(ctx, ctx.TargetRoot.Position)
+	lineTel(from, dir, a.Length, a.Width, RED, a.Windup)
+	task.wait(a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	ctx.Play("Ability2")
+	local mid = from + dir * (a.Length / 2) + Vector3.new(0, 2, 0)
+	fx(Vector3.new(1.6, 1, a.Length), CFrame.lookAt(mid, mid + dir), Color3.fromRGB(230, 110, 140), { Material = Enum.Material.Plastic }, 0.4)
+	for _, h in inStrip(from, dir, a.Length, a.Width) do
+		hurt(h[1], a.Damage)
+		knock(h[1], -dir * a.Pull + Vector3.new(0, 20, 0))
+	end
+end
+
+-- Prism Sovereign: three waves of refracting crystal shards in a fan
+F.ShardBarrage = function(ctx, a)
+	ctx.Play("Ability1")
+	for w = 1, a.Waves do
+		if not ctx.Alive() then
+			return
+		end
+		face(ctx, ctx.TargetRoot.Position)
+		local from = ctx.Root.Position + Vector3.new(0, 3, 0)
+		local base = flatDir(from, ctx.TargetRoot.Position)
+		for i = 1, a.Shards do
+			local ang = math.rad((i - (a.Shards + 1) / 2) * a.Spread + (w % 2 == 0 and a.Spread / 2 or 0))
+			local dir = CFrame.Angles(0, ang, 0):VectorToWorldSpace(base)
+			projectile(from, dir, 75, a.Range, 3, Color3.fromRGB(120, 200, 255), Vector3.new(1, 1, 3.4), function(p)
+				hurt(p, a.Damage)
+				slow(p, a.Slow, a.SlowTime)
+			end)
+		end
+		task.wait(0.55)
+	end
+end
+-- Prism Sovereign: crystal walls erupt along parallel lanes; stand between them
+F.CrystalWalls = function(ctx, a)
+	bossRoar(ctx, Color3.fromRGB(140, 200, 255))
+	local from = ctx.Root.Position
+	local dir = flatDir(from, ctx.TargetRoot.Position)
+	local right = dir:Cross(Vector3.yAxis)
+	local lanes = {}
+	for k = 1, a.Lanes do
+		local off = right * ((k - (a.Lanes + 1) / 2) * a.Width * 2)
+		table.insert(lanes, from + off)
+		lineTel(from + off, dir, a.Length, a.Width, Color3.fromRGB(120, 180, 255), a.Windup)
+	end
+	task.wait(a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	for _, start in lanes do
+		for k = 1, 7 do
+			local p = ground(start + dir * (k * a.Length / 7))
+			fx(Vector3.new(a.Width * 0.8, 10, 3), CFrame.lookAt(p + Vector3.new(0, 5, 0), p + Vector3.new(0, 5, 0) + dir) * CFrame.Angles(0, 0, math.rad(math.random(-10, 10))),
+				Color3.fromRGB(110, 180, 255), { Material = Enum.Material.Glass, Transparency = 0.2 }, 1.8)
+		end
+		for _, h in inStrip(start, dir, a.Length, a.Width) do
+			hurt(h[1], a.Damage)
+			knock(h[1], Vector3.new(0, 55, 0), 0.5)
+		end
+	end
+end
+
+-- Caldera Titan: lava lanes fan out from the titan and erupt
+F.LavaLanes = function(ctx, a)
+	ctx.Play("Ability1")
+	local from = ctx.Root.Position
+	local base = flatDir(from, ctx.TargetRoot.Position)
+	local dirs = {}
+	for k = 1, a.Lanes do
+		local dir = CFrame.Angles(0, math.rad((k - (a.Lanes + 1) / 2) * 24), 0):VectorToWorldSpace(base)
+		table.insert(dirs, dir)
+		lineTel(from, dir, a.Length, a.Width, ORANGE, a.Windup)
+	end
+	task.wait(a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	for _, dir in dirs do
+		local mid = ground(from + dir * (a.Length / 2))
+		fx(Vector3.new(a.Width, 0.6, a.Length), CFrame.lookAt(mid + Vector3.new(0, 0.3, 0), mid + Vector3.new(0, 0.3, 0) + dir), Color3.fromRGB(255, 110, 40), {}, 1.5)
+		for k = 1, 4 do
+			burst(ground(from + dir * (k * a.Length / 4)), Color3.fromRGB(255, 170, 70), 10)
+		end
+		for _, h in inStrip(from, dir, a.Length, a.Width) do
+			hurt(h[1], a.Damage)
+			burn(h[1], a.Burn)
+		end
+	end
+end
+-- Caldera Titan: jumps and crashes down; the whole crater shakes (jump to dodge)
+F.CraterStomp = function(ctx, a)
+	ctx.Play("Ability2")
+	local c = circle(ctx.Root.Position, a.Radius, RED, a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	ring(c, a.Radius, Color3.fromRGB(255, 140, 60))
+	burst(c, Color3.fromRGB(255, 120, 40), 50)
+	for _, h in near(c, a.Radius) do
+		if not airborne(h) then
+			hurt(h[1], a.Damage)
+			knock(h[1], flatDir(c, h[2].Position) * a.Knock + Vector3.new(0, 40, 0), 0.8)
+		end
+	end
+end
+
+-- Tidebreaker: a wall of water rolls forward and shoves everyone back
+F.TideWall = function(ctx, a)
+	local from = ctx.Root.Position
+	local dir = flatDir(from, ctx.TargetRoot.Position)
+	face(ctx, ctx.TargetRoot.Position)
+	ctx.Play("Ability1")
+	lineTel(from, dir, a.Length, a.Width, Color3.fromRGB(90, 180, 255), a.Windup)
+	task.wait(a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	local wall = fx(Vector3.new(a.Width, 10, 3), CFrame.lookAt(ground(from) + Vector3.new(0, 5, 0), ground(from) + Vector3.new(0, 5, 0) + dir), Color3.fromRGB(80, 170, 240),
+		{ Material = Enum.Material.Glass, Transparency = 0.3 }, 1.6)
+	TweenService:Create(wall, TweenInfo.new(1.1, Enum.EasingStyle.Linear), { CFrame = wall.CFrame + dir * a.Length }):Play()
+	local hit = {}
+	for _ = 1, 11 do
+		for _, h in near(wall.Position, a.Width / 2 + 2) do
+			local rel = h[2].Position - wall.Position
+			if not hit[h[1]] and math.abs(rel:Dot(dir)) < 4 then
+				hit[h[1]] = true
+				hurt(h[1], a.Damage)
+				slow(h[1], 0.6, 2)
+				knock(h[1], dir * a.Knock + Vector3.new(0, 25, 0), 0.6)
+			end
+		end
+		task.wait(0.1)
+	end
+end
+-- Tidebreaker: sprays a cone of ink in front of it (blinds)
+F.InkSweep = function(ctx, a)
+	face(ctx, ctx.TargetRoot.Position)
+	local from = ctx.Root.Position
+	local dir = flatDir(from, ctx.TargetRoot.Position)
+	lineTel(from, dir, a.Radius, a.Radius * 0.9, Color3.fromRGB(60, 40, 90), a.Windup)
+	task.wait(a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	ctx.Play("Ability2")
+	for k = 1, 6 do
+		burst(from + dir * (k * a.Radius / 6) + Vector3.new(0, 2, 0), Color3.fromRGB(40, 30, 60), 12)
+	end
+	for _, h in near(from, a.Radius) do
+		local rel = flatDir(from, h[2].Position)
+		if math.deg(math.acos(math.clamp(rel:Dot(dir), -1, 1))) <= a.Cone / 2 then
+			hurt(h[1], a.Damage)
+			blind(h[1], a.Blind)
+		end
+	end
+end
+
 Abilities.F = F
 Abilities.Burst = burst
 

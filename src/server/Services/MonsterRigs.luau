@@ -847,6 +847,286 @@ BUILD.Octoblob = function(s)
 	return r
 end
 
+-- ======================================================================
+-- v2.10 BOSSES (one per biome, built big: Scale ~2.4-3 in MonsterDefs).
+-- Each has a distinctive multi-part silhouette and many layered pieces;
+-- the detail pass adds trims, plates and bumps on top.
+-- ======================================================================
+
+-- Mesa Colossus (Plateau): a walking tableland. Layered sandstone torso with
+-- a grassy flat back carrying ruins, boulder shoulders, pillar arms with
+-- slab fists, stumpy column legs, a carved stone mask face with glowing eyes
+BUILD.MesaColossus = function(s)
+	local r = rig("MesaColossus", s, 3.6)
+	local sand, sand2, sand3, grass, ruin, glow = RGB(205, 160, 112), RGB(176, 128, 92), RGB(226, 186, 138), RGB(110, 190, 90), RGB(232, 226, 210), RGB(255, 210, 110)
+	add(r, "Body", "HumanoidRootPart", V(6, 4, 4.4), V(0, 1, 0), V(0, 0, 0), sand, { Role = "body" })
+	add(r, "Strata1", "Body", V(6.4, 1, 4.8), V(0, -1.6, 0), V(0, 0, 0), sand2, {})
+	add(r, "Strata2", "Body", V(6.2, 1, 4.6), V(0, 0.4, 0), V(0, 0, 0), sand3, {})
+	add(r, "Chest", "Body", V(6.8, 3, 5), V(0, 3.2, 0), V(0, 0, 0), sand2, {})
+	add(r, "Mesa", "Chest", V(7.2, 0.8, 5.4), V(0, 1.9, 0.2), V(0, 0, 0), grass, {})
+	for k = 1, 3 do
+		add(r, "Ruin" .. k, "Mesa", V(0.6, 1.4 + k * 0.4, 0.6), V(-2 + k * 1.3, 0.4, 1.6), V(0, -(1.4 + k * 0.4) / 2, 0), ruin, {})
+	end
+	add(r, "RuinLintel", "Mesa", V(3.4, 0.5, 0.6), V(-0.7, 2.6, 1.6), V(0, 0, 0), ruin, {})
+	add(r, "Bush", "Mesa", V(1.4, 1, 1.4), V(2.4, 0.7, -1.4), V(0, 0, 0), RGB(80, 160, 70), { Shape = "Ball" })
+	add(r, "Head", "Chest", V(2.6, 2.4, 2.4), V(0, 1.4, -2.2), V(0, -1, 0.4), sand3, { Role = "head" })
+	add(r, "Mask", "Head", V(2.4, 2, 0.4), V(0, 0, -1.3), V(0, 0, 0), ruin, {})
+	add(r, "MaskBrow", "Mask", V(2.6, 0.5, 0.6), V(0, 0.75, -0.2), V(0, 0, 0), sand2, {})
+	add(r, "EyeGlowL", "Mask", V(0.5, 0.35, 0.2), V(-0.55, 0.2, -0.25), V(0, 0, 0), glow, { Material = M.Neon })
+	add(r, "EyeGlowR", "Mask", V(0.5, 0.35, 0.2), V(0.55, 0.2, -0.25), V(0, 0, 0), glow, { Material = M.Neon })
+	add(r, "MouthSlot", "Mask", V(1.2, 0.25, 0.2), V(0, -0.55, -0.25), V(0, 0, 0), RGB(60, 40, 30), {})
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		add(r, "Shoulder" .. n, "Chest", V(2.6, 2.4, 2.6), V(side * 4.2, 0.8, 0), V(0, 0, 0), sand3, { Shape = "Ball" })
+		add(r, "ShoulderRock" .. n, "Shoulder" .. n, V(1.4, 1.2, 1.4), V(side * 0.4, 1.2, 0.3), V(0, 0, 0), sand2, { Rot = A(rad(15), rad(30), rad(side * 20)) })
+		limb(r, "Arm" .. n, "Shoulder" .. n, V(side * 0.3, -0.6, 0), V(1.8, 3.4, 1.8), V(1.6, 3, 1.6), V(2.6, 2, 2.6), sand, sand2, side < 0 and "armL" or "armR")
+		for k = 1, 3 do
+			add(r, "Knuckle" .. n .. k, "Arm" .. n .. "Tip", V(0.7, 0.7, 0.7), V(-1 + k * 0.5, -0.9, -1), V(0, 0, 0), sand3, {})
+		end
+		limb(r, "Leg" .. n, "Body", V(side * 1.8, -2, 0), V(2.2, 2.4, 2.2), V(2, 1.8, 2), V(2.8, 0.9, 3.2), sand2, sand, side < 0 and "legA" or "legB")
+	end
+	return r
+end
+
+-- Frostpeak Warden (Mountains): an armoured yeti knight. Shaggy white fur
+-- body under ice-blue armour plates, horned helm with a glowing visor, an
+-- icicle crest, a huge glacier shield arm and an ice-blade arm, fur boots
+BUILD.FrostpeakWarden = function(s)
+	local r = rig("FrostpeakWarden", s, 3.4)
+	local fur, fur2, armor, armor2, ice, glow = RGB(245, 248, 255), RGB(215, 222, 235), RGB(120, 170, 230), RGB(80, 120, 190), RGB(190, 235, 255), RGB(150, 230, 255)
+	add(r, "Body", "HumanoidRootPart", V(4.8, 4, 3.6), V(0, 1, 0), V(0, 0, 0), fur, { Role = "body" })
+	add(r, "Belt", "Body", V(5, 0.8, 3.8), V(0, -1.2, 0), V(0, 0, 0), armor2, {})
+	add(r, "Chest", "Body", V(5.6, 3.2, 4), V(0, 3.2, 0), V(0, 0, 0), fur2, {})
+	add(r, "Breastplate", "Chest", V(4.4, 2.6, 0.6), V(0, 0.1, -2.1), V(0, 0, 0), armor, {})
+	add(r, "Rune", "Breastplate", V(1, 1, 0.2), V(0, 0, -0.35), V(0, 0, 0), glow, { Material = M.Neon })
+	for k = 1, 4 do
+		add(r, "FurTuft" .. k, "Chest", V(1.2, 1, 1.2), V(-2.2 + k * 0.9, 1.6, 1.4), V(0, 0, 0), fur, { Shape = "Ball" })
+	end
+	add(r, "Head", "Chest", V(2.6, 2.6, 2.6), V(0, 1.6, -0.4), V(0, -1.1, 0), fur, { Role = "head" })
+	add(r, "Helm", "Head", V(2.9, 1.6, 2.9), V(0, 0.8, 0), V(0, 0, 0), armor, {})
+	add(r, "Visor", "Head", V(2.2, 0.4, 0.3), V(0, 0.1, -1.4), V(0, 0, 0), glow, { Material = M.Neon })
+	add(r, "Snout", "Head", V(1.4, 0.9, 0.8), V(0, -0.6, -1.4), V(0, 0, 0), fur2, {})
+	teeth(r, "Fang", "Snout", V(0, -0.5, -0.3), 2, 1, V(0.25, 0.5, 0.25), true)
+	for k = 1, 3 do
+		add(r, "Crest" .. k, "Helm", V(0.4, 1 + k * 0.4, 0.8), V(0, 0.9, -0.8 + k * 0.6), V(0, -(1 + k * 0.4) / 2, 0), ice, { Material = M.Glass, Transparency = 0.1 })
+	end
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		add(r, "Horn" .. n, "Helm", V(0.6, 0.6, 2), V(side * 1.5, 0.3, 0), V(0, 0, 0.8), armor2, { Rot = A(rad(-30), rad(side * 60), 0) })
+		add(r, "Pauldron" .. n, "Chest", V(2.6, 1.4, 3), V(side * 3.4, 1.4, 0), V(0, 0, 0), armor, { Rot = A(0, 0, rad(side * -15)) })
+		add(r, "PauldronSpike" .. n, "Pauldron" .. n, V(0.6, 1.4, 0.6), V(side * 0.6, 1, 0), V(0, -0.6, 0), ice, { Material = M.Glass, Rot = A(0, 0, rad(side * -20)) })
+		limb(r, "Arm" .. n, "Chest", V(side * 3.4, 0.4, 0), V(1.6, 3, 1.6), V(1.5, 2.8, 1.5), V(1.8, 1.4, 1.8), fur2, armor2, side < 0 and "armL" or "armR")
+		limb(r, "Leg" .. n, "Body", V(side * 1.4, -1.6, 0), V(1.8, 2.4, 1.8), V(1.7, 2, 1.7), V(2.2, 0.9, 2.8), fur, armor2, side < 0 and "legA" or "legB")
+	end
+	add(r, "Shield", "ArmLTip", V(0.6, 5, 3.6), V(-0.8, 0, 0), V(0, 0, 0), ice, { Material = M.Glass, Transparency = 0.15 })
+	add(r, "ShieldBoss", "Shield", V(0.4, 1.4, 1.4), V(-0.4, 0, 0), V(0, 0, 0), armor, {})
+	add(r, "Blade", "ArmRTip", V(0.5, 1, 6), V(0, -0.2, -3), V(0, 0, 0), ice, { Material = M.Glass, Glow = glow })
+	add(r, "Hilt", "ArmRTip", V(0.8, 0.8, 1.2), V(0, -0.2, -0.4), V(0, 0, 0), armor2, {})
+	return r
+end
+
+-- Mycelium Monarch (Mushroom): a towering mushroom king. A thick gilled
+-- stalk body with a frilled ring, a huge spotted crown cap with smaller caps
+-- on top, a bearded fungal face, root-tendril arms ending in spore bulbs,
+-- a robe of hanging mycelium strands and root feet
+BUILD.MyceliumMonarch = function(s)
+	local r = rig("MyceliumMonarch", s, 3.2)
+	local stalk, stalk2, cap, cap2, spot, glow = RGB(240, 228, 205), RGB(210, 196, 170), RGB(170, 70, 190), RGB(220, 100, 170), RGB(255, 250, 235), RGB(190, 255, 210)
+	add(r, "Body", "HumanoidRootPart", V(3.6, 5, 3.6), V(0, 1.4, 0), V(0, 0, 0), stalk, { Role = "body" })
+	add(r, "Ring", "Body", V(0.6, 5.2, 5.2), V(0, 1.2, 0), V(0, 0, 0), stalk2, { Shape = "Cylinder", Rot = A(0, 0, rad(90)) })
+	for k = 1, 8 do
+		local a = k / 8 * math.pi * 2
+		add(r, "Strand" .. k, "Body", V(0.4, 2.4, 0.4), V(math.cos(a) * 2.2, 0, math.sin(a) * 2.2), V(0, 0, 0), stalk2, {})
+	end
+	add(r, "Head", "Body", V(3, 3, 3), V(0, 3.2, 0), V(0, 0, 0), stalk, { Role = "head" })
+	add(r, "Gills", "Head", V(6.6, 0.5, 6.6), V(0, 1.4, 0), V(0, 0, 0), stalk2, { Shape = "Cylinder", Rot = A(0, 0, rad(90)) })
+	add(r, "Crown", "Head", V(1.6, 8, 8), V(0, 2.2, 0), V(0, 0, 0), cap, { Shape = "Cylinder", Rot = A(0, 0, rad(90)) })
+	add(r, "CrownDome", "Crown", V(1.4, 5.6, 5.6), V(1.2, 0, 0), V(0, 0, 0), cap2, { Shape = "Cylinder" })
+	for k = 1, 6 do
+		local a = k / 6 * math.pi * 2
+		add(r, "Spot" .. k, "Crown", V(0.3, 1, 1), V(0.85, math.cos(a) * 3, math.sin(a) * 3), V(0, 0, 0), spot, { Shape = "Cylinder" })
+	end
+	for k = 1, 3 do
+		local a = k * 2.1
+		add(r, "MiniStem" .. k, "CrownDome", V(1.4, 0.6, 0.6), V(1.2, math.cos(a) * 1.4, math.sin(a) * 1.4), V(-0.7, 0, 0), stalk, { Shape = "Cylinder" })
+		add(r, "MiniCap" .. k, "MiniStem" .. k, V(0.6, 2, 2), V(0.8, 0, 0), V(0, 0, 0), k == 2 and glow or cap2, { Shape = "Cylinder", Material = k == 2 and M.Neon or nil })
+	end
+	face(r, "Head", V(0, 0.2, -1.5), 0.7, V(0.7, 0.8, 0.3), stalk2, -10)
+	add(r, "Beard", "Head", V(2.2, 1.6, 0.8), V(0, -1.3, -1.2), V(0, 0, 0), stalk2, { Class = "WedgePart", Rot = A(rad(180), 0, 0) })
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		limb(r, "Arm" .. n, "Body", V(side * 2.2, 0.8, 0), V(1, 3.4, 1), V(0.8, 3, 0.8), V(1.8, 1.8, 1.8), stalk2, glow, side < 0 and "armL" or "armR")
+		for k = 1, 3 do
+			add(r, "Root" .. n .. k, "Body", V(0.8, 2.6, 0.8), V(side * 1.6, -2.4, (k - 2) * 1.2), V(0, 1.2, 0), stalk2, { Rot = A(rad((k - 2) * 25), 0, rad(side * 35)) })
+		end
+		limb(r, "Leg" .. n, "Body", V(side * 0.9, -2.4, 0), V(1.4, 1.6, 1.4), V(1.2, 1.2, 1.2), V(2.2, 0.6, 2.6), stalk2, stalk2, side < 0 and "legA" or "legB")
+	end
+	return r
+end
+
+-- Bogstorm Croaker (Marsh): a colossal storm toad. Warty swamp-green body,
+-- a huge throat sac that glows with lightning, crown of storm-cloud lumps
+-- with a lightning rod, mossy back, thick folded hind legs, webbed hands
+BUILD.BogstormCroaker = function(s)
+	local r = rig("BogstormCroaker", s, 2.4)
+	local skin, skin2, belly, moss, sac, glow = RGB(80, 120, 70), RGB(55, 90, 55), RGB(200, 210, 150), RGB(70, 150, 80), RGB(150, 220, 255), RGB(220, 245, 255)
+	add(r, "Body", "HumanoidRootPart", V(7, 4, 6.4), V(0, 0.8, 0), V(0, 0, 0), skin, { Role = "body", Shape = "Ball" })
+	add(r, "Belly", "Body", V(5.4, 2.6, 4.6), V(0, -0.8, -0.8), V(0, 0, 0), belly, { Shape = "Ball" })
+	for k = 1, 6 do
+		local a = k * 1.05
+		add(r, "Wart" .. k, "Body", V(0.8, 0.8, 0.8), V(math.cos(a) * 2.6, 1.6, math.sin(a) * 2.2 + 0.6), V(0, 0, 0), skin2, { Shape = "Ball" })
+	end
+	add(r, "Moss", "Body", V(4.4, 0.8, 3.6), V(0, 1.9, 1), V(0, 0, 0), moss, {})
+	add(r, "Head", "Body", V(5.2, 2.4, 3.6), V(0, 1.4, -2.6), V(0, -0.4, 0.8), skin, { Role = "head" })
+	add(r, "Sac", "Head", V(3.6, 2.4, 2.4), V(0, -1.6, -0.6), V(0, 0, 0), sac, { Shape = "Ball", Material = M.Glass, Transparency = 0.2, Glow = glow })
+	add(r, "SacBolt", "Sac", V(0.3, 1.6, 0.3), V(0, 0, 0), V(0, 0, 0), glow, { Material = M.Neon, Rot = A(0, 0, rad(25)) })
+	add(r, "Lip", "Head", V(5, 0.4, 1), V(0, -0.5, -1.7), V(0, 0, 0), skin2, {})
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		add(r, "EyeBump" .. n, "Head", V(1.6, 1.6, 1.6), V(side * 1.7, 1.2, -0.6), V(0, 0, 0), skin, { Shape = "Ball" })
+	end
+	face(r, "Head", V(0, 1.3, -1.25), 1.7, V(0.8, 0.8, 0.4), skin2, 12)
+	for k = 1, 4 do
+		local a = k * 1.6
+		add(r, "Storm" .. k, "Head", V(1.6, 1.2, 1.6), V(math.cos(a) * 1, 1.6, math.sin(a) * 0.8 + 0.4), V(0, 0, 0), RGB(90, 95, 120), { Shape = "Ball" })
+	end
+	add(r, "Rod", "Head", V(0.3, 2.6, 0.3), V(0, 2.4, 0.4), V(0, -1.2, 0), RGB(200, 200, 210), {})
+	add(r, "RodSpark", "Rod", V(0.7, 0.7, 0.7), V(0, 1.4, 0), V(0, 0, 0), glow, { Material = M.Neon, Shape = "Ball" })
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		limb(r, "Arm" .. n, "Body", V(side * 2.6, -0.8, -2), V(1.2, 2.2, 1.2), V(1, 1.8, 1), V(2.2, 0.4, 2.4), skin, skin2, side < 0 and "legA" or "legB")
+		add(r, "Thigh" .. n, "Body", V(2.4, 2.6, 3.6), V(side * 3, -0.6, 1.6), V(0, 0, 0), skin, { Shape = "Ball", Role = side < 0 and "legB" or "legA" })
+		add(r, "Shin" .. n, "Thigh" .. n, V(1.2, 1.2, 3.2), V(side * 0.6, -1, -0.6), V(0, 0, 0), skin2, {})
+		add(r, "Foot" .. n, "Shin" .. n, V(2.6, 0.4, 2.8), V(0, -0.6, -1.4), V(0, 0, 0), skin2, {})
+	end
+	return r
+end
+
+-- Prism Sovereign (Crystal Canyon): a floating crystal monarch. A faceted
+-- core of blue prisms with a glowing heart, a crown of tall spikes, a
+-- mask-like face plate, two hovering crystal hands, a ring of orbiting
+-- shards and a trailing crystal tail
+BUILD.PrismSovereign = function(s)
+	local r = rig("PrismSovereign", s, 4)
+	local blue, blue2, violet, pale, glow = RGB(80, 160, 255), RGB(60, 110, 230), RGB(150, 130, 255), RGB(220, 240, 255), RGB(170, 230, 255)
+	local GL = { Material = M.Glass, Transparency = 0.1 }
+	add(r, "Body", "HumanoidRootPart", V(4, 5, 4), V(0, 1.5, 0), V(0, 0, 0), blue, { Role = "body", Material = M.Glass, Transparency = 0.1 })
+	add(r, "Heart", "Body", V(1.8, 1.8, 1.8), V(0, 0.4, 0), V(0, 0, 0), glow, { Material = M.Neon, Shape = "Ball", Glow = glow })
+	add(r, "Facet1", "Body", V(4.4, 2, 4.4), V(0, -2.2, 0), V(0, 0, 0), blue2, GL)
+	add(r, "Facet2", "Facet1", V(2.6, 1.6, 2.6), V(0, -1.6, 0), V(0, 0, 0), violet, GL)
+	add(r, "Tail", "Facet2", V(1.2, 3, 1.2), V(0, -1.6, 0), V(0, 1.5, 0), blue, { Role = "tail", Material = M.Glass, Transparency = 0.1 })
+	add(r, "Head", "Body", V(3, 3, 3), V(0, 3.6, 0), V(0, 0, 0), pale, { Role = "head", Material = M.Glass, Transparency = 0.05 })
+	add(r, "FacePlate", "Head", V(2.4, 2, 0.4), V(0, 0, -1.6), V(0, 0, 0), RGB(240, 248, 255), {})
+	add(r, "EyeGlowL", "FacePlate", V(0.6, 0.3, 0.2), V(-0.5, 0.25, -0.25), V(0, 0, 0), RGB(80, 220, 255), { Material = M.Neon })
+	add(r, "EyeGlowR", "FacePlate", V(0.6, 0.3, 0.2), V(0.5, 0.25, -0.25), V(0, 0, 0), RGB(80, 220, 255), { Material = M.Neon })
+	for k = 1, 5 do
+		local a = (k - 3) * 0.45
+		add(r, "Spike" .. k, "Head", V(0.7, 2.2 + (3 - math.abs(k - 3)) * 0.9, 0.7), V(math.sin(a) * 1.3, 1.6, 0), V(0, -1, 0), k % 2 == 0 and violet or blue, { Material = M.Glass, Rot = A(0, rad(45), a) })
+	end
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		add(r, "Hand" .. n, "Body", V(1.6, 2.6, 1.6), V(side * 4.2, 0.5, -0.6), V(0, 0, 0), blue2, { Role = side < 0 and "armL" or "armR", Material = M.Glass, Transparency = 0.1 })
+		for k = 1, 3 do
+			add(r, "Finger" .. n .. k, "Hand" .. n, V(0.4, 1.4, 0.4), V((k - 2) * 0.5, -1.8, -0.2), V(0, 0.6, 0), pale, { Material = M.Glass })
+		end
+		add(r, "Pauldron" .. n, "Body", V(2, 1.4, 2), V(side * 2.4, 2, 0), V(0, 0, 0), violet, { Material = M.Glass, Rot = A(0, rad(45), rad(side * -20)) })
+	end
+	for k = 1, 6 do
+		local a = k / 6 * math.pi * 2
+		add(r, "Orbit" .. k, "Body", V(0.8, 2, 0.8), V(math.cos(a) * 5.5, 0.5 + (k % 2) * 1.2, math.sin(a) * 5.5), V(0, 0, 0), k % 2 == 0 and blue or violet, { Role = "orbit", Material = M.Glass, Rot = A(0, -a, rad(20)) })
+	end
+	return r
+end
+
+-- Caldera Titan (Volcanic): a magma giant. Basalt plate armour over a
+-- cracked glowing core, a volcano-crater head pouring lava with ember horns,
+-- huge rock fists with magma knuckles, obsidian spikes down the back,
+-- column legs with glowing seams
+BUILD.CalderaTitan = function(s)
+	local r = rig("CalderaTitan", s, 3.6)
+	local rock, rock2, obs, magma, glow = RGB(70, 58, 56), RGB(48, 40, 42), RGB(30, 25, 35), RGB(255, 110, 40), RGB(255, 200, 90)
+	add(r, "Body", "HumanoidRootPart", V(6, 4.4, 4.6), V(0, 1, 0), V(0, 0, 0), rock, { Role = "body" })
+	add(r, "Core", "Body", V(2.6, 2.6, 0.4), V(0, 1, -2.4), V(0, 0, 0), magma, { Material = M.Neon, Glow = magma })
+	for k = 1, 4 do
+		add(r, "Seam" .. k, "Body", V(0.3, 3, 0.3), V(-2.4 + k * 1, 0, -2.35), V(0, 0, 0), magma, { Material = M.Neon, Rot = A(0, 0, rad((k % 2 == 0) and 15 or -15)) })
+	end
+	add(r, "Chest", "Body", V(7, 3, 5), V(0, 3.4, 0), V(0, 0, 0), rock2, {})
+	for k = 1, 5 do
+		add(r, "BackSpike" .. k, "Chest", V(0.8, 2 + (k % 3) * 0.8, 0.8), V(-2.4 + k * 0.8, 1.2, 2.2), V(0, -1, 0), obs, { Rot = A(rad(-30), 0, 0) })
+	end
+	add(r, "Head", "Chest", V(3.4, 2.4, 3.2), V(0, 2.2, -0.6), V(0, -1, 0), rock, { Role = "head" })
+	add(r, "Crater", "Head", V(2.6, 1, 2.4), V(0, 1.4, 0), V(0, 0, 0), rock2, {})
+	add(r, "CraterLava", "Crater", V(1.8, 0.2, 1.6), V(0, 0.5, 0), V(0, 0, 0), magma, { Material = M.Neon, Glow = magma })
+	add(r, "LavaDrip", "Crater", V(0.4, 1.6, 0.3), V(0.6, -0.4, -1.25), V(0, 0, 0), magma, { Material = M.Neon })
+	add(r, "Jaw", "Head", V(3, 0.8, 1), V(0, -1, -1.4), V(0, 0, 0), rock2, { Role = "jawBot" })
+	add(r, "Mouth", "Head", V(2.2, 0.4, 0.2), V(0, -0.5, -1.65), V(0, 0, 0), magma, { Material = M.Neon })
+	add(r, "EyeGlowL", "Head", V(0.7, 0.4, 0.2), V(-0.7, 0.3, -1.65), V(0, 0, 0), glow, { Material = M.Neon })
+	add(r, "EyeGlowR", "Head", V(0.7, 0.4, 0.2), V(0.7, 0.3, -1.65), V(0, 0, 0), glow, { Material = M.Neon })
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		add(r, "Horn" .. n, "Head", V(0.7, 2.4, 0.7), V(side * 1.6, 1.2, 0), V(0, -1, 0), obs, { Rot = A(0, 0, rad(side * -30)) })
+		add(r, "HornTip" .. n, "Horn" .. n, V(0.5, 0.8, 0.5), V(0, 1.4, 0), V(0, 0, 0), magma, { Material = M.Neon })
+		add(r, "Shoulder" .. n, "Chest", V(3, 2.4, 3.2), V(side * 4.4, 0.8, 0), V(0, 0, 0), rock, {})
+		add(r, "ShoulderSpike" .. n, "Shoulder" .. n, V(0.8, 2, 0.8), V(side * 0.6, 1.6, 0), V(0, -0.6, 0), obs, { Rot = A(0, 0, rad(side * -25)) })
+		limb(r, "Arm" .. n, "Shoulder" .. n, V(side * 0.4, -0.8, 0), V(2, 3.4, 2), V(1.8, 3, 1.8), V(3, 2.4, 3), rock2, rock, side < 0 and "armL" or "armR")
+		for k = 1, 3 do
+			add(r, "Knuckle" .. n .. k, "Arm" .. n .. "Tip", V(0.7, 0.5, 0.7), V(-1 + k * 0.5, -1.1, -1.2), V(0, 0, 0), magma, { Material = M.Neon })
+		end
+		limb(r, "Leg" .. n, "Body", V(side * 1.9, -2.2, 0), V(2.4, 2.6, 2.4), V(2.2, 2, 2.2), V(3, 0.9, 3.4), rock, rock2, side < 0 and "legA" or "legB")
+		add(r, "LegSeam" .. n, "Leg" .. n, V(0.3, 2, 0.3), V(0, 0, -1.25), V(0, 0, 0), magma, { Material = M.Neon })
+	end
+	return r
+end
+
+-- Tidebreaker (Coast): a giant hermit-crab sea guardian. A coiled spiral
+-- shell carrying coral and a barnacle crown, a crab body with stalk eyes,
+-- one huge crushing claw and one tentacle-whip arm, six jointed legs and a
+-- fringe of kelp
+BUILD.Tidebreaker = function(s)
+	local r = rig("Tidebreaker", s, 2.8)
+	local shell, shell2, shell3, crab, crab2, coral, kelp = RGB(235, 200, 160), RGB(210, 160, 120), RGB(250, 230, 200), RGB(220, 90, 70), RGB(180, 60, 55), RGB(255, 120, 150), RGB(60, 140, 90)
+	add(r, "Body", "HumanoidRootPart", V(6, 2.6, 5), V(0, 0.6, 0), V(0, 0, 0), crab, { Role = "body" })
+	add(r, "Underplate", "Body", V(5.2, 0.8, 4.2), V(0, -1.4, 0), V(0, 0, 0), crab2, {})
+	add(r, "Shell", "Body", V(5.6, 5.6, 5.6), V(0, 3, 1), V(0, 0, 0), shell, { Shape = "Ball" })
+	for k = 1, 4 do
+		add(r, "Whorl" .. k, "Shell", V(4.6 - k * 0.9, 4.6 - k * 0.9, 4.6 - k * 0.9), V(0, 1.2 + k * 0.7, 0.6 + k * 0.3), V(0, 0, 0), k % 2 == 0 and shell2 or shell3, { Shape = "Ball" })
+	end
+	for k = 1, 5 do
+		local a = k * 1.2
+		add(r, "Coral" .. k, "Shell", V(0.5, 1.6 + (k % 3) * 0.5, 0.5), V(math.cos(a) * 2, 2.4, math.sin(a) * 2), V(0, -0.8, 0), coral, { Rot = A(rad(math.cos(a) * 20), 0, rad(math.sin(a) * 20)) })
+		add(r, "Barnacle" .. k, "Shell", V(0.8, 0.6, 0.8), V(math.cos(a + 0.6) * 2.6, 0.8, math.sin(a + 0.6) * 2.6), V(0, 0, 0), RGB(220, 220, 210), {})
+	end
+	add(r, "Head", "Body", V(3.4, 1.6, 1.8), V(0, 0.6, -2.8), V(0, 0, 0.4), crab, { Role = "head" })
+	add(r, "Mandible", "Head", V(2, 0.6, 0.8), V(0, -0.7, -0.8), V(0, 0, 0), crab2, { Role = "jawBot" })
+	for _, side in { -1, 1 } do
+		local n = side < 0 and "L" or "R"
+		add(r, "EyeStalk" .. n, "Head", V(0.4, 1.8, 0.4), V(side * 0.9, 1.2, -0.3), V(0, -0.8, 0), crab2, { Rot = A(0, 0, rad(side * -10)) })
+		add(r, "EyeBall" .. n, "EyeStalk" .. n, V(0.9, 0.9, 0.9), V(0, 1.1, 0), V(0, 0, 0), RGB(20, 20, 25), { Shape = "Ball" })
+		for k = 1, 3 do
+			limb(r, "Leg" .. n .. k, "Body", V(side * 3, -0.6, -1.6 + k * 1.4), V(0.6, 2.2, 0.6), V(0.5, 2, 0.5), nil, crab, nil, (k + (side < 0 and 0 or 1)) % 2 == 0 and "legA" or "legB", {})
+		end
+		for k = 1, 3 do
+			add(r, "Kelp" .. n .. k, "Underplate", V(0.4, 1.8, 0.6), V(side * (1 + k * 0.6), -1, 1.6), V(0, 0.9, 0), kelp, { Rot = A(rad(10), 0, rad(side * 10)) })
+		end
+	end
+	-- crushing claw (left)
+	limb(r, "ArmL", "Body", V(-3.2, 0.4, -2.4), V(1.4, 2.4, 1.4), V(1.2, 2, 1.2), nil, crab, nil, "armL", {})
+	add(r, "ClawPalm", "ArmLLower", V(2.4, 2, 2.6), V(0, -1.6, -0.6), V(0, 0, 0), crab, {})
+	add(r, "ClawTop", "ClawPalm", V(1.2, 0.9, 2.6), V(0, 0.5, -2), V(0, 0, 0), crab2, { Role = "jawTop" })
+	add(r, "ClawBottom", "ClawPalm", V(1.1, 0.7, 2.2), V(0, -0.6, -1.8), V(0, 0, 0), crab2, { Role = "jawBot" })
+	-- tentacle whip (right)
+	add(r, "ArmR", "Body", V(1, 1, 1.8), V(3.2, 0.4, -2.2), V(0, 0, 0.6), RGB(150, 90, 170), { Role = "armR", Shape = "Ball" })
+	local prev = "ArmR"
+	for k = 1, 4 do
+		local name = "Tentacle" .. k
+		add(r, name, prev, V(0.9 - k * 0.12, 0.9 - k * 0.12, 1.6), V(0, 0, -1.2), V(0, 0, 0.6), RGB(150, 90, 170):Lerp(RGB(200, 140, 220), k / 4), { Rot = A(rad(-8), rad(10), 0) })
+		add(r, name .. "Sucker", name, V(0.35, 0.2, 0.35), V(0, -0.45, 0), V(0, 0, 0), RGB(240, 200, 230), {})
+		prev = name
+	end
+	return r
+end
+
+
 -- Sprout (Capstride's summon): a tiny walking mushroom — stalk with a
 -- face, orange spotted cap, two stubby feet
 BUILD.Shroomling = function(s)

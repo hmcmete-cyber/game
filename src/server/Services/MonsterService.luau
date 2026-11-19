@@ -74,6 +74,13 @@ local function healthBar(info)
 	name.TextColor3 = Color3.new(1, 1, 1)
 	name.TextStrokeTransparency = 0.4
 	name.Text = info.Type -- director: only the monster's name above its head
+	if def.Boss then
+		-- bosses: big gold name readable from far away, health bar always on
+		gui.Size = UDim2.fromOffset(340, 70)
+		gui.MaxDistance = 320
+		name.Text = def.Title
+		name.TextColor3 = Color3.fromRGB(255, 215, 90)
+	end
 	name.Parent = gui
 	local back = Instance.new("Frame")
 	back.Visible = false -- the health bar appears only once the monster is hurt
@@ -92,14 +99,26 @@ local function healthBar(info)
 	gui.Parent = info.Root
 	table.insert(info.Conns, info.Hum.HealthChanged:Connect(function(hp)
 		fill.Size = UDim2.fromScale(math.clamp(hp / info.Hum.MaxHealth, 0, 1), 1)
-		back.Visible = hp < info.Hum.MaxHealth
+		back.Visible = def.Boss or hp < info.Hum.MaxHealth
 	end))
+	if def.Boss then
+		back.Visible = true
+	end
 end
 
 ------------------------------------------------------------------------
 -- spawning
 ------------------------------------------------------------------------
 local spawnMonster -- forward
+
+-- v2.10 bosses spawn on their temple arena (Map/Temples/<Biome>/BossSpawn)
+local function arenaSpawn(biome: string): Vector3?
+	local map = workspace:FindFirstChild("Map")
+	local temples = map and map:FindFirstChild("Temples")
+	local t = temples and temples:FindFirstChild(biome)
+	local sp = t and t:FindFirstChild("BossSpawn")
+	return sp and (sp :: BasePart).Position or nil
+end
 
 local function pickSpawn(habitat: string): Vector3?
 	local list = {}
@@ -182,7 +201,7 @@ end
 
 spawnMonster = function(typeName: string, at: Vector3?, life: number?, target: Player?)
 	local def = Defs.Types[typeName]
-	local pos = at or pickSpawn(def.Habitat)
+	local pos = at or (def.Arena and arenaSpawn(def.Arena)) or (not def.Arena and pickSpawn(def.Habitat)) or nil
 	if not pos then
 		task.delay(30, function()
 			spawnMonster(typeName)
@@ -407,7 +426,7 @@ local function think(info)
 
 	-- tether: never leave the habitat / stray too far from home
 	local here = info.Root.Position
-	local strayed = (here - info.Home).Magnitude > Defs.Tether
+	local strayed = (here - info.Home).Magnitude > (def.Tether or Defs.Tether)
 	local habitat = habitatOf(here)
 	if not def.Summon and habitat ~= def.Habitat and habitat ~= nil and (here - info.Home).Magnitude > 20 then
 		strayed = true
@@ -422,6 +441,17 @@ local function think(info)
 
 	if not validTarget(info, info.Target) then
 		info.Target = findTarget(info)
+		-- boss introduction: roar + shockwave + a banner for everyone nearby
+		if info.Target and def.Boss and not info.Introduced then
+			info.Introduced = true
+			Abilities.BossRoar(info.Model, Color3.fromRGB(255, 220, 120))
+			for _, p in Players:GetPlayers() do
+				local r = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if r and (r.Position - info.Root.Position).Magnitude < 160 and Remotes and Remotes.Hint then
+					Remotes.Hint:FireClient(p, `⚠ {def.Title} awakens!`, 4)
+				end
+			end
+		end
 	end
 	local target = info.Target
 	if not target then

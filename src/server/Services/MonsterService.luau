@@ -64,7 +64,10 @@ local function healthBar(info)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "MonsterBar"
 	gui.Size = UDim2.fromOffset(200, 44)
-	gui.StudsOffset = Vector3.new(0, 7 * def.Scale + (def.Hover or 0), 0)
+	-- above the model's real top (no more labels inside tall bodies)
+	local bcf, bsize = info.Model:GetBoundingBox()
+	local top = bcf.Position.Y + bsize.Y / 2 - info.Root.Position.Y
+	gui.StudsOffset = Vector3.new(0, top + (def.Boss and 3 or 1.6), 0)
 	gui.MaxDistance = 90
 	gui.LightInfluence = 0
 	local name = Instance.new("TextLabel")
@@ -111,6 +114,7 @@ end
 -- spawning
 ------------------------------------------------------------------------
 local spawnMonster -- forward
+local bossArrival -- forward
 
 -- v2.10 bosses spawn on their temple arena (Map/Temples/<Biome>/BossSpawn)
 local function arenaSpawn(biome: string): Vector3?
@@ -230,8 +234,9 @@ local function bossAura(model: Model, typeName: string)
 		end
 		e.Parent = parent
 	end
-	emitter(root, fx[1], 30, 0.7, 6, Vector3.new(0, 3, 0), 2.5)
-	emitter(root, fx[2], 12, 1.2, 3, Vector3.new(0, 1, 0), 3)
+	emitter(root, fx[1], 60, 0.8, 7, Vector3.new(0, 3, 0), 2.5)
+	emitter(root, fx[2], 25, 1.4, 3, Vector3.new(0, 1, 0), 3)
+	emitter(root, fx[1], 14, 3, 1, Vector3.new(0, 0.5, 0), 4, true)
 	local sig = model:FindFirstChild(fx[3], true)
 	if sig then
 		emitter(sig, fx[1], 25, 1, 8, Vector3.new(0, 6, 0), 2)
@@ -239,7 +244,7 @@ local function bossAura(model: Model, typeName: string)
 	end
 	local n = 0
 	for _, p in model:GetDescendants() do
-		if p:IsA("BasePart") and p.Material == Enum.Material.Neon and n < 10 then
+		if p:IsA("BasePart") and p.Material == Enum.Material.Neon and n < 24 then
 			n += 1
 			emitter(p, p.Color, 5, 0.35, 2, Vector3.new(0, 2, 0), 1.5)
 		end
@@ -251,8 +256,62 @@ local function bossAura(model: Model, typeName: string)
 	light.Parent = root
 end
 
+-- boss (re)spawn: a beam from the sky, shock rings, a burst and a banner
+bossArrival = function(model: Model, pos: Vector3)
+	local fx = BOSS_FX[model:GetAttribute("MonsterType") or model.Name]
+	local color = fx and fx[1] or Color3.fromRGB(255, 220, 120)
+	local beam = Instance.new("Part")
+	beam.Anchored, beam.CanCollide, beam.CanQuery, beam.CanTouch, beam.CastShadow = true, false, false, false, false
+	beam.Shape = Enum.PartType.Cylinder
+	beam.Material = Enum.Material.Neon
+	beam.Color = color
+	beam.Transparency = 0.3
+	beam.Size = Vector3.new(200, 2, 2)
+	beam.CFrame = CFrame.new(pos + Vector3.new(0, 100, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	beam.Parent = workspace
+	TweenService:Create(beam, TweenInfo.new(0.6), { Size = Vector3.new(200, 22, 22) }):Play()
+	task.delay(1.4, function()
+		TweenService:Create(beam, TweenInfo.new(1), { Size = Vector3.new(200, 1, 1), Transparency = 1 }):Play()
+	end)
+	game:GetService("Debris"):AddItem(beam, 3)
+	for k = 1, 3 do
+		task.delay(k * 0.25, function()
+			Abilities.BossRoar(model, color)
+		end)
+	end
+	for _, p in Players:GetPlayers() do
+		local r = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if r and (r.Position - pos).Magnitude < 220 and Remotes and Remotes.Hint then
+			Remotes.Hint:FireClient(p, `⚡ {Defs.Types[model:GetAttribute("MonsterType")].Title} has appeared!`, 4)
+		end
+	end
+end
+
+-- QA: remove the living boss of this type (no reward) and bring it back now
+function MonsterService.RespawnBoss(typeName: string)
+	for m, info in monsters do
+		if info.Type == typeName then
+			info.Alive = false
+			for _, c in info.Conns do
+				c:Disconnect()
+			end
+			monsters[m] = nil
+			m:Destroy()
+		end
+	end
+	return spawnMonster(typeName)
+end
+
 spawnMonster = function(typeName: string, at: Vector3?, life: number?, target: Player?)
 	local def = Defs.Types[typeName]
+	if def.Boss then
+		-- one of each boss at a time (QA respawns + the death timer can overlap)
+		for _, other in monsters do
+			if other.Type == typeName and other.Alive then
+				return nil
+			end
+		end
+	end
 	local pos = at or (def.Arena and arenaSpawn(def.Arena)) or (not def.Arena and pickSpawn(def.Habitat)) or nil
 	if not pos then
 		task.delay(30, function()
@@ -305,6 +364,7 @@ spawnMonster = function(typeName: string, at: Vector3?, life: number?, target: P
 	healthBar(info)
 	if def.Boss then
 		bossAura(model, typeName)
+		bossArrival(model, pos)
 	end
 	table.insert(info.Conns, hum.Died:Connect(function()
 		onDeath(info)
@@ -388,7 +448,8 @@ local function validTarget(info, p: Player?): boolean
 	if not r or not h or h.Health <= 0 or inSafeZone(r.Position) then
 		return false
 	end
-	local wanted = p:GetAttribute("Carrying") ~= nil or (info.Aggro[p] or 0) > now()
+	-- bosses guard their arena: anyone who walks into range is attacked
+	local wanted = info.Def.Boss or p:GetAttribute("Carrying") ~= nil or (info.Aggro[p] or 0) > now()
 	return wanted and (r.Position - info.Root.Position).Magnitude <= info.Def.Aggro * 1.5
 end
 

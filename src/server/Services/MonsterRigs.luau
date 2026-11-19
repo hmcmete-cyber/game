@@ -1288,10 +1288,59 @@ local function detailPass(model: Model)
 	end
 end
 
+-- v2.13 bosses get an extra layer: rivets on the corners of big blocks,
+-- a glowing trim line along long pieces and small spikes on big balls
+local function bossDetail(model: Model)
+	local list = {}
+	for _, p in model:GetDescendants() do
+		if p:IsA("Part") and p.Name ~= "HumanoidRootPart" and p.Transparency < 0.3 and p.Material ~= M.Neon
+			and not p:FindFirstChildOfClass("WeldConstraint") and math.max(p.Size.X, p.Size.Y, p.Size.Z) >= 3 then
+			table.insert(list, p)
+		end
+	end
+	local function bit(base: Part, name: string, size: Vector3, cf: CFrame, color: Color3, mat, shape)
+		local d = Instance.new("Part")
+		d.Name = base.Name .. name
+		d.Size = size
+		d.CFrame = cf
+		d.Color = color
+		d.Material = mat or M.Plastic
+		if shape then
+			d.Shape = shape
+		end
+		d.Anchored, d.CanCollide, d.CanTouch, d.CanQuery, d.Massless, d.CastShadow = false, false, false, false, true, false
+		local w = Instance.new("WeldConstraint")
+		w.Part0, w.Part1 = base, d
+		w.Parent = d
+		d.Parent = base.Parent
+	end
+	for _, p in list do
+		local sz, cf = p.Size, p.CFrame
+		local dark = p.Color:Lerp(Color3.new(0, 0, 0), 0.35)
+		if p.Shape == Enum.PartType.Block then
+			for _, c in { Vector3.new(1, 1, -1), Vector3.new(-1, 1, -1), Vector3.new(1, -1, -1), Vector3.new(-1, -1, -1) } do
+				bit(p, "Rivet", Vector3.one * math.min(0.5, sz.X * 0.12), cf * CFrame.new(c.X * sz.X * 0.4, c.Y * sz.Y * 0.38, -sz.Z / 2 - 0.05), dark, nil, Enum.PartType.Ball)
+			end
+			if math.max(sz.X, sz.Z) >= 4 then
+				bit(p, "Trimline", Vector3.new(sz.X * 0.9, 0.12, 0.12), cf * CFrame.new(0, sz.Y * 0.12, -sz.Z / 2 - 0.06), p.Color:Lerp(Color3.new(1, 1, 1), 0.5), M.Neon)
+			end
+		elseif p.Shape == Enum.PartType.Ball then
+			for k = 1, 4 do
+				local a = k * 1.57
+				bit(p, "Spike", Vector3.new(0.4, 0.9, 0.4), cf * CFrame.new(math.cos(a) * sz.X * 0.35, sz.X * 0.36, math.sin(a) * sz.X * 0.35) * CFrame.Angles(math.sin(a) * 0.5, 0, -math.cos(a) * 0.5), dark)
+			end
+		end
+	end
+end
+
 function MonsterRigs.Build(typeName: string, scale: number): Model
 	local r = BUILD[typeName](scale)
 	cartoonEyes(r)
 	detailPass(r.Model)
+	local def = require(game:GetService("ReplicatedStorage").Shared.MonsterDefs).Types[typeName]
+	if def and def.Boss then
+		bossDetail(r.Model)
+	end
 	local hum = Instance.new("Humanoid")
 	hum.RigType = Enum.HumanoidRigType.R15
 	hum.HipHeight = r.Hip * scale

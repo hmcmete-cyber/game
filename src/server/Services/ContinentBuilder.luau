@@ -1943,7 +1943,7 @@ function ContinentBuilder.Build(ctx)
 		Mountains = { Stone = Color3.fromRGB(205, 214, 228), Trim = Color3.fromRGB(120, 128, 145), Accent = Color3.fromRGB(110, 175, 255), Glow = Color3.fromRGB(190, 230, 255), Fx = Color3.fromRGB(250, 252, 255), Accel = Vector3.new(0, -3, 0) },
 		Mushroom = { Stone = Color3.fromRGB(178, 156, 196), Trim = Color3.fromRGB(110, 90, 130), Accent = Color3.fromRGB(235, 85, 150), Glow = Color3.fromRGB(190, 255, 210), Fx = Color3.fromRGB(200, 255, 220), Accel = Vector3.new(0, 1, 0) },
 		Marsh = { Stone = Color3.fromRGB(98, 124, 108), Trim = Color3.fromRGB(60, 80, 70), Accent = Color3.fromRGB(80, 200, 220), Glow = Color3.fromRGB(150, 240, 255), Fx = Color3.fromRGB(170, 240, 255), Accel = Vector3.new(0, 2, 0) },
-		Canyon = { Stone = Color3.fromRGB(205, 140, 98), Trim = Color3.fromRGB(150, 86, 64), Accent = Color3.fromRGB(80, 160, 255), Glow = Color3.fromRGB(140, 200, 255), Fx = Color3.fromRGB(190, 230, 255), Accel = Vector3.new(0, 1, 0) },
+		Canyon = { Stone = Color3.fromRGB(176, 160, 236), Trim = Color3.fromRGB(104, 92, 186), Accent = Color3.fromRGB(80, 170, 255), Glow = Color3.fromRGB(170, 230, 255), Fx = Color3.fromRGB(200, 235, 255), Accel = Vector3.new(0, 1, 0), Crystal = true },
 		Volcanic = { Stone = Color3.fromRGB(62, 50, 52), Trim = Color3.fromRGB(35, 28, 30), Accent = Color3.fromRGB(255, 110, 40), Glow = Color3.fromRGB(255, 150, 60), Fx = Color3.fromRGB(255, 170, 70), Accel = Vector3.new(0, 4, 0) },
 		Coast = { Stone = Color3.fromRGB(238, 228, 205), Trim = Color3.fromRGB(150, 175, 185), Accent = Color3.fromRGB(70, 175, 230), Glow = Color3.fromRGB(160, 230, 255), Fx = Color3.fromRGB(220, 245, 255), Accel = Vector3.new(0, 2, 0) },
 	}
@@ -2040,6 +2040,12 @@ function ContinentBuilder.Build(ctx)
 				else
 					tpart(m, "Capital" .. k, Vector3.new(5, 1.4, 5), cf * CFrame.new(0, 1.6 + h + 0.7, 0), th.Trim)
 					tpart(m, "CapTop" .. k, Vector3.new(4, 0.8, 4), cf * CFrame.new(0, 1.6 + h + 1.8, 0) * CFrame.Angles(0, math.pi / 4, 0), th.Accent)
+					if th.Crystal then
+						-- prismatic temple: crystal clusters crown every column
+						local cbase = (cf * CFrame.new(0, 1.6 + h + 2.2, 0)).Position
+						crystalPrism(m, "ColCrystal" .. k, cbase, 6, 1.6, CFrame.new(), CRYSTAL_BLUES[k % #CRYSTAL_BLUES + 1])
+						crystalPrism(m, "ColShard" .. k, cbase + Vector3.new(0.8, 0, 0.4), 3.5, 0.9, CFrame.Angles(0, 0, math.rad(-25)), CRYSTAL_BLUES[(k + 1) % #CRYSTAL_BLUES + 1])
+					end
 				end
 			end
 		end
@@ -2072,13 +2078,15 @@ function ContinentBuilder.Build(ctx)
 		aura.Parent = m:FindFirstChild("Altar")
 		-- gate: pylons, lintel, pediment, stairs, braziers
 		local gate = base * CFrame.new(0, 0, -38)
+		-- v2.13 (director: the gate blocked the facade): two lower obelisks set
+		-- wide apart, no lintel/pediment across the view
 		for sgn = -1, 1, 2 do
-			local py = gate * CFrame.new(sgn * 9, 0, 0)
-			tpart(m, "Pylon" .. sgn, Vector3.new(5, 22, 5), py * CFrame.new(0, 12, 0), th.Stone)
-			tpart(m, "PylonBand" .. sgn, Vector3.new(5.6, 1.2, 5.6), py * CFrame.new(0, 9, 0), th.Accent)
-			tpart(m, "PylonTop" .. sgn, Vector3.new(6.4, 2, 6.4), py * CFrame.new(0, 24, 0), th.Trim)
+			local py = gate * CFrame.new(sgn * 14, 0, 0)
+			tpart(m, "Pylon" .. sgn, Vector3.new(4, 11, 4), py * CFrame.new(0, 6.5, 0), th.Stone)
+			tpart(m, "PylonBand" .. sgn, Vector3.new(4.6, 1, 4.6), py * CFrame.new(0, 5, 0), th.Accent)
+			tpart(m, "PylonTop" .. sgn, Vector3.new(3, 2.4, 3), py * CFrame.new(0, 13, 0) * CFrame.Angles(0, math.pi / 4, 0), th.Trim)
 			-- brazier with fire / glow
-			local br = gate * CFrame.new(sgn * 16, 0, -6)
+			local br = gate * CFrame.new(sgn * 20, 0, -4)
 			tpart(m, "BrazierLeg" .. sgn, Vector3.new(1.4, 5, 1.4), br * CFrame.new(0, 2.5, 0), th.Trim)
 			local bowl = tpart(m, "Brazier" .. sgn, Vector3.new(4, 1.6, 4), br * CFrame.new(0, 5.6, 0), th.Trim)
 			local flame = tpart(m, "BrazierGlow" .. sgn, Vector3.new(2.6, 1, 2.6), br * CFrame.new(0, 6.6, 0), th.Glow, { Material = Enum.Material.Neon, CanCollide = false })
@@ -2092,18 +2100,6 @@ function ContinentBuilder.Build(ctx)
 			l.Color = th.Glow
 			l.Parent = bowl
 		end
-		tpart(m, "Lintel", Vector3.new(24, 3, 6), gate * CFrame.new(0, 25, 0), th.Stone)
-		for sgn = -1, 1, 2 do
-			local w = Instance.new("WedgePart")
-			w.Name = "Pediment" .. sgn
-			w.Anchored = true
-			w.Size = Vector3.new(6, 5, 12)
-			w.CFrame = gate * CFrame.new(sgn * 6, 29, 0) * CFrame.Angles(0, sgn > 0 and math.rad(-90) or math.rad(90), 0)
-			w.Color = th.Trim
-			studAll(w)
-			w.Parent = m
-		end
-		tpart(m, "Keystone", Vector3.new(3, 3, 6.4), gate * CFrame.new(0, 25, 0), th.Accent)
 		-- accent path tiles leading through the gate to the seal
 		for k = 0, 5 do
 			tpart(m, "Path" .. k, Vector3.new(6, 0.2, 3), base * CFrame.new(0, (k < 1 and 1 or 4) + 0.1, -36 + k * 5), k % 2 == 0 and th.Accent or th.Trim, { CanCollide = false })

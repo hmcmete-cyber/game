@@ -112,6 +112,49 @@ local function makeSpeedTool(): Tool
 	return tool
 end
 
+-- TEST ONLY: respawn the boss of the nearest temple right now (with its
+-- arrival effect). Same guard: QA account + Studio/private server only.
+local function makeBossTool(monsterService): Tool
+	local Defs = require(game:GetService("ReplicatedStorage").Shared.MonsterDefs)
+	local tool = Instance.new("Tool")
+	tool.Name = "QA Boss Respawner (test only)"
+	tool.ToolTip = "Test tool: respawn the boss of the nearest temple"
+	tool.CanBeDropped = false
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(1, 2.4, 1)
+	handle.Color = Color3.fromRGB(255, 90, 60)
+	handle.Material = Enum.Material.Neon
+	handle.CanCollide = false
+	handle.Parent = tool
+	local busy = false
+	tool.Activated:Connect(function()
+		local player = Players:GetPlayerFromCharacter(tool.Parent)
+		local root = player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if busy or not player or not root or not allowed(player) then
+			return
+		end
+		busy = true
+		local temples = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Temples")
+		local best, bestD = nil, math.huge
+		for _, t in temples and temples:GetChildren() or {} do
+			local sp = t:FindFirstChild("BossSpawn")
+			if sp and (sp.Position - root.Position).Magnitude < bestD then
+				best, bestD = t.Name, (sp.Position - root.Position).Magnitude
+			end
+		end
+		for typeName, def in Defs.Types do
+			if def.Boss and def.Arena == best then
+				monsterService.RespawnBoss(typeName)
+				print(`[QA] {player.Name} respawned {typeName}`)
+			end
+		end
+		task.wait(1)
+		busy = false
+	end)
+	return tool
+end
+
 function QaWeaponService.Start(monsterService)
 	local function give(player: Player)
 		if not allowed(player) then
@@ -124,6 +167,9 @@ function QaWeaponService.Start(monsterService)
 			end
 			if backpack and not backpack:FindFirstChild("QA Speed (test only)") then
 				makeSpeedTool().Parent = backpack
+			end
+			if backpack and not backpack:FindFirstChild("QA Boss Respawner (test only)") then
+				makeBossTool(monsterService).Parent = backpack
 			end
 		end
 		player.CharacterAdded:Connect(function()

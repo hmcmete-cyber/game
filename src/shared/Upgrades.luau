@@ -54,6 +54,36 @@ Upgrades.Types = {
 
 Upgrades.Order = { "Speed", "Jump", "Carry", "Income", "PerkSlot" }
 
+-- v2.13: Aurelius' 40 Boons (VendorCatalog). One level each, locked until
+-- their cloud is offered at Aurelius' Orb. Effects run in PetService.
+do
+	local ok, Catalog = pcall(require, script.Parent:WaitForChild("VendorCatalog"))
+	local PetDefs = require(script.Parent:WaitForChild("PetDefs"))
+	if ok then
+		for _, id in Catalog.BoonOrder do
+			local b = Catalog.Boons[id]
+			local spec = PetDefs.BUFF[b.Kind]
+			local v = spec.Flag and 1 or spec.Base * b.Tier * 1.5
+			local desc
+			if spec.Flag then
+				desc = spec.Label
+			elseif b.Kind == "Shield" then
+				desc = string.format(spec.Label, math.floor(30 / v))
+			elseif spec.Flat then
+				desc = string.format(spec.Label, v)
+			else
+				desc = string.format(spec.Label, math.floor(v * 100 + 0.5))
+			end
+			Upgrades.Types[id] = {
+				DisplayName = b.DisplayName, IconText = b.IconText, IconColor = b.IconColor,
+				Desc = desc .. b.WhenText .. " (permanent)", MaxLevel = 1, BaseCost = b.BaseCost,
+				Boon = b, BoonValue = v, Cloud = b.Cloud,
+			}
+			table.insert(Upgrades.Order, id)
+		end
+	end
+end
+
 function Upgrades.Cost(id: string, level: number): number
 	return Upgrades.Types[id].BaseCost * (level + 1)
 end

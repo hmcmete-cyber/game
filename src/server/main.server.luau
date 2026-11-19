@@ -89,6 +89,8 @@ require(Services.QaWeaponService).Start(MonsterService) -- TEST ONLY: director Q
 -- v2.12 pets + boss eggs + incubator
 local PetService = require(Services.PetService)
 PetService.Start(DataService, MonsterService)
+InventoryService.Hooks.MonsterBlast = PetService.Blast -- v2.13 Tayron gadgets
+require(Services.VendorOrbService).Start(DataService, WeatherService, remoteTable) -- v2.13 vendor orbs
 require(Services.EggService).Start(DataService, PetService, remoteTable, require(Services.MonsterDeaths))
 StyleSample.Start(require(Services.MonsterRigs)) -- Studio only: v2.1 style review island
 

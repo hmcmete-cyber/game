@@ -44,6 +44,11 @@ local function buy(player: Player, id: unknown)
 	if not def or not lv or not d then
 		return
 	end
+	-- v2.13: boons are locked until their cloud is offered at Aurelius' Orb
+	if def.Cloud and not (d.Unlocks and d.Unlocks[id]) then
+		Remotes.Hint:FireClient(player, "Locked: offer the required cloud at Aurelius' Orb first.", 3)
+		return
+	end
 	local level = lv[id] or 0
 	if level >= def.MaxLevel then
 		Remotes.Hint:FireClient(player, `Max level!`, 2)

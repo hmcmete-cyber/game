@@ -82,4 +82,51 @@ ShopItems.Types = {
 
 ShopItems.Order = { "LaserGun", "SpeedPotion", "JumpPotion", "Nitro", "Flare", "ShieldGenerator", "GrapplingHook" }
 
+-- v2.13: Tayron's 40 Gadgets (VendorCatalog), locked until their cloud is
+-- offered at Tayron's Orb. Handled in InventoryService.useItem.
+do
+	local ok, Catalog = pcall(require, script.Parent:WaitForChild("VendorCatalog"))
+	if ok then
+		local function desc(g): string
+			if g.Effect == "Buff" then
+				local pct = math.floor(g.Amount * 100 + 0.5)
+				local txt = ({
+					Speed = `+{pct}% speed`, Jump = `+{pct}% jump`, Resist = `-{pct}% damage taken`, KnockResist = `-{pct}% knockback`,
+					Regen = `+{g.Amount} HP/s`, Damage = `+{pct}% damage`, XP = `+{pct}% XP`, Coins = `+{pct}% coins`, Crit = `{pct}% crit`,
+					Lifesteal = `{pct}% lifesteal`, Haste = `-{pct}% attack cooldown`, Stealth = `monsters notice you {pct}% later`,
+					SlipImmune = "no slipping", ElectricImmune = "shock immune", FireImmune = "burn immune", BlindImmune = "blind immune",
+					Cleanse = `debuffs {pct}% shorter`,
+				})[g.Kind] or g.Kind
+				return `{txt} for {g.Duration} s`
+			elseif g.Effect == "Heal" then
+				return `Heal {g.Amount} HP`
+			elseif g.Effect == "ShieldNow" then
+				return `Shield bubble for {g.Duration} s`
+			elseif g.Effect == "Blast" then
+				return `Blast: {g.Damage} damage to monsters within {g.Radius} studs (+{g.Hit})`
+			elseif g.Effect == "Freeze" then
+				return `Freezes monsters within {g.Radius} studs for {g.Seconds} s`
+			elseif g.Effect == "Recall" then
+				return "Teleport to your base (not while carrying)"
+			elseif g.Effect == "Dash" then
+				return `Dash {g.Distance} studs forward`
+			elseif g.Effect == "EggWarm" then
+				return `Your incubating egg hatches {g.Minutes} min sooner`
+			elseif g.Effect == "Cleanse" then
+				return "Removes slows, roots, burns and blindness"
+			end
+			return ""
+		end
+		for _, id in Catalog.GadgetOrder do
+			local g = Catalog.Gadgets[id]
+			local item = table.clone(g)
+			item.Desc = desc(g)
+			item.Charges = 1
+			item.MaxStack = 5
+			ShopItems.Types[id] = item
+			table.insert(ShopItems.Order, id)
+		end
+	end
+end
+
 return ShopItems

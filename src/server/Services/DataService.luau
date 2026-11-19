@@ -31,6 +31,7 @@ local function defaults()
 		NextPetUid = 1,
 		Eggs = {}, -- egg keys waiting to be incubated
 		Incubator = nil, -- { Egg = key, ReadyAt = os.time() }
+		Unlocks = {}, -- v2.13 vendor orb unlocks: [catalog id] = true
 	}
 end
 

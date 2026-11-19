@@ -286,6 +286,11 @@ local function buy(player: Player, id: unknown)
 	if not d or not item or item.ComingSoon then
 		return
 	end
+	-- v2.13: gadgets are locked until their cloud is offered at Tayron's Orb
+	if item.Cloud and not (d.Unlocks and d.Unlocks[id]) then
+		Remotes.Hint:FireClient(player, "Locked: offer the required cloud at Tayron's Orb first.", 3)
+		return
+	end
 	if d.Coins < item.Price then
 		Remotes.Hint:FireClient(player, `Need {item.Price} coins`, 2)
 		return
@@ -467,6 +472,59 @@ local function useItem(player: Player, id: unknown, aim: unknown)
 		flare(player)
 	elseif item.Effect == "Shield" then
 		shield(player, item, duration)
+	-- v2.13 Tayron gadgets ------------------------------------------------
+	elseif item.Effect == "Buff" then
+		-- timed buff, summed with pets/boons (and switched off while carrying) in PetService
+		player:SetAttribute("GB_" .. item.Kind, item.Amount)
+		player:SetAttribute("GBUntil_" .. item.Kind, now + duration)
+	elseif item.Effect == "Heal" then
+		local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if not hum or hum.Health <= 0 then
+			return
+		end
+		hum.Health = math.min(hum.MaxHealth, hum.Health + item.Amount)
+	elseif item.Effect == "ShieldNow" then
+		player:SetAttribute("ShieldUntil", now + duration)
+	elseif item.Effect == "Cleanse" then
+		for _, attr in { "MonsterSlowUntil", "RootedUntil", "BurnUntil", "BlindUntil", "ShockedUntil", "LaserSlowUntil" } do
+			player:SetAttribute(attr, 0)
+		end
+	elseif item.Effect == "EggWarm" then
+		if not d.Incubator then
+			Remotes.Hint:FireClient(player, "No egg is incubating.", 2)
+			return
+		end
+		d.Incubator.ReadyAt -= item.Minutes * 60
+	elseif item.Effect == "Recall" then
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root or player:GetAttribute("Carrying") then
+			Remotes.Hint:FireClient(player, "Can't recall while carrying a cloud.", 2)
+			return
+		end
+		local roofs = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Rooftops")
+		local nest
+		for _, roof in roofs and roofs:GetChildren() or {} do
+			if roof:GetAttribute("OwnerUserId") == player.UserId then
+				nest = roof:FindFirstChild("Nest", true)
+			end
+		end
+		if not nest then
+			return
+		end
+		player.Character:PivotTo(CFrame.new(nest.Position + Vector3.new(0, 5, 4)))
+	elseif item.Effect == "Dash" then
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root or not Remotes.Grapple then
+			return
+		end
+		Remotes.Grapple:FireClient(player, root.Position + root.CFrame.LookVector * item.Distance)
+	elseif item.Effect == "Blast" or item.Effect == "Freeze" then
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local hook = InventoryService.Hooks.MonsterBlast
+		if not root or not hook then
+			return
+		end
+		hook(player, root.Position, item)
 	elseif item.Effect == "Laser" or item.Effect == "Grapple" then
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		if not root then

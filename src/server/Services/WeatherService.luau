@@ -1371,6 +1371,20 @@ function WeatherService.OnPlayerRemoving(player: Player)
 	end
 end
 
+-- v2.13 vendor orbs: give up the carried cloud. Returns its type, or
+-- "stolen" (refused, the cloud stays) / nil (not carrying).
+function WeatherService.ConsumeCarry(player: Player): string?
+	local c = carriers[player]
+	if not c then
+		return nil
+	end
+	if c.Victim then
+		return "stolen"
+	end
+	clearCarry(player, false)
+	return c.Type
+end
+
 function WeatherService.Start(mapService, dataService, remotes)
 	-- v2.13 theft rule, server side: a carrier moving much faster than the
 	-- carry speed for 2 s (speed hacks, client buff tricks) loses the cloud.

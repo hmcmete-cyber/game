@@ -17,6 +17,15 @@ local UserInputService = game:GetService("UserInputService")
 
 local ShopItems = require(ReplicatedStorage.Shared.ShopItems)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
+local VendorCatalog = require(ReplicatedStorage.Shared.VendorCatalog)
+-- v2.13: locked catalogue entries (unlocked by offering a cloud at the vendor's Orb)
+local function isUnlocked(id: string): boolean
+	local s = Players.LocalPlayer:GetAttribute("Unlocks") or ""
+	return string.find(s, "," .. id .. ",", 1, true) ~= nil
+end
+local function lockText(cloudId: string, vendor: string): string
+	return `Locked - offer a {VendorCatalog.CloudNames[cloudId] or cloudId} at {vendor}'s Orb`
+end
 
 local ShopUi = {}
 
@@ -203,8 +212,9 @@ local function render()
 		avatarText.Text = "T"
 		for i, id in ShopItems.Order do
 			local item = ShopItems.Types[id]
-			local c = card(i, id, item.IconText, item.IconColor, item.DisplayName, item.Desc)
-			buyButton(c, item.ComingSoon and "Coming soon" or `Buy - {item.Price} coins`, not item.ComingSoon,
+			local locked = item.Cloud ~= nil and not isUnlocked(id)
+			local c = card(i, id, item.IconText, item.IconColor, item.DisplayName, locked and (item.Desc .. "\n" .. lockText(item.Cloud, "Tayron")) or item.Desc)
+			buyButton(c, locked and "Locked" or (item.ComingSoon and "Coming soon" or `Buy - {item.Price} coins`), not item.ComingSoon and not locked,
 				Color3.fromRGB(120, 220, 160), function()
 					remotes.BuyItem:FireServer(id)
 				end)
@@ -217,8 +227,10 @@ local function render()
 			local def = Upgrades.Types[id]
 			local level = player:GetAttribute("Up_" .. id) or 0
 			local maxed = level >= def.MaxLevel
-			local c = card(i, id, def.IconText, def.IconColor, def.DisplayName, def.Desc, `Level {level} / {def.MaxLevel}`)
-			buyButton(c, maxed and "MAX" or `Upgrade - {Upgrades.Cost(id, level)} coins`, not maxed,
+			local locked = def.Cloud ~= nil and not isUnlocked(id)
+			local c = card(i, id, def.IconText, def.IconColor, def.DisplayName, locked and (def.Desc .. "\n" .. lockText(def.Cloud, "Aurelius")) or def.Desc,
+				def.Boon and (maxed and "Owned" or "Not owned") or `Level {level} / {def.MaxLevel}`)
+			buyButton(c, locked and "Locked" or (maxed and (def.Boon and "OWNED" or "MAX") or `Upgrade - {Upgrades.Cost(id, level)} coins`), not maxed and not locked,
 				Color3.fromRGB(255, 200, 90), function()
 					remotes.BuyUpgrade:FireServer(id)
 				end)
@@ -352,6 +364,11 @@ local function build()
 end
 
 function ShopUi.Start()
+	Players.LocalPlayer:GetAttributeChangedSignal("Unlocks"):Connect(function()
+		if window and window.Visible then
+			render()
+		end
+	end)
 	remotes = ReplicatedStorage:WaitForChild("Remotes")
 	build()
 	remotes:WaitForChild("OpenShop").OnClientEvent:Connect(open)

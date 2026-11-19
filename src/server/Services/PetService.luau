@@ -18,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PetDefs = require(ReplicatedStorage.Shared.PetDefs)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local PetModels = require(script.Parent:WaitForChild("PetModels"))
+local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 
 local PetService = {}
 
@@ -427,9 +428,55 @@ local function buffTick(player: Player)
 				end
 			end
 		end
-		-- team caps
+		-- v2.13: Aurelius boons (permanent) + Tayron gadgets (timed) add to the
+		-- same totals; everything together is capped at 1.5x the pet cap
+		local function add(kind: string, v: number)
+			local spec = PetDefs.BUFF[kind]
+			if not spec then
+				return
+			end
+			if spec.Flag then
+				flags[kind] = true
+			else
+				totals[kind] = (totals[kind] or 0) + v
+			end
+		end
+		local hour = game:GetService("Lighting").ClockTime
+		local night = hour < 6 or hour >= 18
+		local function condOn(when: string): boolean
+			if when == "Always" then
+				return true
+			elseif when == "NearBase" then
+				return nearBase
+			elseif when == "LowHP" then
+				return low
+			elseif when == "AfterKill" then
+				return afterKill
+			elseif when == "Night" then
+				return night
+			elseif when == "Day" then
+				return not night
+			elseif string.sub(when, 1, 2) == "In" then
+				return here == string.sub(when, 3)
+			end
+			return false
+		end
+		local d = data(player)
+		for id, lv in d and d.Upgrades or {} do
+			local def = Upgrades.Types[id]
+			if def and def.Boon and lv >= 1 and condOn(def.Boon.When) then
+				add(def.Boon.Kind, def.BoonValue)
+			end
+		end
+		local tnow = now()
+		for kind in PetDefs.BUFF do
+			if (player:GetAttribute("GBUntil_" .. kind) or 0) > tnow then
+				add(kind, player:GetAttribute("GB_" .. kind) or 0)
+			end
+		end
+		-- caps
 		for kind, v in totals do
-			totals[kind] = math.min(v, PetDefs.BUFF[kind].Cap)
+			totals[kind] = math.min(v, PetDefs.BUFF[kind].Cap * 1.5)
 		end
 		-- regen + shield pulse
 		if totals.Regen then
@@ -585,6 +632,33 @@ function PetService.Start(dataService, monsterService)
 			end
 		end
 	end)
+end
+
+-- v2.13 Tayron blast / freeze gadgets
+function PetService.Blast(player: Player, pos: Vector3, item)
+	local color = EFFECT_COLOR[item.Hit or "Slow"] or Color3.fromRGB(255, 200, 120)
+	local ring = fxPart(Vector3.new(0.3, 2, 2), CFrame.new(pos - Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, 0, math.pi / 2), color, Enum.PartType.Cylinder, 0.7)
+	TweenService:Create(ring, TweenInfo.new(0.5), { Size = Vector3.new(0.2, item.Radius * 2, item.Radius * 2), Transparency = 1 }):Play()
+	for _, m in monstersNear(pos, item.Radius) do
+		if item.Effect == "Freeze" then
+			local info = MonsterService.Get(m)
+			if info and not info.PetShocked then
+				info.PetShocked = true
+				local hum = info.Hum
+				local old = hum.WalkSpeed
+				hum.WalkSpeed = 0
+				task.delay(item.Seconds, function()
+					info.PetShocked = nil
+					if hum.Parent then
+						hum.WalkSpeed = old
+					end
+				end)
+			end
+		else
+			MonsterService.Damage(m, item.Damage, player, "Gadget")
+			applyEffect(player, m, item.Hit, item.Damage, pos)
+		end
+	end
 end
 
 PetService.SendData = sendData

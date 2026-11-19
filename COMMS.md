@@ -1732,3 +1732,36 @@ All bosses also carry aura particles, emitters on their signature part, glow emi
 9. Screenshots of all of the above, please.
 
 **Animation note:** the new Caldera Titan rig changed (gait Plod), so its 6 clips must be exported again. MonsterAnims now exports 28 monsters.
+
+
+## [2026-11-19 23:15 Istanbul] Director → Claude — egg, boss, map, theft and orb progression fixes
+
+Please treat this as the next implementation request. Preserve the existing architecture and report which items are completed, deferred, or blocked.
+
+### Egg interaction and boss rewards
+1. Eggs currently do not appear when the player presses/interacts with the relevant prompt. Trace the full spawn/interaction path, fix the failure, and test a complete boss kill → egg spawn → pickup flow.
+2. Make world eggs larger and substantially more detailed, using the classic Roblox stud/block style.
+3. When multiple players damage the same boss, award its egg to the player who dealt the most total damage. Track damage per player and resolve the winner reliably.
+4. If the carrier is killed while taking an egg to a base, drop the egg as a world pickup that any player can claim.
+5. Add a boss respawn effect.
+6. Add a private OP Boss Respawner test item for **Cubickzz** only. Guard it server-side using the existing owner/admin pattern; do not grant it to other players or expose unrestricted live-server spawning.
+
+### Boss behavior, appearance and world population
+7. Bosses should aggro and attack as soon as a player enters their intended detection range. Increase their threat and particle effects, and add more visual detail. Fix nameplates and body parts clipping/intersecting; keep labels readable above the model.
+8. Update the Prism Sovereign temple from its current brown look to the intended crystal/prismatic palette.
+9. The map has too much empty space after expansion. Add several existing regular mob types across appropriate regions, with sensible spacing and spawn areas.
+10. Move each player base farther from the center and expand its footprint for a more spacious layout.
+11. Remove the fence directly in front of the Nursery entrance.
+12. The attached screenshot shows temple frontage obstructed by a large pale horizontal foreground beam/platform and a tall pale structure at the right. Please inspect the temple approach and reposition/remove the blocking geometry so the entrance and temple facade are clearly visible from the approach. Keep required structural supports intact.
+
+### Cloud theft rules
+13. When a player steals/carries a cloud, clear all normal gameplay buffs, including cloud and pet buffs, and apply a noticeable movement slow comparable to Steal a Brainrot. The only exception is Cubickzz's existing OP/test powers. Ensure this is authoritative and cannot be bypassed by client UI or re-equipping a pet mid-carry.
+
+### Aurelius and Tayron progression orbs
+14. Add at least 40 additional distinct items/buffs to **Aurelius** and at least 40 to **Tayron**. Keep the two vendors' inventories themed and avoid duplicate entries with only renamed stats.
+15. Place a clearly named Orb beside each vendor. Orb unlocks require a specific cloud type/identity to be deposited into the matching Orb. Only clouds the player currently owns or is legitimately carrying may be deposited; stolen clouds must be rejected. Show the required cloud and unlock state clearly.
+16. Define balanced unlock requirements and meaningful effects for the new items. A few can be powerful, but require rarer or more specific cloud sacrifices. Make sure the cloud check and unlock are server-side and the unlock persists.
+
+### QA and report
+Please test: egg prompt and spawn, boss damage attribution with at least two players if possible, carrier death/drop and pickup, boss aggro/respawn, cloud theft buff removal and slow, private Cubickzz OP item authorization, orb rejection of stolen clouds, valid owned-cloud unlock, persistence, base spacing, Nursery entrance, temple sightlines, and FPS. Report any limits when multiplayer QA is not available and include exact F9 red/yellow lines.
+

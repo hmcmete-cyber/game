@@ -1325,3 +1325,50 @@ OBJECTS: Runtime generated map v2.9 (no manual object changes); expected paths f
 ANIMATIONS: None uploaded in this pass.
 ERRORS: Output warning exactly as above; no F9 Client/Server error captured.
 NOTES: Please keep the texture ID fields pending. I can finish the visual checks and upload as soon as Studio/Computer Use is available again; current run had 14,932 map parts.
+
+
+### [2026-11-19 21:45 Istanbul] Director → Claude — major world-art pass, biome temples/bosses, test weapon, cloud-design proposal
+Status: request
+
+Please address the following as a coordinated world-art pass in the runtime-generated map. The director supplied two screenshots in chat; the first shows the current purple Crystal Canyon/player view and the second shows the “Watch the holes!” zone banner overlapping the HUD.
+
+**1) Crystal Canyon — rebuild the terrain language**
+The current canyon reads as a rushed, awkward flat/purple area with arbitrary holes. Keep intentional holes/arches, but make them feel like a natural traversable canyon: deep winding ravines, connected irregular cliff walls, broken overhangs/arches only where they form believable crossings, layered rock strata, ledges, alcoves and purposeful crystal outcrops. Use depth and a few readable routes/landmarks; avoid a swiss-cheese plate, randomly punched circular holes, broad empty floor or decorative holes that do not lead anywhere. Make blue crystal clusters a clear focal feature.
+
+**2) Plateau biome — replace giant round “plateaus”**
+The so-called plateaus currently look like oversized circles. Build real broad, mostly flat-topped tablelands with asymmetrical outlines, broken escarpment rims, stepped erosion, branching ridges, gullies and foothill debris. Vary their height and footprint; the top should read as a playable plateau. Avoid round disks/cylinders and repeated concentric tiers.
+
+**3) Upper continent scale and content**
+Expand the upper continent substantially in playable X/Z footprint (not only vertical scale), then fill the added area with larger/varied mountain ranges, volcanic ridges and craters, broad plateaus, routes and biome-specific landmarks. Preserve clear walkable routes, spawns and gameplay paths. At the far end of **each biome**, add a detailed themed temple/arena as a strong end-of-zone landmark and future boss location. Use the newly added area intentionally so it does not feel empty.
+
+**4) Temple/boss direction**
+Bosses should be visibly larger than normal monsters, with a distinctive multi-part silhouette, a readable arena entrance, strong spawn/introduction moment and two or more high-impact, telegraphed abilities each. Design one per biome, not palette-swapped copies. Suggested roster to develop (names are placeholders):
+- Plateau: **Mesa Colossus** — raises shifting stone pillars / sends a ridge shockwave.
+- Mountains: **Frostpeak Warden** — avalanche sweep / expanding ice ring.
+- Mushroom: **Mycelium Monarch** — spore doubles / root snare.
+- Marsh: **Bogstorm Croaker** — thunder-wave croak / long tongue sweep.
+- Crystal Canyon: **Prism Sovereign** — refracting shard barrage / crystal-wall lanes.
+- Volcanic: **Caldera Titan** — erupting lava lanes / crater-wide stomp.
+- Coast: **Tidebreaker** — advancing tide wall / tentacle or ink sweep.
+Temples and bosses need rich structural and visual detail, not a single large primitive with effects. The director explicitly says no lag problem has been noticed and wants you to feel free to raise particle counts for bosses/temples; please still report actual performance if testing reveals a problem.
+
+**5) Lower camera / underside**
+The upper continent's underside is still visible from below. Hide it behind a continuous layered cloud-and-mist canopy that reads as a deliberate atmospheric layer, with enough depth/coverage to conceal the whole plate from ordinary lower-level camera angles. No exposed bare plate/default gray baseplate; keep supports and playable geometry intact.
+
+**6) Clouds — please present a design direction before finalizing**
+The current cloud designs do not create enough excitement/reward and need a more distinctive identity. Proposal for discussion: treat each collectible as a **Cloudkin** with a unique 3D puffy silhouette built from interlocking, varied-size lobes (not uniform balls): low broad Cumulus; dark rain cloud with a heavy belly; snow cloud with icy fringe; asymmetrical thunder cloud with a visible contained lightning core; spiral-tailed tornado; rare cosmic/aurora cloud with orbiting shards. Rarity should change silhouette, material accents, animation and capture reveal—not only color. Catch should have a satisfying inflate → snap/bounce → sparkle/rarity reveal beat, while remaining readable in a child-friendly classic Roblox studded style. Please share/confirm a small visual direction (at least common, storm, and rare) before spending time on a large cloud rebuild; the director explicitly wants to discuss cloud design.
+
+**7) Other specific fixes**
+- A lightning/storm cloud appears embedded inside a mountain. Move it clear of rock geometry (above/adjacent to the ridge) so the cloud and lightning are visible and do not clip into the mountain.
+- Remove biome subtitle/slogan text such as **“Watch the holes!”** and similar phrases under every biome label (including the secondary banner visible in screenshot 2). Keep the zone name clean and reduce unnecessary HUD wording.
+- Break up the mushroom rows: vary height, cap angle, lean, spacing and cluster density. Some can stand straight, but avoid a uniform aligned forest; use a few tilted, bent or partly hidden mushrooms.
+
+**8) Test-only OP weapon**
+Give only the director's `Cubickzz` account a clearly named OP test weapon so they can test monster deaths. Restrict it to the Studio/private QA test path and identify the account by stable Roblox UserId if available (do not grant it to every player or expose it in the public/live game). Keep it easy to remove after death testing.
+
+Please implement the map changes in the generator so runtime rebuilds retain them. Keep gameplay paths/spawns/collisions stable, then run Studio and report the map version/part count, any F9 errors, and screenshots of Crystal Canyon, a plateau, the underside from below, one temple/boss and each changed cloud example. The cloud visual direction should be sent to the director for feedback before full production.
+
+OBJECTS: Preserve code-required map paths; add one named temple/boss arena per biome and report exact paths.
+ANIMATIONS: None requested in this pass.
+ERRORS: None reported by the director in this message.
+NOTES: User’s two reference screenshots are attached in the director’s message. Cloud design suggestion above is a proposal for discussion, not a final approval; the director wants to review ideas before committing to that visual direction.

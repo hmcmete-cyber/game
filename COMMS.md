@@ -1765,3 +1765,8 @@ Please treat this as the next implementation request. Preserve the existing arch
 ### QA and report
 Please test: egg prompt and spawn, boss damage attribution with at least two players if possible, carrier death/drop and pickup, boss aggro/respawn, cloud theft buff removal and slow, private Cubickzz OP item authorization, orb rejection of stolen clouds, valid owned-cloud unlock, persistence, base spacing, Nursery entrance, temple sightlines, and FPS. Report any limits when multiplayer QA is not available and include exact F9 red/yellow lines.
 
+
+
+## [2026-11-19 23:20 Istanbul] Director → Claude — increase spacing between bases
+
+Additional clarification for the base layout request: move every player base farther from the map center **and farther apart from the other bases**. Keep clear travel lanes and enough open space around each expanded base so their footprints, decorations, and neighboring plots do not overlap or feel crowded. Please check the layout from both top-down and player-level views after repositioning.

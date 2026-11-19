@@ -4,8 +4,8 @@
 -- attributes). Pure math: same answer on server and client.
 --
 -- Layout is authored in v1.4 units (heart 16-70, habitats 70-262, coast
--- 262-314). R() stretches them to studs (heart 16-110, habitats 110-590,
--- coast 590-680) and Wr() bends the outline by angle (coast ~555-805).
+-- 262-314). R() stretches them to studs (v2.10: heart 16-110, habitats
+-- 110-860, coast 860-990) and Wr() bends the outline by angle (coast ~810-1180).
 -- Habitats are six 60° sectors whose borders wander with distance (wobble).
 
 local BiomeMap = {}
@@ -19,19 +19,19 @@ function BiomeMap.R(r: number): number
 	if r <= 70 then
 		return 16 + (r - 16) * (94 / 54)
 	elseif r <= 262 then
-		return 110 + (r - 70) * (480 / 192)
+		return 110 + (r - 70) * (750 / 192)
 	end
-	return 590 + (r - 262) * (90 / 52)
+	return 860 + (r - 262) * (130 / 52)
 end
 
 -- inverse of R (studs -> authoring units)
 function BiomeMap.Rinv(s: number): number
 	if s <= 110 then
 		return 16 + (s - 16) * (54 / 94)
-	elseif s <= 590 then
-		return 70 + (s - 110) * (192 / 480)
+	elseif s <= 860 then
+		return 70 + (s - 110) * (192 / 750)
 	end
-	return 262 + (s - 590) * (52 / 90)
+	return 262 + (s - 860) * (52 / 130)
 end
 
 function BiomeMap.Warp(deg: number): number
@@ -41,7 +41,7 @@ end
 
 -- studs -> warped studs (the heart stays round, the bend grows outward)
 function BiomeMap.Wr(r: number, deg: number): number
-	local k = math.clamp((r - 110) / 480, 0, 1)
+	local k = math.clamp((r - 110) / 750, 0, 1)
 	return r * (1 + (BiomeMap.Warp(deg) - 1) * k)
 end
 
@@ -49,7 +49,7 @@ end
 function BiomeMap.Unwarp(rw: number, deg: number): number
 	local r = rw
 	for _ = 1, 6 do
-		local k = math.clamp((r - 110) / 480, 0, 1)
+		local k = math.clamp((r - 110) / 750, 0, 1)
 		r = rw / (1 + (BiomeMap.Warp(deg) - 1) * k)
 	end
 	return r

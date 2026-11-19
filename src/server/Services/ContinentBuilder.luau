@@ -421,7 +421,8 @@ function ContinentBuilder.Build(ctx)
 	local sand = Color3.fromRGB(240, 220, 170)
 
 	-- Canyon pits (angle range, radius range) — straight down to the death clouds
-	local PITS = { { 225, 235, 140, 172 }, { 245, 255, 186, 210 } }
+	-- v2.10: ONE intentional chasm on the west ravine, crossed by the Storm Bridge
+	local PITS = { { 226, 234, 160, 172 } }
 	local function inPit(deg: number, r0: number, r1: number): boolean
 		for _, pit in PITS do
 			if deg >= pit[1] and deg < pit[2] and r0 < pit[4] and r1 > pit[3] then
@@ -439,8 +440,8 @@ function ContinentBuilder.Build(ctx)
 	------------------------------------------------------------------
 	local terrain = workspace.Terrain
 	-- clear only the continent's slab of terrain (rebuilds start clean)
-	for gx = -850, 850, 340 do
-		for gz = -850, 850, 340 do
+	for gx = -1360, 1360, 340 do
+		for gz = -1360, 1360, 340 do
 			terrain:FillBlock(CFrame.new(gx, UP - 30, gz), Vector3.new(340, 80, 340), Enum.Material.Air)
 		end
 	end
@@ -461,7 +462,7 @@ function ContinentBuilder.Build(ctx)
 	local LOOK = { Plateau = 0, Mountains = 0, Mushroom = 0, Marsh = -3, Volcanic = 0, Canyon = 0 }
 	local HCOLOR = {
 		Plateau = Color3.fromRGB(110, 195, 90), Mountains = Color3.fromRGB(165, 160, 158), Mushroom = Color3.fromRGB(120, 180, 165),
-		Marsh = Color3.fromRGB(95, 120, 100), Volcanic = Color3.fromRGB(75, 62, 62), Canyon = Color3.fromRGB(185, 130, 170),
+		Marsh = Color3.fromRGB(95, 120, 100), Volcanic = Color3.fromRGB(75, 62, 62), Canyon = Color3.fromRGB(205, 140, 98),
 		Heart = Color3.fromRGB(240, 242, 250), Coast = Color3.fromRGB(245, 225, 165), Shallows = Color3.fromRGB(110, 195, 235),
 	}
 	local function canyonTop(r0: number): number
@@ -547,7 +548,7 @@ function ContinentBuilder.Build(ctx)
 				if run.Roof then
 					local roofTop = UP
 					-- a 4-stud slab (not a full column): you can walk under it
-					band("CaveRoof" .. k .. "_" .. run.R0, deg, Wr(R(run.R0), deg), Wr(R(run.R1), deg), roofTop, Color3.fromRGB(125, 100, 125), Z.Canyon, { Bottom = UP - 4 })
+					band("CaveRoof" .. k .. "_" .. run.R0, deg, Wr(R(run.R0), deg), Wr(R(run.R1), deg), roofTop, Color3.fromRGB(150, 92, 70), Z.Canyon, { Bottom = UP - 4 })
 				end
 				run = nil
 			end
@@ -608,6 +609,7 @@ function ContinentBuilder.Build(ctx)
 		{ 205, 110, 42 }, { 200, 12, 52 }, { 258, 66, 26 }, { 225, 192, 14 }, -- elder, mesa, lake, tower
 		{ 180, 300, 82 }, { 115, 285, 46 }, { 130, 220, 9 }, { 150, 238, 22 }, { 200, 222, 22 }, { 120, 255, 22 }, -- volcanoes, canyon
 		{ 292, 90, 9 }, { 282, 180, 10 }, { 240, 326, 10 }, -- lighthouse, altars
+		{ 248, 0, 50 }, { 250, 62, 50 }, { 248, 120, 50 }, { 252, 180, 50 }, { 252, 240, 50 }, { 252, 300, 50 }, { 281, 210, 44 }, -- v2.10 temples
 	} do
 		reserve(A(c[1], c[2], UP), c[3])
 	end
@@ -657,14 +659,8 @@ function ContinentBuilder.Build(ctx)
 	------------------------------------------------------------------
 	-- PLATEAU MEADOWS (330-30): rolling hills + trees
 	------------------------------------------------------------------
-	for i = 1, 14 do
-		local rad = rng:NextNumber(20, 40)
-		local c = place(habGen(100, 240, 330, 390, "Plateau", UP), rad)
-		if c then
-			disc(continent, "Hill" .. i, c, rad, 3.5, UP + 3.5, grass, Enum.Material.Grass, Z.Plateau)
-		end
-	end
-	for i = 1, 30 do
+	-- (v2.10: the round hills are gone; tablelands are built after the crag kit)
+	for i = 1, 48 do
 		local c = place(habGen(85, 250, 330, 390, "Plateau", UP), 7)
 		if not c then
 			continue
@@ -1096,6 +1092,143 @@ function ContinentBuilder.Build(ctx)
 	end
 
 	------------------------------------------------------------------
+	-- v2.10 CRYSTAL CANYON TERRAIN (director: no flat purple plate with
+	-- random holes). Warm layered sandstone mesas fill the canyon floor and
+	-- leave DEEP WINDING RAVINES between them: a main ravine from the heart
+	-- to the coast, two branches (west one crosses the chasm on the Storm
+	-- Bridge, east one runs into the caves) and the crystal river crossing.
+	-- Every mesa is a stack of 4-stud strata layers that step inward (ledges
+	-- you can climb), with broken chips on the rims. Big blue crystal
+	-- clusters glow at the ravine bends as landmarks.
+	------------------------------------------------------------------
+	local STRATA = { Color3.fromRGB(150, 86, 64), Color3.fromRGB(196, 122, 82), Color3.fromRGB(214, 152, 104), Color3.fromRGB(176, 104, 74), Color3.fromRGB(228, 182, 132) }
+	local function mainDeg(r: number): number
+		local f = (r - 74) / 182
+		return 240 + 11 * math.sin(f * math.pi * 2 * 1.15 + 0.4)
+	end
+	local function pathPoints(ctrl: { { number } }, step: number): { Vector3 }
+		local pts = {}
+		for k = 1, #ctrl - 1 do
+			local a, b = ctrl[k], ctrl[k + 1]
+			local n = math.max(1, math.floor((b[1] - a[1]) / step))
+			for j = 0, n - 1 do
+				local t = j / n
+				table.insert(pts, A(a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, UP))
+			end
+		end
+		local last = ctrl[#ctrl]
+		table.insert(pts, A(last[1], last[2], UP))
+		return pts
+	end
+	local mainCtrl = {}
+	for r = 74, 256, 6 do
+		table.insert(mainCtrl, { r, mainDeg(r) })
+	end
+	local ravines = {
+		pathPoints(mainCtrl, 2),
+		pathPoints({ { 122, mainDeg(122) }, { 166, 230 }, { 205, 224 }, { 250, 219 } }, 2),
+		pathPoints({ { 140, mainDeg(140) }, { 175, 252 }, { 215, 259 }, { 250, 262 } }, 2),
+	}
+	local RAVINE_HALF = 28
+	local function ravineDist(p: Vector3): number
+		local best = math.huge
+		for _, path in ravines do
+			for _, q in path do
+				local d = (Vector2.new(p.X, p.Z) - Vector2.new(q.X, q.Z)).Magnitude
+				if d < best then
+					best = d
+				end
+			end
+		end
+		return best
+	end
+	local mesaFolder = Instance.new("Folder")
+	mesaFolder.Name = "CanyonMesas"
+	mesaFolder.Parent = continent
+	local mesaCount = 0
+	for r = 78, 254, 7 do
+		local rStuds = R(r)
+		local dStep = math.deg(30 / rStuds)
+		for deg = 211, 269, dStep do
+			local d = deg + rng:NextNumber(-dStep * 0.2, dStep * 0.2)
+			local rr = r + rng:NextNumber(-1.2, 1.2)
+			local w2 = wobble(d % 360, rr)
+			local floorY = canyonTop(rr)
+			local pos = A(rr, d, floorY)
+			local roofZone = w2 >= 256 and rr >= 108 and rr <= 224
+			local nearRiver = rr >= 189 and rr <= 213
+			if habitatAt(d, rr) == "Canyon" and not roofZone and not nearRiver and not inPit(d, rr - 5, rr + 5)
+				and ravineDist(pos) > RAVINE_HALF and isFree(pos, 13) then
+				mesaCount += 1
+				-- taller toward the canyon rims, lower in the middle
+				local edge = math.min(w2 - 210, 270 - w2)
+				local levels = math.clamp(math.floor(2 + (1 - math.clamp(edge / 30, 0, 1)) * 3 + rng:NextNumber(-0.5, 1.5)), 2, 5)
+				local m = Instance.new("Model")
+				m.Name = "Mesa" .. mesaCount
+				local yaw = CFrame.Angles(0, -math.rad(d) + math.rad(rng:NextNumber(-12, 12)), 0)
+				local w, dd = rng:NextNumber(30, 38), rng:NextNumber(30, 40)
+				local off = Vector2.zero
+				for L = 1, levels do
+					local inset = (L - 1) * rng:NextNumber(1.6, 3.2)
+					off += Vector2.new(rng:NextNumber(-1.2, 1.2), rng:NextNumber(-1.2, 1.2))
+					local h = L * 4
+					local cf = CFrame.new(pos.X + off.X, floorY + h / 2, pos.Z + off.Y) * yaw
+					local layer = newPart(m, "Strata" .. L, Vector3.new(math.max(8, w - inset * 2), h, math.max(8, dd - inset * 2)), cf, STRATA[(L + mesaCount) % #STRATA + 1], {})
+					studAll(layer)
+					tag(layer, Z.Canyon)
+				end
+				-- broken rim chips / small ledges sticking out of the top layers
+				for k = 1, rng:NextInteger(1, 3) do
+					local a = rng:NextNumber(0, math.pi * 2)
+					local top = floorY + levels * 4
+					local chip = chunk(m, "Chip" .. k, Vector3.new(rng:NextNumber(3, 6), rng:NextNumber(1.5, 3), rng:NextNumber(3, 5)),
+						Vector3.new(pos.X + math.cos(a) * w * 0.42, top - rng:NextNumber(0, 3), pos.Z + math.sin(a) * dd * 0.42), STRATA[k % #STRATA + 1], 14, true)
+					tag(chip, Z.Canyon)
+				end
+				m.Parent = mesaFolder
+				reserve(pos, 16)
+			end
+		end
+	end
+	-- crystal landmarks at the ravine bends (big glowing blue clusters)
+	local clusterAt = { { 1, 0.18 }, { 1, 0.45 }, { 1, 0.78 }, { 2, 0.55 }, { 2, 0.95 }, { 3, 0.5 }, { 3, 0.9 } }
+	for i, spec in clusterAt do
+		local path = ravines[spec[1]]
+		local q = path[math.clamp(math.floor(#path * spec[2]), 1, #path)]
+		local side = polar(1, rng:NextNumber(0, 360), 0)
+		local _, qr = BiomeMap.Polar(q)
+		local base = Vector3.new(q.X, canyonTop(qr), q.Z) + side * (RAVINE_HALF - 9)
+		local m = Instance.new("Model")
+		m.Name = "CrystalLandmark" .. i
+		for k = 1, 3 do
+			chunk(m, "Frost" .. k, Vector3.new(rng:NextNumber(5, 8), rng:NextNumber(1.5, 2.5), rng:NextNumber(5, 8)), base + Vector3.new(rng:NextNumber(-3, 3), 0.6, rng:NextNumber(-3, 3)), Color3.fromRGB(205, 228, 248), 8)
+		end
+		local main = crystalPrism(m, "Main", base + Vector3.new(0, 1, 0), rng:NextNumber(18, 28), 4, CFrame.Angles(math.rad(rng:NextNumber(-8, 8)), 0, math.rad(rng:NextNumber(-8, 8))), CRYSTAL_BLUES[1])
+		for k = 1, 5 do
+			local a = k * 1.25 + rng:NextNumber(0, 0.4)
+			crystalPrism(m, "Shard" .. k, base + Vector3.new(math.cos(a) * 4, 0.6, math.sin(a) * 4), rng:NextNumber(6, 13), rng:NextNumber(1.6, 2.6),
+				CFrame.Angles(0, -a, math.rad(rng:NextNumber(18, 32))), CRYSTAL_BLUES[k % #CRYSTAL_BLUES + 1])
+		end
+		local light = Instance.new("PointLight")
+		light.Range = 40
+		light.Brightness = 2.2
+		light.Color = Color3.fromRGB(120, 190, 255)
+		light.Parent = main
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Color = ColorSequence.new(Color3.fromRGB(190, 230, 255))
+		sparkle.LightEmission = 1
+		sparkle.Size = NumberSequence.new(0.5, 0)
+		sparkle.Lifetime = NumberRange.new(1, 2)
+		sparkle.Rate = 6
+		sparkle.Speed = NumberRange.new(1, 3)
+		sparkle.SpreadAngle = Vector2.new(180, 180)
+		sparkle.Parent = main
+		m.Parent = decor
+		reserve(base, 10)
+	end
+	print(string.format("[MapCheck] canyon: %d strata mesas, 3 ravines, %d crystal landmarks", mesaCount, #clusterAt))
+
+	------------------------------------------------------------------
 	-- CRYSTAL CANYONS (210-270): crystals, electric river, storm bridge
 	------------------------------------------------------------------
 	local crystalC = { Color3.fromRGB(255, 140, 230), Color3.fromRGB(130, 230, 255), Color3.fromRGB(190, 150, 255) }
@@ -1395,8 +1528,46 @@ function ContinentBuilder.Build(ctx)
 
 	-- PLATEAU: Grand Mesa with ancient ruins on top
 	local mesaC = A(200, 12, UP)
-	for t = 1, 4 do
-		disc(continent, "Mesa" .. t, mesaC, 58 - t * 9, 4, UP + t * 4, Color3.fromRGB(190, 170, 140), Enum.Material.Sandstone, Z.Plateau)
+	-- v2.10 TABLELANDS (director: real flat-topped plateaus, not circles):
+	-- crag kit with a steep escarpment profile, a long stretched outline,
+	-- spurs as branching ridges, rock outcrops + ramps as eroded steps, a
+	-- broad flat grassy top, layered sandstone sides and debris at the foot
+	local SANDS = { Color3.fromRGB(176, 128, 92), Color3.fromRGB(198, 156, 112), Color3.fromRGB(214, 178, 132), Color3.fromRGB(160, 112, 82) }
+	local function tableland(name: string, center: Vector3, radius: number, tiers: number, seed: number, drift: number?)
+		local c = crag(name, center, {
+			Radius = radius, Tiers = tiers, MinR = radius * 0.72, Power = 2.6, Ridge = rng:NextNumber(0, 180), Stretch = rng:NextNumber(1.45, 1.85),
+			Drift = drift or radius * 0.08, DriftDeg = rng:NextNumber(0, 360), Seed = seed,
+			Color = function(t, frac, sat)
+				if t == tiers then
+					return sat and grass:Lerp(Color3.fromRGB(70, 140, 60), 0.3) or grass
+				end
+				return SANDS[(t + (sat and 1 or 0)) % #SANDS + 1]
+			end,
+			Zone = function()
+				return Z.Plateau
+			end,
+		})
+		for k = 1, 4 do
+			local a = k * 1.6 + rng:NextNumber(0, 0.6)
+			local pos = center + polar(radius * rng:NextNumber(1.05, 1.25), math.deg(a), 0)
+			if isFree(pos, 5) then
+				dressRocks(name .. "Debris" .. k, pos, SANDS[k % #SANDS + 1], "Plateau")
+			end
+		end
+		return c
+	end
+	tableland("GrandMesa", mesaC, 58, 4, 51, 0)
+	local tableN = 0
+	for i = 1, 14 do
+		local rad = rng:NextNumber(30, 58)
+		local c = place(habGen(105, 250, 334, 386, "Plateau", UP), rad + 8)
+		if c then
+			tableN += 1
+			tableland("Tableland" .. tableN, c, rad, rng:NextInteger(2, 5), 60 + i)
+		end
+		if tableN >= 8 then
+			break
+		end
 	end
 	for i = 0, 7 do
 		local a = math.rad(i * 45)
@@ -1465,7 +1636,7 @@ function ContinentBuilder.Build(ctx)
 		for k = 0, 8 do
 			local t = k / 8 * math.pi
 			local pos = c + axis * math.cos(t) * 18 + Vector3.new(0, math.sin(t) * 16 + 2, 0)
-			block(continent, `Arch{i}_{k}`, Vector3.new(6, 4, 7), CFrame.lookAt(pos, pos + axis), Color3.fromRGB(165, 120, 140), Enum.Material.Sandstone, Z.Canyon)
+			block(continent, `Arch{i}_{k}`, Vector3.new(6, 4, 7), CFrame.lookAt(pos, pos + axis), Color3.fromRGB(196, 128, 88), Enum.Material.Sandstone, Z.Canyon)
 		end
 	end
 	local spireC = A(130, 220, UP - 12)
@@ -1575,6 +1746,302 @@ function ContinentBuilder.Build(ctx)
 			leaf:SetAttribute("Shelter", true)
 		end
 	end
+
+	------------------------------------------------------------------
+	-- v2.10 OUTER LANDS (the continent grew ~1.45x wider): new mountain
+	-- ranges, volcanic ridges and craters fill the added outer ring.
+	------------------------------------------------------------------
+	local outerSpawns = {}
+	-- two more mountain ranges: chains of 3 peaks whose ridges follow the chain
+	for chain, spec in { { 205, 40, 248, 52 }, { 200, 70, 250, 84 } } do
+		local a, b = A(spec[1], spec[2], UP), A(spec[3], spec[4], UP)
+		for k = 0, 2 do
+			local c = a:Lerp(b, k / 2) + polar(rng:NextNumber(-12, 12), rng:NextNumber(0, 360), 0)
+			local rad = ({ 38, 52, 34 })[k + 1] + rng:NextNumber(-4, 4)
+			if isFree(c, rad) then
+				reserve(c, rad + 6)
+				local tiers = math.floor(rad / 4)
+				local pk = peak(`Range{chain}_{k}`, c, rad, tiers, math.floor(tiers * 0.55), tiers - 1, {
+					Ridge = math.deg(math.atan2(b.Z - a.Z, b.X - a.X)) + rng:NextNumber(-15, 15), DriftDeg = rng:NextNumber(0, 360),
+					Drift = rad * 0.3, Seed = 70 + chain * 5 + k, Stretch = 1.5,
+				})
+				table.insert(outerSpawns, { cragLedge(pk, 3, rng:NextNumber(0, 360)), "Mountains" })
+			end
+		end
+	end
+	-- volcanic ridges: long low broken crags of dark basalt
+	local function ashColor(t, frac, sat)
+		local c = Color3.fromRGB(70, 58, 58):Lerp(Color3.fromRGB(45, 36, 38), frac)
+		return sat and c:Lerp(Color3.fromRGB(110, 60, 40), 0.2) or c
+	end
+	local function volcZone()
+		return Z.Volcanic
+	end
+	for i, spec in { { 215, 280, 300 }, { 232, 322, 30 }, { 160, 276, 60 } } do
+		local c = A(spec[1], spec[2], UP)
+		if isFree(c, 40) then
+			reserve(c, 46)
+			local cr = crag("VolcRidge" .. i, c, { Radius = 40, Tiers = 4, MinR = 10, Power = 1.2, Ridge = spec[3], Stretch = 2.2, Drift = 8, DriftDeg = spec[3] + 90, Seed = 90 + i, Color = ashColor, Zone = volcZone })
+			table.insert(outerSpawns, { cragLedge(cr, 2, spec[3]), "Volcanic" })
+		end
+	end
+	-- two small craters with lava pools and broken rims
+	for i, spec in { { 238, 288 }, { 205, 322 } } do
+		local c = A(spec[1], spec[2], UP)
+		if isFree(c, 34) then
+			reserve(c, 40)
+			local cr = crag("Crater" .. i, c, { Radius = 32, Tiers = 3, MinR = 16, Power = 0.8, Ridge = rng:NextNumber(0, 180), Stretch = 1.25, Drift = 4, DriftDeg = 0, Seed = 95 + i, Color = ashColor, Zone = volcZone })
+			local top = cr.summit
+			lava("CraterLava" .. i, Vector3.new(top.X, UP + 12.1, top.Z), Vector3.new(14, 0.4, 14))
+			for k = 1, 7 do
+				local a = k * 51 + rng:NextNumber(-10, 10)
+				local pos = top + polar(rng:NextNumber(9, 11), a, 0)
+				local h = rng:NextNumber(1.5, 4.5)
+				local rim = newPart(cr.model, "Rim" .. k, Vector3.new(rng:NextNumber(3.5, 5.5), h + 1, 3), CFrame.new(pos.X, UP + 12 + h / 2 - 0.5, pos.Z) * CFrame.Angles(0, -math.rad(a), math.rad(rng:NextNumber(-8, 8))), Color3.fromRGB(38, 30, 32), {})
+				studAll(rim)
+				tag(rim, Z.Volcanic)
+			end
+			table.insert(outerSpawns, { cragLedge(cr, 2, 90), "Volcanic" })
+		end
+	end
+	for _, sp in outerSpawns do
+		if sp[1] then
+			spawnPoint(sp[1], sp[2])
+		end
+	end
+	-- the outer ring needs as much life as the inner one: extra spawns
+	for _, h in { { "Plateau", 333, 387 }, { "Mountains", 33, 87 }, { "Mushroom", 93, 147 }, { "Marsh", 153, 207 }, { "Canyon", 213, 267 }, { "Volcanic", 273, 327 } } do
+		for _ = 1, 8 do
+			local deg, r = rng:NextNumber(h[2], h[3]) % 360, rng:NextNumber(190, 255)
+			if habitatAt(deg, r) == h[1] then
+				spawnPoint(A(r, deg, UP + 3), h[1])
+			end
+		end
+	end
+
+	------------------------------------------------------------------
+	-- v2.10 BIOME TEMPLES (director: a detailed themed temple/arena at the
+	-- far end of every biome, future boss location). Each one:
+	--   stepped octagonal arena floor, a ring of 12 columns (base, octagon
+	--   shaft segments, capital; some broken with rubble), a gate facing the
+	--   continent centre (pylons, lintel, pediment, stairs, fire braziers),
+	--   ruined back walls with crenellations, a raised shrine with a themed
+	--   emblem, banners and themed particles. Map/Temples/<Biome>, with a
+	--   BossSpawn marker (used by the boss) at the arena centre.
+	------------------------------------------------------------------
+	local templesFolder = Instance.new("Folder")
+	templesFolder.Name = "Temples"
+	templesFolder.Parent = ctx.continent.Parent
+	local function tpart(m: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, props: { [string]: any }?): BasePart
+		local p = newPart(m, name, size, cf, color, props or {})
+		if p.Material ~= Enum.Material.Neon then
+			studAll(p)
+		end
+		p.CastShadow = false
+		return p
+	end
+	local function particles(parent: Instance, color: Color3, rate: number, speed: number, accel: Vector3, size: number, glow: number)
+		local e = Instance.new("ParticleEmitter")
+		e.Color = ColorSequence.new(color)
+		e.LightEmission = glow
+		e.Size = NumberSequence.new(size, 0)
+		e.Lifetime = NumberRange.new(2, 4)
+		e.Rate = rate
+		e.Speed = NumberRange.new(speed * 0.5, speed)
+		e.SpreadAngle = Vector2.new(180, 180)
+		e.Acceleration = accel
+		e.Parent = parent
+		return e
+	end
+	local THEMES = {
+		Plateau = { Stone = Color3.fromRGB(218, 206, 178), Trim = Color3.fromRGB(150, 128, 96), Accent = Color3.fromRGB(95, 175, 80), Glow = Color3.fromRGB(255, 220, 120), Fx = Color3.fromRGB(150, 220, 110), Accel = Vector3.new(0, -1, 0) },
+		Mountains = { Stone = Color3.fromRGB(205, 214, 228), Trim = Color3.fromRGB(120, 128, 145), Accent = Color3.fromRGB(110, 175, 255), Glow = Color3.fromRGB(190, 230, 255), Fx = Color3.fromRGB(250, 252, 255), Accel = Vector3.new(0, -3, 0) },
+		Mushroom = { Stone = Color3.fromRGB(178, 156, 196), Trim = Color3.fromRGB(110, 90, 130), Accent = Color3.fromRGB(235, 85, 150), Glow = Color3.fromRGB(190, 255, 210), Fx = Color3.fromRGB(200, 255, 220), Accel = Vector3.new(0, 1, 0) },
+		Marsh = { Stone = Color3.fromRGB(98, 124, 108), Trim = Color3.fromRGB(60, 80, 70), Accent = Color3.fromRGB(80, 200, 220), Glow = Color3.fromRGB(150, 240, 255), Fx = Color3.fromRGB(170, 240, 255), Accel = Vector3.new(0, 2, 0) },
+		Canyon = { Stone = Color3.fromRGB(205, 140, 98), Trim = Color3.fromRGB(150, 86, 64), Accent = Color3.fromRGB(80, 160, 255), Glow = Color3.fromRGB(140, 200, 255), Fx = Color3.fromRGB(190, 230, 255), Accel = Vector3.new(0, 1, 0) },
+		Volcanic = { Stone = Color3.fromRGB(62, 50, 52), Trim = Color3.fromRGB(35, 28, 30), Accent = Color3.fromRGB(255, 110, 40), Glow = Color3.fromRGB(255, 150, 60), Fx = Color3.fromRGB(255, 170, 70), Accel = Vector3.new(0, 4, 0) },
+		Coast = { Stone = Color3.fromRGB(238, 228, 205), Trim = Color3.fromRGB(150, 175, 185), Accent = Color3.fromRGB(70, 175, 230), Glow = Color3.fromRGB(160, 230, 255), Fx = Color3.fromRGB(220, 245, 255), Accel = Vector3.new(0, 2, 0) },
+	}
+	-- themed emblem above the shrine
+	local function emblem(m: Instance, biome: string, at: CFrame, th)
+		local glow = { Material = Enum.Material.Neon, CanCollide = false }
+		if biome == "Plateau" then -- sun disc with rays
+			tpart(m, "SunDisc", Vector3.new(1, 7, 7), at * CFrame.Angles(0, math.rad(90), 0), th.Glow, { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, CanCollide = false })
+			for k = 0, 7 do
+				tpart(m, "Ray" .. k, Vector3.new(0.8, 3, 0.6), at * CFrame.Angles(0, 0, k * math.pi / 4) * CFrame.new(0, 5.4, 0), th.Glow, glow)
+			end
+		elseif biome == "Mountains" then -- snowflake
+			for k = 0, 2 do
+				tpart(m, "Arm" .. k, Vector3.new(0.8, 10, 0.6), at * CFrame.Angles(0, 0, k * math.pi / 3), th.Glow, glow)
+				for sgn = -1, 1, 2 do
+					tpart(m, "Twig" .. k .. sgn, Vector3.new(0.5, 2.4, 0.5), at * CFrame.Angles(0, 0, k * math.pi / 3) * CFrame.new(0, sgn * 3.2, 0) * CFrame.Angles(0, 0, math.rad(40)), th.Glow, glow)
+					tpart(m, "Twag" .. k .. sgn, Vector3.new(0.5, 2.4, 0.5), at * CFrame.Angles(0, 0, k * math.pi / 3) * CFrame.new(0, sgn * 3.2, 0) * CFrame.Angles(0, 0, math.rad(-40)), th.Glow, glow)
+				end
+			end
+		elseif biome == "Mushroom" then -- glowing mushroom
+			tpart(m, "Stem", Vector3.new(1.6, 5, 1.6), at * CFrame.new(0, -1.5, 0), Color3.fromRGB(245, 235, 215), { CanCollide = false })
+			tpart(m, "Cap", Vector3.new(1.6, 8, 8), at * CFrame.new(0, 1.6, 0) * CFrame.Angles(0, 0, math.pi / 2), th.Accent, { Shape = Enum.PartType.Cylinder, CanCollide = false })
+			tpart(m, "CapTop", Vector3.new(1.2, 5, 5), at * CFrame.new(0, 2.8, 0) * CFrame.Angles(0, 0, math.pi / 2), th.Accent:Lerp(Color3.new(1, 1, 1), 0.15), { Shape = Enum.PartType.Cylinder, CanCollide = false })
+			for k = 1, 5 do
+				local a = k * 1.25
+				tpart(m, "Spot" .. k, Vector3.new(0.4, 1, 1), at * CFrame.new(math.cos(a) * 2.6, 3.2, math.sin(a) * 2.6), th.Glow, glow)
+			end
+		elseif biome == "Marsh" then -- lightning bolt
+			local pts = { Vector3.new(-1, 5, 0), Vector3.new(1.5, 1.5, 0), Vector3.new(-1.2, 0.5, 0), Vector3.new(1.2, -4.5, 0) }
+			for k = 1, #pts - 1 do
+				local a, b = at * pts[k], at * pts[k + 1]
+				tpart(m, "Bolt" .. k, Vector3.new(1.1, 1.1, (b - a).Magnitude + 0.8), CFrame.lookAt((a + b) / 2, b), th.Glow, glow)
+			end
+		elseif biome == "Canyon" then -- crystal cluster
+			local base = (at * CFrame.new(0, -4, 0)).Position
+			crystalPrism(m, "EmblemMain", base, 12, 2.6, CFrame.new(), CRYSTAL_BLUES[1])
+			for k = 1, 4 do
+				crystalPrism(m, "EmblemShard" .. k, base + Vector3.new(math.cos(k * 1.57) * 2, 0, math.sin(k * 1.57) * 2), 6, 1.4, CFrame.Angles(0, -k * 1.57, math.rad(25)), CRYSTAL_BLUES[k % #CRYSTAL_BLUES + 1])
+			end
+		elseif biome == "Volcanic" then -- flame
+			for k = 0, 3 do
+				tpart(m, "Flame" .. k, Vector3.new(4 - k * 0.8, 3, 4 - k * 0.8), at * CFrame.new(0, -3 + k * 2.4, 0) * CFrame.Angles(0, k * 0.6, 0), th.Glow:Lerp(Color3.fromRGB(255, 240, 160), k / 4), glow)
+			end
+			local f = Instance.new("Fire")
+			f.Size = 10
+			f.Parent = m:FindFirstChild("Flame0")
+		else -- Coast: wave / shell arc
+			for k = 0, 8 do
+				local t = k / 8 * math.pi
+				tpart(m, "Wave" .. k, Vector3.new(1.2, 1.2, 2.4), at * CFrame.new(math.cos(t) * 4.5, math.sin(t) * 4.5 - 1.5, 0) * CFrame.Angles(0, 0, t), k % 2 == 0 and th.Glow or th.Accent, glow)
+			end
+		end
+	end
+	local function temple(biome: string, rAuth: number, deg: number, groundY: number)
+		local th = THEMES[biome]
+		local m = Instance.new("Model")
+		m.Name = biome
+		local c = A(rAuth, deg, groundY)
+		local inward = Vector3.new(-c.X, 0, -c.Z).Unit
+		local base = CFrame.lookAt(Vector3.new(c.X, groundY, c.Z), Vector3.new(c.X, groundY, c.Z) + inward) -- -Z (look) faces the continent centre
+		local floorY = 3
+		-- stepped base: three octagonal steps (two crossed squares each)
+		for step = 1, 3 do
+			local w = 84 - step * 8
+			for x = 0, 1 do
+				tpart(m, "Step" .. step .. "_" .. x, Vector3.new(w, step == 3 and floorY or 1, w), base * CFrame.new(0, (step - 1) + (step == 3 and floorY / 2 - 1 or 0.5), 0) * CFrame.Angles(0, x * math.pi / 4, 0),
+					step == 3 and th.Stone or th.Trim:Lerp(th.Stone, step / 3))
+			end
+		end
+		-- inlaid floor ring and centre seal
+		for k = 0, 15 do
+			local a = k / 16 * math.pi * 2
+			tpart(m, "Inlay" .. k, Vector3.new(6, 0.2, 2), base * CFrame.new(math.cos(a) * 22, floorY + 1.1, math.sin(a) * 22) * CFrame.Angles(0, -a + math.pi / 2, 0), k % 2 == 0 and th.Accent or th.Trim)
+		end
+		tpart(m, "Seal", Vector3.new(0.3, 14, 14), base * CFrame.new(0, floorY + 1.1, 0) * CFrame.Angles(0, 0, math.pi / 2), th.Accent, { Shape = Enum.PartType.Cylinder, CanCollide = false })
+		-- column ring (gap at the gate side)
+		for k = 0, 11 do
+			local a = k / 12 * math.pi * 2 + math.pi / 12
+			local local2 = Vector3.new(math.sin(a) * 27, 0, -math.cos(a) * 27)
+			if math.abs(math.deg(a) % 360 - 0) > 20 and math.abs(math.deg(a) % 360 - 360) > 20 then
+				local broken = rng:NextNumber() < 0.25
+				local h = broken and rng:NextNumber(5, 10) or 18
+				local cf = base * CFrame.new(local2 + Vector3.new(0, floorY + 1, 0))
+				tpart(m, "ColBase" .. k, Vector3.new(4.4, 1.6, 4.4), cf * CFrame.new(0, 0.8, 0), th.Trim)
+				for seg = 0, math.floor(h / 4.5) - 1 do
+					for x = 0, 1 do
+						tpart(m, "Col" .. k .. "_" .. seg .. "_" .. x, Vector3.new(3, 4.5, 3), cf * CFrame.new(0, 1.6 + seg * 4.5 + 2.25, 0) * CFrame.Angles(0, x * math.pi / 4 + seg * 0.08, 0), th.Stone)
+					end
+				end
+				if broken then
+					for r2 = 1, 3 do
+						chunk(m, "Rubble" .. k .. "_" .. r2, Vector3.new(2.4, 1.6, 2.4), (cf * CFrame.new(rng:NextNumber(-4, 4), 0.8, rng:NextNumber(-4, 4))).Position, th.Stone, 25)
+					end
+				else
+					tpart(m, "Capital" .. k, Vector3.new(5, 1.4, 5), cf * CFrame.new(0, 1.6 + h + 0.7, 0), th.Trim)
+					tpart(m, "CapTop" .. k, Vector3.new(4, 0.8, 4), cf * CFrame.new(0, 1.6 + h + 1.8, 0) * CFrame.Angles(0, math.pi / 4, 0), th.Accent)
+				end
+			end
+		end
+		-- ruined back walls with crenellations between the rear columns
+		for k = -2, 2 do
+			local a = math.pi + k * math.pi / 6
+			local pos = Vector3.new(math.sin(a) * 30.5, 0, -math.cos(a) * 30.5)
+			local h = rng:NextNumber(6, 12)
+			local wcf = base * CFrame.new(pos + Vector3.new(0, floorY + 1 + h / 2, 0)) * CFrame.Angles(0, -a, 0)
+			tpart(m, "Wall" .. k, Vector3.new(14, h, 2.4), wcf, th.Stone:Lerp(th.Trim, 0.25))
+			for q = -1, 1 do
+				if rng:NextNumber() < 0.75 then
+					tpart(m, "Merlon" .. k .. "_" .. q, Vector3.new(2.6, 2, 2.6), wcf * CFrame.new(q * 4.6, h / 2 + 1, 0), th.Stone)
+				end
+			end
+			tpart(m, "Banner" .. k, Vector3.new(4, h * 0.7, 0.3), wcf * CFrame.new(0, -h * 0.05, -1.4), th.Accent, { CanCollide = false })
+		end
+		-- shrine dais at the back with the emblem
+		local shrine = base * CFrame.new(0, floorY + 1, 20)
+		tpart(m, "Dais1", Vector3.new(16, 2, 10), shrine * CFrame.new(0, 1, 0), th.Trim)
+		tpart(m, "Dais2", Vector3.new(11, 2, 7), shrine * CFrame.new(0, 3, 0.5), th.Stone)
+		tpart(m, "Altar", Vector3.new(6, 3, 3.4), shrine * CFrame.new(0, 5.5, 1), th.Stone:Lerp(th.Accent, 0.2))
+		emblem(m, biome, shrine * CFrame.new(0, 14, 1) * CFrame.Angles(0, math.pi, 0), th)
+		local fxPart = tpart(m, "Aura", Vector3.new(30, 1, 30), base * CFrame.new(0, floorY + 3, 0), th.Glow, MARKER)
+		particles(fxPart, th.Fx, 14, 3, th.Accel, 0.5, 0.6)
+		local aura = Instance.new("PointLight")
+		aura.Range = 50
+		aura.Brightness = 1.6
+		aura.Color = th.Glow
+		aura.Parent = m:FindFirstChild("Altar")
+		-- gate: pylons, lintel, pediment, stairs, braziers
+		local gate = base * CFrame.new(0, 0, -38)
+		for sgn = -1, 1, 2 do
+			local py = gate * CFrame.new(sgn * 9, 0, 0)
+			tpart(m, "Pylon" .. sgn, Vector3.new(5, 22, 5), py * CFrame.new(0, 12, 0), th.Stone)
+			tpart(m, "PylonBand" .. sgn, Vector3.new(5.6, 1.2, 5.6), py * CFrame.new(0, 9, 0), th.Accent)
+			tpart(m, "PylonTop" .. sgn, Vector3.new(6.4, 2, 6.4), py * CFrame.new(0, 24, 0), th.Trim)
+			-- brazier with fire / glow
+			local br = gate * CFrame.new(sgn * 16, 0, -6)
+			tpart(m, "BrazierLeg" .. sgn, Vector3.new(1.4, 5, 1.4), br * CFrame.new(0, 2.5, 0), th.Trim)
+			local bowl = tpart(m, "Brazier" .. sgn, Vector3.new(4, 1.6, 4), br * CFrame.new(0, 5.6, 0), th.Trim)
+			local flame = tpart(m, "BrazierGlow" .. sgn, Vector3.new(2.6, 1, 2.6), br * CFrame.new(0, 6.6, 0), th.Glow, { Material = Enum.Material.Neon, CanCollide = false })
+			local fire = Instance.new("Fire")
+			fire.Size = 6
+			fire.Color = th.Glow
+			fire.SecondaryColor = th.Accent
+			fire.Parent = flame
+			local l = Instance.new("PointLight")
+			l.Range = 22
+			l.Color = th.Glow
+			l.Parent = bowl
+		end
+		tpart(m, "Lintel", Vector3.new(24, 3, 6), gate * CFrame.new(0, 25, 0), th.Stone)
+		for sgn = -1, 1, 2 do
+			local w = Instance.new("WedgePart")
+			w.Name = "Pediment" .. sgn
+			w.Anchored = true
+			w.Size = Vector3.new(6, 5, 12)
+			w.CFrame = gate * CFrame.new(sgn * 6, 29, 0) * CFrame.Angles(0, sgn > 0 and math.rad(-90) or math.rad(90), 0)
+			w.Color = th.Trim
+			studAll(w)
+			w.Parent = m
+		end
+		tpart(m, "Keystone", Vector3.new(3, 3, 6.4), gate * CFrame.new(0, 25, 0), th.Accent)
+		-- accent path tiles leading through the gate to the seal
+		for k = 0, 5 do
+			tpart(m, "Path" .. k, Vector3.new(6, 0.2, 3), base * CFrame.new(0, (k < 1 and 1 or 4) + 0.1, -36 + k * 5), k % 2 == 0 and th.Accent or th.Trim, { CanCollide = false })
+		end
+		local spawn = newPart(m, "BossSpawn", Vector3.new(2, 1, 2), base * CFrame.new(0, floorY + 4, 4), Color3.new(1, 0, 0), MARKER)
+		spawn:SetAttribute("Biome", biome)
+		for _, d in m:GetDescendants() do
+			if d:IsA("BasePart") and d.Transparency < 1 then
+				tag(d, Z[biome] or Z.Coast)
+			end
+		end
+		m:SetAttribute("Biome", biome)
+		m.Parent = templesFolder
+		return m
+	end
+	temple("Plateau", 248, 0, UP)
+	temple("Mountains", 250, 62, UP)
+	temple("Mushroom", 248, 120, UP)
+	temple("Marsh", 252, 180, UP - 3)
+	temple("Canyon", 252, 240, canyonTop(252))
+	temple("Volcanic", 252, 300, UP)
+	temple("Coast", 281, 210, UP - 0.5)
+	print("[MapCheck] temples: " .. #templesFolder:GetChildren())
 
 	------------------------------------------------------------------
 	-- HABITAT TRANSITIONS: a few mossy boulders / shrubs along borders
@@ -1697,16 +2164,47 @@ function ContinentBuilder.Build(ctx)
 		model.Parent = underClouds
 	end
 	local masses = 0
-	for gx = -800, 800, 92 do
-		for gz = -800, 800, 92 do
+	-- v2.10 (bigger continent): grid covers the whole new footprint
+	for gx = -1300, 1300, 100 do
+		for gz = -1300, 1300, 100 do
 			local c = Vector3.new(gx + rng:NextNumber(-14, 14), UP - 44 + rng:NextNumber(-5, 3), gz + rng:NextNumber(-14, 14))
 			local r = Vector2.new(c.X, c.Z).Magnitude
 			local deg = math.deg(math.atan2(c.Z, c.X)) % 360
 			if r > 34 + 50 and r < edgeAt(deg) * 1.04 then
 				masses += 1
-				hangingMass("CloudMass" .. masses, c, rng:NextNumber(108, 138))
+				hangingMass("CloudMass" .. masses, c, rng:NextNumber(120, 150))
 			end
 		end
+	end
+	-- v2.10 director: the plate must never show from below. Second, lower
+	-- CLOUD DECK of wide flattened lobes (overlapping on a 130 grid, offset
+	-- from the canopy grid) closes every gap between the hanging masses, and
+	-- a SKIRT of masses around the shoreline hides the plate's side faces
+	-- from low, far camera angles. Together they read as one thick layer.
+	local deck = Instance.new("Folder")
+	deck.Name = "CloudDeck"
+	deck.Parent = underClouds
+	local deckN = 0
+	for gx = -1300 + 65, 1300, 130 do
+		for gz = -1300 + 65, 1300, 130 do
+			local c = Vector3.new(gx + rng:NextNumber(-12, 12), UP - 78 + rng:NextNumber(-4, 4), gz + rng:NextNumber(-12, 12))
+			local r = Vector2.new(c.X, c.Z).Magnitude
+			local deg = math.deg(math.atan2(c.Z, c.X)) % 360
+			if r > 34 + 60 and r < edgeAt(deg) * 1.02 then
+				deckN += 1
+				local w = rng:NextNumber(190, 230)
+				local yaw = CFrame.new(c) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+				lobe(deck, "Deck" .. deckN, Vector3.new(w, w * 0.2, w * 0.85), yaw, Color3.fromRGB(222, 228, 242), 0.08)
+				lobe(deck, "DeckBulge" .. deckN, Vector3.new(w * 0.45, w * 0.16, w * 0.4), yaw * CFrame.new(rng:NextNumber(-0.2, 0.2) * w, -w * 0.07, rng:NextNumber(-0.2, 0.2) * w),
+					Color3.fromRGB(210, 218, 236), 0.08)
+			end
+		end
+	end
+	for i = 0, 89 do
+		local deg = i * 4 + rng:NextNumber(-1, 1)
+		local w = rng:NextNumber(95, 120)
+		local c = polar(edgeAt(deg) * 1.02, deg, UP - 32)
+		lobe(deck, "Skirt" .. i, Vector3.new(w, w * 0.42, w * 0.6), CFrame.lookAt(c, c + polar(1, deg + 90, 0)), Color3.fromRGB(236, 240, 250), 0.06)
 	end
 	-- small masses ringing the updraft hole (kept 34 studs clear of its axis)
 	for i = 0, 7 do
@@ -1740,7 +2238,7 @@ function ContinentBuilder.Build(ctx)
 	end
 
 	-- QA marker: centre of the canyon pit used by the QA "Death test"
-	local pitMarker = newPart(decor, "PitMarker", Vector3.one, CFrame.new(A(198, 250, UP + 5)), Color3.new(1, 0, 0), MARKER)
+	local pitMarker = newPart(decor, "PitMarker", Vector3.one, CFrame.new(A(166, 227.5, UP + 5)), Color3.new(1, 0, 0), MARKER)
 	pitMarker:SetAttribute("QaPit", true)
 
 	------------------------------------------------------------------
@@ -1757,13 +2255,13 @@ function ContinentBuilder.Build(ctx)
 			end
 		end
 	end
-	scatter(12, 4, habGen(90, 250, 333, 387, "Plateau", UP), function(i, p) dressFlowers("Flowers" .. i, p) end)
-	scatter(6, 6, habGen(90, 250, 333, 387, "Plateau", UP), function(i, p) dressRocks("MeadowRocks" .. i, p, Color3.fromRGB(165, 160, 150), "Plateau") end)
-	scatter(18, 6, habGen(80, 255, 33, 87, "Mountains", UP), function(i, p) dressPine("Pine" .. i, p) end)
-	scatter(10, 7, habGen(80, 255, 33, 87, "Mountains", UP), function(i, p) dressRocks("MountainRocks" .. i, p, Color3.fromRGB(150, 148, 150), "Mountains") end)
-	scatter(14, 6, habGen(85, 250, 93, 147, "Mushroom", UP), function(i, p) dressGrove("Grove" .. i, p) end)
-	scatter(16, 4, habGen(80, 255, 153, 207, "Marsh", UP - 3), function(i, p) dressReeds("Reeds" .. i, p) end)
-	scatter(6, 6, habGen(80, 255, 153, 207, "Marsh", UP - 3), function(i, p) dressLog("Log" .. i, p) end)
+	scatter(20, 4, habGen(90, 250, 333, 387, "Plateau", UP), function(i, p) dressFlowers("Flowers" .. i, p) end)
+	scatter(10, 6, habGen(90, 250, 333, 387, "Plateau", UP), function(i, p) dressRocks("MeadowRocks" .. i, p, Color3.fromRGB(165, 160, 150), "Plateau") end)
+	scatter(30, 6, habGen(80, 255, 33, 87, "Mountains", UP), function(i, p) dressPine("Pine" .. i, p) end)
+	scatter(16, 7, habGen(80, 255, 33, 87, "Mountains", UP), function(i, p) dressRocks("MountainRocks" .. i, p, Color3.fromRGB(150, 148, 150), "Mountains") end)
+	scatter(22, 6, habGen(85, 250, 93, 147, "Mushroom", UP), function(i, p) dressGrove("Grove" .. i, p) end)
+	scatter(26, 4, habGen(80, 255, 153, 207, "Marsh", UP - 3), function(i, p) dressReeds("Reeds" .. i, p) end)
+	scatter(10, 6, habGen(80, 255, 153, 207, "Marsh", UP - 3), function(i, p) dressLog("Log" .. i, p) end)
 	scatter(14, 4, function()
 		local deg, r = rng:NextNumber(214, 266), rng:NextNumber(112, 218)
 		if inPit(deg, r - 6, r + 6) or habitatAt(deg, r) ~= "Canyon" then
@@ -1771,12 +2269,12 @@ function ContinentBuilder.Build(ctx)
 		end
 		return A(r, deg, UP - 12)
 	end, function(i, p) dressCrystals("CrystalGroup" .. i, p) end)
-	scatter(10, 5, habGen(85, 255, 273, 327, "Volcanic", UP), function(i, p) dressBasalt("Basalt" .. i, p) end)
-	scatter(6, 6, habGen(85, 255, 273, 327, "Volcanic", UP), function(i, p) dressRocks("AshRocks" .. i, p, Color3.fromRGB(70, 60, 60), "Volcanic") end)
-	scatter(12, 4, function()
+	scatter(16, 5, habGen(85, 255, 273, 327, "Volcanic", UP), function(i, p) dressBasalt("Basalt" .. i, p) end)
+	scatter(10, 6, habGen(85, 255, 273, 327, "Volcanic", UP), function(i, p) dressRocks("AshRocks" .. i, p, Color3.fromRGB(70, 60, 60), "Volcanic") end)
+	scatter(20, 4, function()
 		return A(rng:NextNumber(266, 296), rng:NextNumber(0, 360), UP - 0.5)
 	end, function(i, p) dressBeach("Beach" .. i, p) end)
-	scatter(10, 6, function()
+	scatter(16, 6, function()
 		return A(rng:NextNumber(268, 298), rng:NextNumber(0, 360), UP - 0.5)
 	end, function(i, p) dressRocks("ShoreRocks" .. i, p, Color3.fromRGB(175, 165, 150), "Coast") end)
 	-- foothills: boulder clusters around the base of every peak

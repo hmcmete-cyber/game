@@ -264,7 +264,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.9"
+local MAP_VERSION = "2.10"
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
 -- v2.2 CLASSIC STUDDED STYLE PASS over the whole generated map: every solid
@@ -526,8 +526,8 @@ local function buildPlaceholder(): Instance
 		mesh.Parent = p
 	end
 	local i = 0
-	for gx = -1040, 1040, 160 do
-		for gz = -1040, 1040, 160 do
+	for gx = -1360, 1360, 160 do
+		for gz = -1360, 1360, 160 do
 			local c = Vector3.new(gx + rng:NextNumber(-25, 25), DEATH + rng:NextNumber(4, 10), gz + rng:NextNumber(-25, 25))
 			local rr = Vector2.new(c.X, c.Z).Magnitude
 			local clear = true
@@ -578,10 +578,10 @@ local function buildPlaceholder(): Instance
 	-- Decorative floating islands (outside everything)
 	------------------------------------------------------------------
 	local islandSpots = {
-		-- hub-level islands stay below the continent's keel (Y ~96); sky islands sit beyond its coast (r > 820)
+		-- hub-level islands stay below the continent's keel (Y ~96); sky islands sit beyond its coast (v2.10: r > 1300)
 		{ Vector3.new(-260, Y + 22, 120), 28 }, { Vector3.new(270, Y + 25, -80), 32 },
-		{ Vector3.new(-760, UP - 20, -480), 26 }, { Vector3.new(700, UP + 30, 640), 30 },
-		{ Vector3.new(120, UP + 70, -900), 24 }, { Vector3.new(-120, Y - 5, 260), 26 },
+		{ Vector3.new(-1150, UP - 20, -720), 26 }, { Vector3.new(1040, UP + 30, 950), 30 },
+		{ Vector3.new(180, UP + 70, -1340), 24 }, { Vector3.new(-120, Y - 5, 260), 26 },
 	}
 	for i, spot in islandSpots do
 		local pos, size = spot[1], spot[2]

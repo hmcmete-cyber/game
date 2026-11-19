@@ -1507,3 +1507,47 @@ Status: done in code / untested.
   - The speed stays after the tool is unequipped, until it is cycled back to x1.
 - **Implementation:** the server sets the player attribute `QaSpeed`, and client `Movement` applies it.
 - **To remove:** delete `QaWeaponService.luau`, its line in `main.server.luau`, and the QaSpeed block in `client/Movement.luau`.
+
+
+### [2026-11-19 22:10 Istanbul] Director → Claude — unique deaths, boss eggs, pet homes/incubators, 50+ pets, cloud redesign
+Status: request
+
+Please plan and implement this as a coherent progression update. The director requests unique visual death sequences for every monster, with especially dramatic boss deaths; bosses drop blocky eggs that hatch into combat pets; and every cloud type must have a distinct silhouette readable from a distance. New screenshots are in the director's chat and are not embedded here, so use the written observations below.
+
+**1) Distinct monster and boss deaths**
+- Every normal monster species needs its own recognizable death sequence/effect keyed to its identity. The current shared/common death simulation feels identical across the roster.
+- Boss deaths should be an extra-cinematic version with multiple readable beats (stagger/charge collapse → species-specific defeat moment → particles/reward reveal), not just a larger copy of the normal death effect.
+- Keep the death readable and child-friendly; make each creature's silhouette/element drive the animation and VFX. Do not reuse one generic dissolve/explosion for all species.
+- Increase boss model detail and boss particle/VFX count substantially; the director explicitly approves a high spectacle level and says particle count may be raised freely. Caldera Titan's current silhouette is too similar to a monster from the same biome: change its body plan, proportions and signature visual motif so it reads as a unique boss immediately.
+
+**2) Boss eggs and hatch sequence**
+- Boss defeat drops a clearly blocky, studded egg, themed to that boss/biome. It is a visible reward pickup and enters an egg collection/hatching flow.
+- Each boss/biome egg should have a recognizable theme and tier identity; keep the classic blocky Roblox/studded style requested for the game.
+- Pet outcome is rolled via RNG. The egg should visibly grow/charge as the reveal escalates according to the rolled pet's rarity/power; then perform a satisfying hatch reveal with a distinct pet entrance, sound/VFX/particles. For the top rarest tier, send a server-wide announcement identifying the hatch/player/pet.
+- Build the incubator timer as **100 minutes** for now, with a visible countdown and saved remaining/ready time so leaving and rejoining does not reset it. One item for the director's `Cubickzz` account should instant-open an egg for testing. Keep this instant-open item allowlisted to Cubickzz/QA; do not give it to all players or expose it as a public devproduct.
+
+**3) Pet homes at each base**
+- Beside every base, use one of the added square side-plots for a small, charming cloud hut/pet house. It should be an inviting, detailed blocky cloud-shaped cottage where that player's pets visibly stay/idle. Give each hut a stable English name/path for code.
+- Put a separate egg nursery/incubator hut on the square plot directly opposite the pet hut. The incubator should be readable from outside, with an egg inside and an obvious timer/ready state. Keep walkway/base function, vaults and code-required paths clear.
+
+**4) At least 50 distinct pets**
+- Build a roster of **50 or more genuinely distinct pets**, not color variants: each needs its own name, multi-part blocky silhouette/design, rarity, a specific useful buff, and a combat assist/attack that helps the player fight enemies.
+- Organize the roster across biome/boss egg pools (for example 7 biomes × 7–8 pets). Make the design immediately thematic and visibly different pet to pet. Stronger rarities may be stronger, but use sensible stacking limits so a full team does not trivialize every encounter.
+- Communicate the full roster/table (name, biome/egg, rarity, design hook, passive buff, combat move) and the chosen active-pet/equip limit before building every asset, so the director can review the scope. Do not implement 50 identical helpers with only changed names/colors.
+
+**5) Buff enemy strength**
+Normal monsters are too weak. Raise their survivability/threat and make attack behavior more meaningful; bosses should be a clear step up. Keep readable telegraphs and recovery windows so stronger enemies feel exciting/fair. Do not rely only on giant HP bars.
+
+**6) Fix the two pictured map issues**
+- Screenshot 1: remove the conspicuous large blue puffy cloud/cluster beside the mountain; it looks misplaced/clips into the terrain.
+- Screenshot 2: replace the very long, straight, striped/banded feature in Crystal Canyon. A cliff or ravine is fine, but shape it as natural continuous canyon walls/ledge/crevasse geometry; the current ruler-straight strip looks artificial and out of place.
+
+**7) Differentiate all clouds**
+All cloud forms are currently too similar and indistinguishable at distance. Give each cloud type a unique silhouette plus a signature feature that matches its name/element: e.g. face/expression, horns, frost fringe, lightning core, raindrop belly, tornado tail, halo/arc, etc. Use varied lobe sizes, proportions, orientation, and restrained effects. Avoid simply adding the same face/hat/horns to every cloud or changing only its color. Show a common, storm and rare example from player height and far away for director review.
+
+Please preserve the agreed classic Roblox studded/blocky language, stable English object paths, and all existing routes/spawn/collision contracts. After implementation, test a normal monster death, at least one boss death/drop/hatch, 100-minute timer persistence, Cubickzz instant-open, a pet following/attacking, and all new cloud silhouettes. Send COMMS screenshots and exact F9/Output lines before marking this complete.
+
+OBJECTS: Report stable paths for every base's PetHut and IncubatorHut, egg pickups/incubators, and pet roster/storage.
+ANIMATIONS: Report any new monster/boss death clips and Roblox animation IDs if assets are published.
+ERRORS: None reported by the director in this message.
+NOTES: Screenshots are in the director's ChatGPT message only; textual observations are transcribed above. Pet roster and cloud examples should be surfaced for director review before full production.

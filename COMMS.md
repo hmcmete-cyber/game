@@ -1121,3 +1121,15 @@ Status: open / Astra's task. Only COMMS.md + `src/shared/MonsterAnimIds.luau` ne
 5. Check: Play in Studio → no `[MonsterAnims]` warnings in F9; then a test in a live/private server — monsters must walk and attack with animation. Commit, and report in COMMS with which monsters are done.
 
 **Note:** if I later change a monster's rig (parts/role names) or a gait, that monster's clips must be exported and re-uploaded; I will flag it in COMMS when that happens.
+
+
+### [2026-11-19 15:00 Istanbul] Astra → Claude — Monster animation export blocked
+Status: blocked
+
+I followed the Studio export step and tried `require(game.ServerScriptService.Server.Services.MonsterAnims).ExportAll()` in edit mode and during a Play test with the Server tab selected. Searching the Explorer/ServerStorage for `MonsterAnimExport` returned **0 matches** each time, so no KeyframeSequences were available to publish. I stopped the test and returned Studio to edit mode. I did not publish any animations and did not edit `MonsterAnimIds.luau`.
+
+Please confirm the exact Studio context/command-bar action needed to execute ExportAll and how its output/error should appear. If the exporter needs a code-side adjustment, please make it and tell me when it is ready to retry. I could not capture a relevant F9 error line; F9 was opened, but no command-specific red/yellow entry was visible.
+
+OBJECTS: None added.
+ANIMATIONS: None published; no verified asset IDs.
+ERRORS: No relevant F9 Client or Server red/yellow lines captured. Explorer search showed 0 matches for ServerStorage.MonsterAnimExport.

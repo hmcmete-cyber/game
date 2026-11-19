@@ -1932,3 +1932,36 @@ Status: done in code / needs Studio + multiplayer QA from you (I cannot run Stud
 8. Carrying a cloud: buffs off and slow; using a speed tool while carrying makes you lose the cloud.
 9. Orb: a stolen cloud is refused; an own cloud unlocks the matching entry; the unlock survives rejoin; buying works after unlocking.
 10. FPS.
+
+### [2026-11-19 Istanbul] Claude → Astra — HOW TO PUBLISH THE MONSTER ANIMATIONS (updated, step by step)
+Status: Astra's task (director asked). Nothing in code needs to change; only `src/shared/MonsterAnimIds.luau` gets the ids.
+
+**What:** 28 monsters (21 regular + 7 bosses) × 6 clips (Idle, Walk, Ability1, Ability2, Hit, Death) = **168 KeyframeSequences**. Until they have published ids, monsters only animate in Studio.
+
+**Steps:**
+1. **Sync:** Studio is synced by Rojo to the latest `ccr-5b580860-g7jv2e`. Check that `ServerScriptService > Server > Services > MonsterAnims` exists.
+2. **Edit mode:** stay in **EDIT mode** (do NOT press Play). Open **View → Output** and **View → Command Bar**.
+3. **Export:** paste into the Command Bar and press Enter:
+   `require(game.ServerScriptService.Server.Services.MonsterAnims).ExportAll()`
+4. **Check the output:** the **Output** window (not F9) must end with
+   `[MonsterAnims] exported 28 monster(s), 168 KeyframeSequences in ServerStorage.MonsterAnimExport; failed: none`
+   If a line says `<Name> FAILED: ...`, copy it to COMMS.
+   To export a single monster: `...ExportAll("CalderaTitan")`.
+5. **Save each clip:** in Explorer open **ServerStorage → MonsterAnimExport**. Each child is named `<Monster>_<Clip>` (e.g. `Prismaw_Walk`). For each: right-click → **Save to Roblox** → upload as an Animation owned by the **same user/group that owns the game** (otherwise it will not load in the game). Keep the name.
+6. **Copy the id:** copy the asset id Roblox gives for each one.
+7. **Fill the id file:** fill `src/shared/MonsterAnimIds.luau` (keep the header comment):
+   ```lua
+   return {
+   	Prismaw_Idle = "rbxassetid://111111",
+   	Prismaw_Walk = "rbxassetid://222222",
+   	-- ... one line per clip, key = exactly the KeyframeSequence name
+   }
+   ```
+   You can do it monster by monster; missing keys fall back to the Studio-only clip.
+8. **Commit and push.**
+9. **Test:** in Studio Play, Output shows `[Monsters] <Name>: 6/6 animation tracks loaded` with no `[MonsterAnims]` warnings. Then in a **private/live server**, monsters must walk and attack with animation.
+
+**Notes:**
+- **Caldera Titan** was rebuilt (v2.12, gait Plod). Export and upload its 6 clips AFTER pulling the latest code. Any id you uploaded for it before is wrong now.
+- **When a rig changes again:** if I change a monster's rig again, I will flag it here, and only that monster's 6 clips need re-uploading.
+- **Report:** post in COMMS which monsters are done, any `FAILED` / red Output lines, and whether the live-server test animates.

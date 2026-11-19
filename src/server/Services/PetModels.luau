@@ -406,8 +406,20 @@ function PetModels.Build(petId: string): Model
 	return model
 end
 
--- a blocky studded egg (used for pickups, the incubator and hatching)
-function PetModels.Egg(eggKey: string, scale: number?): Model
+-- a blocky studded egg (pickups, carried eggs, the incubator, hatching).
+-- v2.13 (director: larger + much more detailed): an 11-layer stepped egg
+-- silhouette in alternating shades, a zig-zag crack band, raised spots,
+-- glowing seam rings and a themed topper per boss egg
+local EGG_TOPPER = {}
+EGG_TOPPER.Plateau = function(ctx, c1, c2) mk(ctx, "Sprout", V(0.25, 0.9, 0.25), CF(0, 6.3, 0), RGB(90, 170, 70)); for _, x in { -1, 1 } do mk(ctx, "Leaf", V(0.8, 0.12, 0.4), CF(x * 0.4, 6.6, 0) * A(0, 0, rad(x * -25)), RGB(110, 200, 90)) end end
+EGG_TOPPER.Mountains = function(ctx, c1, c2) mk(ctx, "SnowCap", V(1.6, 0.5, 1.6), CF(0, 6, 0), WHITE); for k = 0, 5 do local a = k / 6 * math.pi * 2; mk(ctx, "Icicle", V(0.2, 0.7, 0.2), CF(math.cos(a) * 1.35, 4.9, math.sin(a) * 1.35) * A(math.pi, 0, 0), RGB(200, 235, 255), "Glass") end end
+EGG_TOPPER.Mushroom = function(ctx, c1, c2) mk(ctx, "Cap", V(0.5, 2.2, 2.2), CF(0, 6.2, 0) * A(0, 0, rad(90)), c1, "Cyl"); for k = 1, 4 do local a = k * 1.57; mk(ctx, "CapSpot", V(0.35, 0.1, 0.35), CF(math.cos(a) * 0.6, 6.48, math.sin(a) * 0.6), WHITE) end end
+EGG_TOPPER.Marsh = function(ctx, c1, c2) mk(ctx, "Rod", V(0.15, 1.4, 0.15), CF(0, 6.5, 0), RGB(200, 200, 210)); mk(ctx, "Spark", V(0.45, 0.45, 0.45), CF(0, 7.3, 0), c2, "Neon") end
+EGG_TOPPER.Canyon = function(ctx, c1, c2) for k = 0, 4 do local a = k / 5 * math.pi * 2; mk(ctx, "Crystal", V(0.3, 1, 0.3), CF(math.cos(a) * 0.35, 6.3, math.sin(a) * 0.35) * A(math.sin(a) * 0.35, rad(45), -math.cos(a) * 0.35), k % 2 == 0 and c1 or c2, "Glass") end end
+EGG_TOPPER.Volcanic = function(ctx, c1, c2) mk(ctx, "Crater", V(1.2, 0.4, 1.2), CF(0, 6.05, 0), c1); mk(ctx, "Lava", V(0.8, 0.1, 0.8), CF(0, 6.3, 0), c2, "Neon"); for k = 1, 3 do local a = k * 2.1; mk(ctx, "LavaCrack", V(0.12, 1.6, 0.1), CF(math.cos(a) * 1.18, 3.4, math.sin(a) * 1.18) * A(0, -a, rad(15)), c2, "Neon") end end
+EGG_TOPPER.Coast = function(ctx, c1, c2) mk(ctx, "Shell", V(0.6, 1.1, 1.1), CF(0, 6.3, 0) * A(0, rad(90), 0), RGB(255, 190, 200), "Cyl"); mk(ctx, "ShellTip", V(0.45, 0.45, 0.45), CF(0.1, 6.9, 0), RGB(255, 220, 230), "Ball") end
+
+function PetModels.Egg(eggKey: string, scale: number?, nest: boolean?): Model
 	local e = PetDefs.Eggs[eggKey]
 	local s = scale or 1
 	local model = Instance.new("Model")
@@ -423,16 +435,40 @@ function PetModels.Egg(eggKey: string, scale: number?): Model
 	root.Parent = model
 	model.PrimaryPart = root
 	local ctx = { Model = model, Root = root, S = s }
-	-- stacked blocks narrowing at top and bottom = blocky egg silhouette
-	local rows = { { 0.4, 1.4 }, { 1.1, 2 }, { 1.9, 2.3 }, { 2.7, 2.2 }, { 3.4, 1.8 }, { 4, 1.2 }, { 4.4, 0.6 } }
+	local c1, c2 = e.Color, e.Color2
+	-- stepped egg silhouette (wider below the middle, narrow pointed top)
+	local rows = { { 0.3, 1.4 }, { 0.8, 2 }, { 1.3, 2.4 }, { 1.8, 2.65 }, { 2.3, 2.75 }, { 2.8, 2.7 }, { 3.3, 2.5 }, { 3.8, 2.2 }, { 4.3, 1.8 }, { 4.8, 1.3 }, { 5.3, 0.8 } }
 	for i, r in rows do
-		mk(ctx, "Layer" .. i, V(r[2], 0.8, r[2]), CF(0, r[1], 0), i % 2 == 0 and e.Color or e.Color:Lerp(Color3.new(1, 1, 1), 0.08))
+		local shade = (i % 2 == 0) and c1 or c1:Lerp(Color3.new(1, 1, 1), 0.1)
+		mk(ctx, "Layer" .. i, V(r[2], 0.55, r[2]), CF(0, r[1], 0), shade)
+		-- corner blocks rotated 45° round the silhouette off
+		mk(ctx, "LayerR" .. i, V(r[2] * 0.82, 0.5, r[2] * 0.82), CF(0, r[1], 0) * A(0, rad(45), 0), shade)
 	end
-	-- theme band + spots in the second colour
-	mk(ctx, "Band", V(2.35, 0.3, 2.35), CF(0, 2.3, 0), e.Color2)
-	for k = 0, 3 do
-		local a = k * math.pi / 2 + 0.4
-		mk(ctx, "Spot" .. k, V(0.5, 0.5, 0.2), CF(math.cos(a) * 1.12, 3.1 + (k % 2) * 0.4, math.sin(a) * 1.12) * A(0, -a + math.pi / 2, 0), e.Color2)
+	-- zig-zag crack band in the second colour
+	for k = 0, 11 do
+		local a = k / 12 * math.pi * 2
+		mk(ctx, "Zig" .. k, V(0.5, 0.35, 0.2), CF(math.cos(a) * 1.38, 2.8 + (k % 2) * 0.3, math.sin(a) * 1.38) * A(0, -a + math.pi / 2, rad(k % 2 == 0 and 30 or -30)), c2)
+	end
+	-- raised spots
+	for k = 0, 7 do
+		local a = k / 8 * math.pi * 2 + 0.3
+		local y = (k % 2 == 0) and 1.6 or 4
+		local r = (k % 2 == 0) and 1.28 or 1.05
+		mk(ctx, "Spot" .. k, V(0.45, 0.45, 0.25), CF(math.cos(a) * r, y, math.sin(a) * r) * A(0, -a + math.pi / 2, 0), c2)
+	end
+	-- glowing seam rings
+	for _, y in { 1.05, 4.55 } do
+		mk(ctx, "Seam", V(0.12, (y < 2 and 2.45 or 1.6), (y < 2 and 2.45 or 1.6)), CF(0, y, 0) * A(0, 0, rad(90)), c2:Lerp(Color3.new(1, 1, 1), 0.3), "Neon")
+	end
+	local top = EGG_TOPPER[eggKey]
+	if top then
+		top(ctx, c1, c2)
+	end
+	if nest then
+		for k = 0, 9 do
+			local a = k / 10 * math.pi * 2
+			mk(ctx, "Nest" .. k, V(1.2, 0.5, 0.5), CF(math.cos(a) * 1.5, 0.15, math.sin(a) * 1.5) * A(0, -a, rad(10)), RGB(190, 150, 90))
+		end
 	end
 	model:SetAttribute("Egg", eggKey)
 	return model

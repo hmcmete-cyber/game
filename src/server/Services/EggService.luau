@@ -80,81 +80,161 @@ local function emit(parent: Instance, color: Color3, count: number, speed: numbe
 end
 
 ------------------------------------------------------------------------
--- 1) boss egg drops
+-- 1) boss egg drops (v2.13): the egg goes to the player who dealt the MOST
+--    damage. Taking it puts it on your back ("CarryingEgg"); bring it to
+--    your Egg Nursery. If you die (or leave) on the way it drops as a free
+--    world pickup that ANY player can claim.
 ------------------------------------------------------------------------
-function EggService.BossDefeated(info, pos: Vector3)
-	local eggKey = info.Def.Arena or info.Def.Habitat
-	if not PetDefs.Eggs[eggKey] then
+local carried = {} -- [Player] = { Key, Model, Conns }
+local spawnPickup -- forward
+
+local function dropCarried(player: Player, at: Vector3?)
+	local c = carried[player]
+	if not c then
 		return
 	end
-	local total = 0
-	for _, d in info.Damage do
-		total += d
+	carried[player] = nil
+	for _, conn in c.Conns do
+		conn:Disconnect()
 	end
-	local eligible = {}
-	for p, d in info.Damage do
-		if p.Parent and (p == info.LastHitBy or (total > 0 and d / total >= 0.05)) then
-			eligible[p] = true
-		end
+	if c.Model then
+		c.Model:Destroy()
 	end
-	local egg = PetModels.Egg(eggKey, 1.3)
-	egg:PivotTo(CFrame.new(pos + Vector3.new(0, 1, 0)))
+	player:SetAttribute("CarryingEgg", nil)
+	if at then
+		spawnPickup(c.Key, at, nil, 120)
+		hint(player, "You dropped the egg! Anyone can grab it now.", 4)
+	end
+end
+
+local function carryEgg(player: Player, eggKey: string)
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not root or not hum then
+		return false
+	end
+	dropCarried(player, nil)
+	local egg = PetModels.Egg(eggKey, 0.5)
+	local eroot = egg.PrimaryPart
+	egg:PivotTo(root.CFrame * CFrame.new(0, -1.2, 1.6))
+	eroot.Anchored = false
+	eroot.Massless = true
+	local w = Instance.new("WeldConstraint")
+	w.Part0 = root
+	w.Part1 = eroot
+	w.Parent = eroot
+	egg.Parent = char
+	player:SetAttribute("CarryingEgg", eggKey)
+	local conns = {}
+	table.insert(conns, hum.Died:Connect(function()
+		dropCarried(player, root.Position)
+	end))
+	carried[player] = { Key = eggKey, Model = egg, Conns = conns }
+	hint(player, `Carry the {PetDefs.Eggs[eggKey].Name} to the Egg Nursery at your base!`, 5)
+	return true
+end
+
+-- a world egg pickup; owner = only that player may take it (nil = anyone)
+spawnPickup = function(eggKey: string, pos: Vector3, owner: Player?, life: number)
+	local egg = PetModels.Egg(eggKey, 1.6, true)
+	egg:PivotTo(CFrame.new(pos + Vector3.new(0, 0.5, 0)))
 	egg.Parent = dropsFolder
 	local root = egg.PrimaryPart
-	-- glow, sparkle and a beam of light so it is easy to find
+	local e = PetDefs.Eggs[eggKey]
 	local light = Instance.new("PointLight")
-	light.Color = PetDefs.Eggs[eggKey].Color2
-	light.Range = 30
+	light.Color = e.Color2
+	light.Range = 34
 	light.Brightness = 3
 	light.Parent = root
 	local sp = Instance.new("ParticleEmitter")
 	sp.Texture = "rbxasset://textures/particles/sparkles_main.dds"
 	sp.Color = ColorSequence.new(Color3.fromRGB(255, 240, 170))
-	sp.Rate = 15
-	sp.Size = NumberSequence.new(0.6, 0)
-	sp.Lifetime = NumberRange.new(1, 1.6)
+	sp.Rate = 18
+	sp.Size = NumberSequence.new(0.7, 0)
+	sp.Lifetime = NumberRange.new(1, 1.8)
 	sp.Speed = NumberRange.new(1, 3)
 	sp.SpreadAngle = Vector2.new(180, 180)
 	sp.LightEmission = 1
 	sp.Parent = root
+	-- name tag so players see whose egg it is
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(240, 46)
+	gui.StudsOffset = Vector3.new(0, 11, 0)
+	gui.MaxDistance = 150
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.GothamBlack
+	label.TextScaled = true
+	label.TextColor3 = Color3.fromRGB(255, 230, 140)
+	label.TextStrokeTransparency = 0.3
+	label.Text = owner and `{e.Name} · {owner.DisplayName}` or `{e.Name} · free!`
+	label.Parent = gui
+	gui.Parent = root
 	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "EggPickup"
 	prompt.ActionText = "Take Egg"
-	prompt.ObjectText = PetDefs.Eggs[eggKey].Name
-	prompt.HoldDuration = 0.5
-	prompt.MaxActivationDistance = 16
+	prompt.ObjectText = e.Name
+	prompt.HoldDuration = 0.6
+	prompt.MaxActivationDistance = 18
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = root
-	local taken = {}
+	local done = false
 	prompt.Triggered:Connect(function(player)
-		if not eligible[player] then
-			hint(player, "Only players who fought this boss can take its egg.", 3)
+		if done then
 			return
 		end
-		if taken[player] then
+		if owner and owner.Parent and player ~= owner then
+			hint(player, `This egg belongs to {owner.DisplayName} (most damage).`, 3)
 			return
 		end
-		local d = data(player)
-		if not d then
+		if player:GetAttribute("CarryingEgg") then
+			hint(player, "You are already carrying an egg.", 3)
 			return
 		end
-		taken[player] = true
-		table.insert(d.Eggs, eggKey)
-		emit(root, PetDefs.Eggs[eggKey].Color2, 40, 14, 0.8)
-		hint(player, `You got a {PetDefs.Eggs[eggKey].Name}! Bring it to the Egg Nursery at your base.`, 5)
+		if carryEgg(player, eggKey) then
+			done = true
+			egg:Destroy()
+		end
 	end)
-	-- gentle bob + spin until it expires
 	local t0 = os.clock()
 	local base = egg:GetPivot()
 	task.spawn(function()
-		while egg.Parent and os.clock() - t0 < 120 do
+		while egg.Parent and os.clock() - t0 < life do
 			local t = os.clock() - t0
-			egg:PivotTo(base * CFrame.new(0, math.sin(t * 2) * 0.6 + 0.6, 0) * CFrame.Angles(0, t * 0.8, 0))
+			egg:PivotTo(base * CFrame.new(0, math.sin(t * 2) * 0.5 + 0.5, 0) * CFrame.Angles(0, t * 0.7, 0))
 			task.wait(0.05)
 		end
-		egg:Destroy()
+		if egg.Parent then
+			egg:Destroy()
+		end
 	end)
-	for p in eligible do
-		hint(p, `The {info.Def.Title} dropped a {PetDefs.Eggs[eggKey].Name}!`, 4)
+	return egg
+end
+
+function EggService.BossDefeated(info, pos: Vector3)
+	local eggKey = info.Def.Arena or info.Def.Habitat
+	if not PetDefs.Eggs[eggKey] then
+		warn("[Eggs] no egg for " .. tostring(info.Type))
+		return
+	end
+	-- winner = most total damage (ties: the final hit)
+	local winner, best = nil, -1
+	for p, d in info.Damage do
+		if p.Parent and (d > best or (d == best and p == info.LastHitBy)) then
+			winner, best = p, d
+		end
+	end
+	spawnPickup(eggKey, pos, winner, 180)
+	print(`[Eggs] {info.Type} dropped a {eggKey} egg for {winner and winner.Name or "anyone"} ({math.floor(best)} dmg)`)
+	if winner then
+		hint(winner, `You dealt the most damage! The {PetDefs.Eggs[eggKey].Name} is yours. Take it!`, 5)
+	end
+	for p in info.Damage do
+		if p ~= winner and p.Parent then
+			hint(p, `{winner and winner.DisplayName or "Someone"} dealt the most damage and wins the egg.`, 4)
+		end
 	end
 end
 
@@ -458,6 +538,8 @@ function EggService.Start(dataService, petService, remotes, monsterDeaths)
 	end
 	Players.PlayerAdded:Connect(setup)
 	Players.PlayerRemoving:Connect(function(p)
+		local r = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		dropCarried(p, r and r.Position or nil)
 		hatching[p] = nil
 		local hut = nurseryOf(baseIndex(p))
 		if hut and shownEgg[hut] then
@@ -469,6 +551,29 @@ function EggService.Start(dataService, petService, remotes, monsterDeaths)
 		while true do
 			task.wait(1)
 			updateBoards()
+		end
+	end)
+	-- carried eggs are delivered when you reach your own nursery
+	task.spawn(function()
+		while true do
+			task.wait(0.4)
+			for player, c in carried do
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				local hut = nurseryOf(baseIndex(player))
+				local spot = hut and hut:FindFirstChild("EggSpot")
+				if root and spot and (root.Position - spot.Position).Magnitude < 16 then
+					local d = data(player)
+					if d then
+						local key = c.Key
+						dropCarried(player, nil)
+						table.insert(d.Eggs, key)
+						hint(player, `{PetDefs.Eggs[key].Name} delivered to your nursery!`, 4)
+						if not d.Incubator then
+							startIncubating(player)
+						end
+					end
+				end
+			end
 		end
 	end)
 end

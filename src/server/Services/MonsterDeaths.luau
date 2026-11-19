@@ -726,6 +726,14 @@ function MonsterDeaths.Play(info, onDone: () -> ())
 	local model: Model = info.Model
 	local pos = info.Root.Position - Vector3.new(0, (info.Root.Size.Y / 2) + (info.Hum.HipHeight or 0), 0)
 	local typeName = info.Type
+	local fired = false
+	local function fireReward()
+		-- always runs (even if a VFX step errors): the egg must drop
+		if not fired and info.Def.Boss and MonsterDeaths.OnBossDefeated then
+			fired = true
+			task.spawn(MonsterDeaths.OnBossDefeated, info, pos)
+		end
+	end
 	task.spawn(function()
 		task.wait(0.35) -- let the Death clip start
 		local ok, err = pcall(function()
@@ -740,9 +748,7 @@ function MonsterDeaths.Play(info, onDone: () -> ())
 					fling(model, 20, 30)
 				end
 				reward(pos)
-				if MonsterDeaths.OnBossDefeated then
-					task.spawn(MonsterDeaths.OnBossDefeated, info, pos)
-				end
+				fireReward()
 				task.wait(2.5)
 			else
 				local f = D[typeName]
@@ -760,6 +766,7 @@ function MonsterDeaths.Play(info, onDone: () -> ())
 		if not ok then
 			warn(`[Deaths] {typeName}: {err}`)
 		end
+		fireReward()
 		onDone()
 	end)
 end

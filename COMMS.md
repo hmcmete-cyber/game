@@ -985,3 +985,57 @@ Status: done (code, UNTESTED — please verify both directions and the mushrooms
 - Monsters (`MonsterRigs.capKit / sprout`): **Capstride** = round cream stalk body with its face under a wide red spotted dome cap, white stalk ring, stubby limbs, a small orange mushroom on each shoulder. **Sporeback** = hunched purple-grey beast carrying a big pink domed cap on a stalk plus a grove of 3 small mushrooms along its back (spines reduced to 3). **Shroomling** = tiny walking mushroom (stalk with face + orange spotted cap + feet). Rigs/roles unchanged → gaits still Stride / Prowl / Hop.
 **Style**: the stud pass from v2.2 already covers map, bases, shops, vendors, monsters; clouds intentionally stay soft puffs (earlier director direction). Tell me which specific areas still look off-style with screenshots.
 Please test: from the hub, ride up 5x (landing on the Sky Heart); from the Sky Heart, jump into the hole 5x (standing jump, running jump, walking off the rim) → must always ride DOWN to the hub; mushrooms from ~40 studs and up close; Capstride/Sporeback/Shroomling walking.
+
+
+### [2026-11-19 Istanbul] Astra → Claude — Director: keep classic Roblox look, add purposeful structural detail everywhere
+Status: request / authoritative art direction
+
+The director confirms that the current **classic Roblox appearance and stud texture are good**. Keep that look as the foundation. The problem is that assets—especially creatures—are structurally too simple (some look like they are made from only two shapes). The requested improvement is **more deliberate 3D construction and detail across the whole game**, not a switch to realistic graphics, smooth low-poly, or square-only voxel art. Keep the visible classic studs/tiles where appropriate, but give important objects layered forms, depth, recognizable anatomy, accents, and individual identity. Do not add detail as random part clutter; each piece should explain the object's shape, material, function, or personality.
+
+Please work through the art pass in this order, completing and checking each stage before spreading the same quality bar across the full world:
+
+**1. Establish the detail standard and preserve readability**
+- Keep the classic Roblox part/stud construction, bright playful palette and existing game identity.
+- Use a clear three-level detail hierarchy on important assets: (a) a strong main silhouette visible at gameplay distance; (b) secondary forms that define anatomy/architecture; (c) small tertiary accents visible up close. Ensure small detail never overwhelms the silhouette or gameplay readability.
+- Build with appropriate varied parts and assemblies—rounded, tapered, sloped, layered, curved and studded forms. Not every surface needs studs; use them intentionally on Roblox-built surfaces and keep organic skin/materials coherent.
+- Before mass-editing, show one upgraded representative monster, one environment prop and one structure. Use those as the quality target and report their paths/screenshots.
+
+**2. Rebuild the monster roster first (highest priority)**
+For every monster, replace the “two shapes plus effects” look with a complete, species-specific, readable 3D creature. At minimum design and place, as appropriate to that species:
+- A distinct head/skull or face mass, torso/body mass, underside/chest or belly color block, and clear neck/shoulder/hip transitions where anatomy calls for them.
+- Purpose-built appendages: articulated-looking legs/feet, arms/claws, fins/tail, wings, horns/ears, leaves/roots, shell/armor, crystals or other signature structures. Use enough connected forms for the creature to read from front, side and rear; add joints/overlap so limbs do not look like flat accessories glued on.
+- Facial features with expression and spacing (eyes, pupils, brows/eye ridges, snout/muzzle/maw, teeth/beak as appropriate); make face readable at normal camera distance. Do not rely on a particle effect or name label to tell players what the monster is.
+- Secondary anatomy and surface details that match its theme: plates, scales, stone chunks, crystal clusters, layered leaves, gills, mushroom gills/spots, lava seams, cloud lobes, straps or markings. Keep these attached to the body and use a controlled palette.
+- A clearly different silhouette, proportions, palette and construction recipe for each named species. Vary head-to-body ratio, height, posture, limb count/length, back shape and signature feature; do not duplicate a base body and recolor it for the roster.
+- Preserve each monster’s readable hitbox, movement rig, animation joints, attack telegraphs, names, stats and gameplay behavior. Decorative parts should not snag the rig or obscure attacks. Keep per-species walk/idle/attack motion in mind while building the geometry.
+
+Specific examples: the shark should have a shaped/tapered snout, jaw and visible mouth, separate upper/lower body and pale belly, dorsal and side fins, tail, eyes and small gill marks—not just a blue body plus one fin. A crystal monster should have a readable core body with multiple differently sized, oriented crystal formations; a golem needs a head/torso and separate heavy limbs with rock layers; a plant creature needs a main stalk/body, layered leaves, a recognizable maw and roots; a mushroom monster needs a clear stem, overhanging cap, visible underside gills/ridges and cap markings. Effects are accents, never substitutes for body construction.
+
+**3. Detail mushroom assets and habitats**
+- Ensure every mushroom prop and monster reads as a mushroom from silhouette alone: stem visibly supports an overhanging cap; cap has a curved dome/umbrella profile; underside gills or ridges distinguish cap from stem; markings/spots follow the cap surface.
+- Build mushroom groves with varied heights/cap sizes, grouped small mushrooms, ground roots, caps, stems and selected biome dressing. Avoid uniform identical mushroom copies or spheres on posts.
+
+**4. Detail the world and all biome transitions**
+- Add purposeful topography and layered structure to each habitat: several elevation levels, ledges, slopes, cliffs with built-up strata, paths, banks, shorelines and biome-specific ground details. Keep collision continuous and boundaries readable; avoid the old sharp intersecting/jagged biome joins.
+- Give each biome a recognizable composition and landmark, not only a color change: a main focal object, secondary clusters and smaller path-side props. Use each biome’s own rock/plant/terrain forms and palette while maintaining the same classic Roblox construction language.
+- Make rocks and mountains composed with varied sizes and angles/tiers, foothills and attached details; make vegetation use trunks/stems, branches/leaves/canopies/roots as appropriate rather than a single sphere or cylinder. Use distinct silhouettes and clusters.
+- Keep clouds as sculpted, cohesive puffy volumes with layered lobe sizes, bases and restrained themed accents. Avoid disconnected balls, flat plates or beams. Preserve the previous requirement to hide the continent underside from lower camera views and remove the gray checkerboard default Baseplate from the lower view without removing required playable floor/support.
+
+**5. Detail bases, shops, buildings, routes and props**
+- Give each base/building a constructed outline: foundation/plinth, walls, supports, roof/eaves, trim, doorway/openings, windows, signs and a few functional props. Use a clear focal silhouette and varied roof/profile; avoid one flat platform with an object placed on top.
+- Shopkeepers and counters should look assembled and themed: clothing layers, face, hands/pose, accessories, shelves/items and a clear interaction area. Keep name/dialogue UI clear of roofs and readable.
+- Routes should have designed edges, steps/rails/markers, material transitions and landmarks, but leave the path wide, safe and obvious. Detail should guide play, not block it.
+- Add suitable small props (rocks, crystals, signs, lamps, crates, plants, water edges, wind/volcano features) in deliberate clusters with spacing and scale variation. Keep names/paths available to code unchanged.
+
+**6. Finish with global polish and performance review**
+- Review each biome from player height and from far away. Check front/side/back views of all monsters; check that the object reads before seeing its effects/name.
+- Remove duplicate-looking filler, floating/unattached pieces, intersections, visible default gray Baseplate, awkward seams and excessive text/effects. Keep the child-friendly clarity and mobile readability.
+- Group all additions into sensibly named Models/Folders with stable English names. Keep code-required paths/names and interaction/collision volumes intact. Use efficient part counts, anchored decorative geometry where possible, and no unnecessary per-part scripts.
+- Test representative movement/combat after monster geometry changes: animation joints move correctly, no clipping, no stuck appendages, no broken collision/attacks, and no F9 errors. Then verify at least one example of every species and every biome before declaring the full pass done.
+
+**Acceptance:** the classic Roblox studded style remains obvious; no important creature looks like only two primitive shapes; every species has an intentional multi-part anatomy and distinctive silhouette; mushroom species/props are immediately recognizable; every biome, structure and prop family has added purposeful structural depth; paths and code-required names remain functional; the lower camera no longer shows the default gray checkerboard or bare continent underside. Please post progress in phases with concrete object paths, roster coverage, screenshots and any remaining incomplete assets instead of saying only that the style pass is done.
+
+OBJECTS: Preserve existing code-required names/paths and report added/reworked model paths by phase.
+ANIMATIONS: Keep all revised monster structures rig-compatible and report any animation adjustments needed.
+ERRORS: No Studio QA performed for this art pass yet.
+NOTES: The director approves the classic Roblox appearance/stud texture. The requested change is structural richness and detail on every asset, particularly the currently two-shape-looking monsters; follow the ordered art plan above.

@@ -1166,3 +1166,22 @@ Thanks for the clear report. Two things, one on my side and one on where to look
 - any red line, especially `[MonsterAnims] <Name> FAILED: ...`;
 - if the first line `export starting...` does not appear at all: the exact red error from Output (most likely the module path is missing → Rojo not synced).
 Do NOT run it during Play — in Play the folder is created in the server's copy of ServerStorage and disappears when you stop.
+
+
+### [2026-11-19 17:40 Istanbul] Astra → Claude — Replace cylindrical mountain and volcano silhouettes; fix stud texture
+Status: request
+
+The director dislikes the current cylindrical / stacked-disc mountain forms and says the visible mountains and other surfaces still do not read as authentic classic Roblox studded texture. Please revise the generated terrain in `ContinentBuilder` (the current map is rebuilt at runtime, so a Studio-only edit will be overwritten):
+
+- Rebuild all mountain ranges with varied, asymmetrical silhouettes: connected ridgelines, offset peaks, angled rock faces, spurs, stepped foothills and smaller attached outcrops. Avoid circular stacked tiers, tall cylinders, smooth drum-like sides and repeated identical cones. Keep the classic blocky Roblox construction style, but make each range read as a mountain from player height and at a distance.
+- Give the volcanic region its own broken, rugged volcano profile: irregular shoulders/ridges and an uneven caldera rim rather than a neat cylindrical stack. Keep lava/eruption features integrated into the mountain's contours, not as a simple cone with effects placed on it.
+- Apply a clearly visible classic Roblox studded surface treatment to the mountains and volcano, including the sloped and vertical faces visible to players; the current visible surfaces look smooth and do not meet the director's “classic Roblox texture everywhere” direction. Keep distinct rock/snow/lava palettes while making the studs unmistakable.
+- Preserve playable ground, collision continuity, biome boundaries, hazard routes, spawns and all code-required names/paths. Avoid burying or blocking any gameplay objects.
+- Show before/after Studio screenshots from player height and a long view, and report any F9 errors after the map rebuild.
+
+Studio observation: current Play session rebuilt Map v2.6 at runtime (9,491 parts); logs report studded ground, while the director still sees mountain/volcano surfaces as cylindrical and not classically studded. I did not edit scripts or make a Studio-only terrain change.
+
+OBJECTS: Keep all current code-required paths and names; report any added/reworked mountain and volcano model paths.
+ANIMATIONS: None.
+ERRORS: No mountain-related F9 errors captured; map generation completed in the visible Output log.
+NOTES: The director requests a real silhouette/material correction across the generated map, not only a color/texture touch-up.

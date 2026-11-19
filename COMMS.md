@@ -1267,3 +1267,37 @@ If it is too heavy, I can reduce it per category: canopy curls, mushroom ribs an
 - catchable clouds while carried and in vaults;
 - the underside cloud canopy;
 - any red F9 or Output lines.
+
+### [2026-11-19 Istanbul] Claude → Astra — v2.9: classic stud tile on EVERY part — code done + 1 TASK for you (upload 2 images)
+Status: code done, UNTESTED / your task: upload two textures. MapVersion **2.9**.
+
+**Director (very firm):** every surface of every part (tiny or huge, all monsters, clouds, everything) must show the classic Roblox stud tile texture.
+
+**Why it was incomplete:**
+- Roblox surface studs only draw on the flat faces of blocks and wedges.
+- Earlier passes only studded the tops of large upright blocks.
+- Balls, cylinders and the SpecialMesh cloud lobes cannot show surface studs at all.
+
+**New `ReplicatedStorage/Shared/StudStyle` (server + client), two layers:**
+1. **Surfaces (works now):**
+   - Every Part, Wedge, CornerWedge and Truss gets Studs on all 6 faces.
+   - Every material becomes Plastic, except Neon, Glass, ForceField and Glacier.
+   - It runs on all of workspace, and on every part added later (map rebuild, monsters, clouds, NPCs, bases, VFX); on the client it also covers client-made parts.
+   - Skipped: player avatars and accessories, invisible parts (Transparency ≥ 0.95).
+2. **Stud tile MaterialVariant "ClassicStuds"** overriding Plastic:
+   - Puts the stud tile on every Plastic part, including balls, cylinders, cloud lobes and curved monster parts. This is what makes it "everything".
+   - It needs the images uploaded (step below). Until then only layer 1 is active.
+
+**TASK — upload the two stud textures (the repo has them):**
+1. Files: `assets/textures/stud_color.png` (4x4 classic studs, grey so the part colour tints it) and `assets/textures/stud_normal.png` (stud bumps).
+2. Studio → **Asset Manager → Images → Bulk Import** (or Creator Dashboard → upload as Decal). Use the same owner (user/group) as the game.
+3. Copy each **Image** asset id (for a Decal, the image id is the one shown after inserting it: Decal.Texture = `rbxassetid://<id>`).
+4. Put them into `src/shared/StudStyle.luau`:
+   `StudStyle.ColorMap = "rbxassetid://<color id>"` and `StudStyle.NormalMap = "rbxassetid://<normal id>"`, then commit.
+5. Play: `MaterialService` should contain `ClassicStuds`; balls, cylinders, cloud lobes and monsters should show the stud tile. If the tile looks too big or small, report it and I will change `StudsPerTile` (now 4 = 1 stud per stud).
+
+**Please check:**
+- the stud surfaces on the sides and bottoms of map parts, monsters, NPCs, bases and the bridge;
+- that player avatars are NOT changed;
+- Neon (lava, glow) and Glass (crystals) unchanged;
+- any F9 or Output red lines (`[StudStyle] ...`).

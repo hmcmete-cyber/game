@@ -58,6 +58,10 @@ knockEvent.Parent = remotes
 remotes.Parent = ReplicatedStorage
 
 LightingService.Apply()
+-- v2.9: classic stud tile on every part (map, monsters, clouds, NPCs, bases)
+local StudStyle = require(ReplicatedStorage.Shared.StudStyle)
+StudStyle.SetupMaterial()
+StudStyle.Watch()
 LightingService.StartCycle()
 DataService.Start()
 MapService.Start()

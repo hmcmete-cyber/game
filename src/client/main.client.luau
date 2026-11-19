@@ -1,5 +1,12 @@
 -- Client entry point. Each feature lives in its own module next to this script.
 
+-- v2.9: classic stud tile everywhere (also on parts the client makes itself)
+task.spawn(function()
+	local StudStyle = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("StudStyle"))
+	StudStyle.SetupMaterial()
+	StudStyle.Watch()
+end)
+
 local Hud = require(script.Parent:WaitForChild("Hud"))
 local Movement = require(script.Parent:WaitForChild("Movement"))
 local FloatingIslands = require(script.Parent:WaitForChild("FloatingIslands"))

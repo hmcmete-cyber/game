@@ -28,6 +28,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
+local HutBuilder = require(script.Parent:WaitForChild("HutBuilder"))
 local BaseBuilder = require(script.Parent:WaitForChild("BaseBuilder"))
 local ContinentBuilder = require(script.Parent:WaitForChild("ContinentBuilder"))
 
@@ -264,7 +265,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.12"
+local MAP_VERSION = "2.13"
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
 -- v2.2 CLASSIC STUDDED STYLE PASS over the whole generated map: every solid
@@ -449,6 +450,22 @@ local function buildPlaceholder(): Instance
 		pad:SetAttribute("ExpansionSlot", i)
 		local linkPos = center + side * 16 + Vector3.new(0, -0.5, 0)
 		newPart(expansion, "ExpansionLink" .. i, Vector3.new(8, 1, 6), CFrame.lookAt(linkPos, linkPos + dir), hubColor, { Material = Enum.Material.Marble })
+		-- v2.12: pet hut on this pad. The egg nursery gets its own pad on the far
+		-- side of the base (straight across from the bridge): the pad mirrored
+		-- across the base would overlap the neighbouring base's pet hut (bases
+		-- are only ~72 studs apart), so "opposite" is across the base, outward.
+		local accent = Color3.fromHSV((i - 1) / 12, 0.45, 1)
+		local padTop = padPos + Vector3.new(0, 0.5, 0)
+		HutBuilder.PetHut(expansion, i, CFrame.lookAt(padTop, Vector3.new(center.X, padTop.Y, center.Z)), accent)
+		local nurseryPos = center + dir * 32 + Vector3.new(0, -0.5, 0)
+		local nursery = newPart(expansion, "NurseryPad" .. i, Vector3.new(20, 1, 20), CFrame.lookAt(nurseryPos, nurseryPos + dir), Color3.fromRGB(220, 225, 235), {
+			Material = Enum.Material.Concrete,
+		})
+		nursery:SetAttribute("NurserySlot", i)
+		local link2 = center + dir * 17 + Vector3.new(0, -0.5, 0)
+		newPart(expansion, "NurseryLink" .. i, Vector3.new(6, 1, 8), CFrame.lookAt(link2, link2 + dir), hubColor, { Material = Enum.Material.Marble })
+		local nurseryTop = nurseryPos + Vector3.new(0, 0.5, 0)
+		HutBuilder.IncubatorHut(expansion, i, CFrame.lookAt(nurseryTop, Vector3.new(center.X, nurseryTop.Y, center.Z)), accent)
 	end
 
 	------------------------------------------------------------------

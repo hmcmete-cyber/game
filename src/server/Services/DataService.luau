@@ -25,6 +25,12 @@ local function defaults()
 		XP = 0,
 		Collection = {}, -- [typeName or typeName_Shiny] = count
 		Recent = {}, -- newest first: { Type = string, Shiny = boolean }
+		-- v2.12 pets + eggs
+		Pets = {}, -- { { Uid = number, Id = petId } }
+		Equipped = {}, -- uids (max PetDefs.EquipLimit)
+		NextPetUid = 1,
+		Eggs = {}, -- egg keys waiting to be incubated
+		Incubator = nil, -- { Egg = key, ReadyAt = os.time() }
 	}
 end
 

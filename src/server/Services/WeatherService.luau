@@ -224,7 +224,7 @@ end
 
 -- Solar Flare perk etc.
 local function coinMult(player: Player): number
-	return player:GetAttribute("CoinMult") or 1
+	return (player:GetAttribute("CoinMult") or 1) * (1 + (player:GetAttribute("PetCoins") or 0))
 end
 
 local function rewardOf(typeName: string, shiny: boolean): number

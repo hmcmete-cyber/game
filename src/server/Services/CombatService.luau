@@ -47,6 +47,18 @@ end
 
 -- one hit on a model (monster takes damage, dummy gets knocked)
 local function hit(player: Player?, model: Model, amount: number, dir: Vector3?, kind: string)
+	-- pet buffs: more damage, crits, lifesteal
+	if player and kind ~= "Pet" then
+		amount *= 1 + (player:GetAttribute("PetDamage") or 0)
+		if math.random() < (player:GetAttribute("PetCrit") or 0) then
+			amount *= 2
+		end
+		local steal = player:GetAttribute("PetLifesteal") or 0
+		local hum = steal > 0 and player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if hum and hum.Health > 0 then
+			hum.Health = math.min(hum.MaxHealth, hum.Health + amount * steal)
+		end
+	end
 	if CollectionService:HasTag(model, "TestDummy") then
 		DummyService.HandleHit(model, dir)
 	elseif MonsterService then
@@ -84,7 +96,7 @@ local function attack(player: Player, kind: unknown, aim: unknown)
 	if os.clock() < (ready[player][kind] or 0) then
 		return
 	end
-	ready[player][kind] = os.clock() + spec.Cooldown
+	ready[player][kind] = os.clock() + spec.Cooldown * (1 - (player:GetAttribute("PetHaste") or 0))
 
 	if kind == "Punch" then
 		local look = root.CFrame.LookVector

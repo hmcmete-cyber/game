@@ -86,6 +86,10 @@ DummyService.Start(WeatherService) -- Studio only
 MonsterService.Start(MapService, DataService, remoteTable)
 CombatService.Start(remoteTable, InventoryService, MonsterService, DummyService)
 require(Services.QaWeaponService).Start(MonsterService) -- TEST ONLY: director QA weapon (Studio/private servers)
+-- v2.12 pets + boss eggs + incubator
+local PetService = require(Services.PetService)
+PetService.Start(DataService, MonsterService)
+require(Services.EggService).Start(DataService, PetService, remoteTable, require(Services.MonsterDeaths))
 StyleSample.Start(require(Services.MonsterRigs)) -- Studio only: v2.1 style review island
 
 local function onPlayerAdded(player: Player)

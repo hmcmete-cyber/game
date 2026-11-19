@@ -162,6 +162,9 @@ local function onDeath(info)
 	end
 	play(info, "Death")
 
+	if info.LastHitBy and info.LastHitBy.Parent then
+		info.LastHitBy:SetAttribute("LastKillAt", now()) -- pets: "after a kill" buffs
+	end
 	-- XP: killer 100 %, helpers with >= 10 % of the damage get AssistShare
 	local total = 0
 	for _, d in info.Damage do
@@ -170,7 +173,7 @@ local function onDeath(info)
 	for p, d in info.Damage do
 		if p.Parent then
 			local share = (p == info.LastHitBy) and 1 or ((total > 0 and d / total >= 0.1) and Defs.AssistShare or 0)
-			local xp = math.floor(info.Def.XP * share)
+			local xp = math.floor(info.Def.XP * share * (1 + (p:GetAttribute("PetXP") or 0)))
 			if xp > 0 then
 				local levelUp = DataService.AddXP(p, xp)
 				Remotes.Hint:FireClient(p, `+{xp} XP!`, 3)
@@ -394,7 +397,7 @@ local function findTarget(info): Player?
 	for _, p in Players:GetPlayers() do
 		local r = playerRoot(p)
 		if r then
-			local d = (r.Position - info.Root.Position).Magnitude
+			local d = (r.Position - info.Root.Position).Magnitude / math.max(0.3, 1 - (p:GetAttribute("PetStealth") or 0))
 			if d <= bestD and validTarget(info, p) then
 				best, bestD = p, d
 			end

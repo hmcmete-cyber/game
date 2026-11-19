@@ -106,6 +106,12 @@ local function applySpeed()
 	if active("RootedUntil") then
 		speed, jump = 0, 0 -- held by roots / a bite
 	end
+	-- pet buffs (PetService sets these player attributes)
+	speed *= 1 + (player:GetAttribute("PetSpeed") or 0)
+	jump *= 1 + (player:GetAttribute("PetJump") or 0)
+	if carrying then
+		speed *= 1 + (player:GetAttribute("PetCarrySpeed") or 0)
+	end
 	-- TEST ONLY: director's QA speed tool (server sets QaSpeed only for the QA account)
 	local qa = player:GetAttribute("QaSpeed")
 	if qa and qa > 1 then

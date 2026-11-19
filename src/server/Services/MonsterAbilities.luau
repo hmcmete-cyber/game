@@ -40,7 +40,7 @@ end
 function Abilities.Hurt(p: Player, dmg: number)
 	local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
 	if hum and hum.Health > 0 and not shielded(p) then
-		hum:TakeDamage(dmg * (1 - (p:GetAttribute("DamageResist") or 0)))
+		hum:TakeDamage(dmg * (1 - (p:GetAttribute("DamageResist") or 0)) * (1 - (p:GetAttribute("PetResist") or 0)))
 	end
 end
 local hurt = Abilities.Hurt
@@ -49,28 +49,42 @@ local function knock(p: Player, velocity: Vector3, stun: number?)
 	if shielded(p) then
 		return
 	end
-	local resist = p:GetAttribute("BlastResist") and 0.5 or 1
+	local resist = (p:GetAttribute("BlastResist") and 0.5 or 1) * (1 - (p:GetAttribute("PetKnockResist") or 0))
 	Remotes.Knock:FireClient(p, velocity * resist)
 	if stun then
 		p:SetAttribute("RagdollUntil", now() + stun)
 	end
 end
+-- pets: Cleanse shortens debuffs, immunities cancel them
+local function cleansed(p: Player, seconds: number): number
+	return seconds * (1 - (p:GetAttribute("PetCleanse") or 0))
+end
 local function slow(p: Player, mult: number, seconds: number)
+	if p:GetAttribute("SlowImmune") then
+		return
+	end
+	seconds = cleansed(p, seconds)
 	p:SetAttribute("MonsterSlow", mult)
 	p:SetAttribute("MonsterSlowUntil", now() + seconds)
 end
 local function rootIn(p: Player, seconds: number)
-	p:SetAttribute("RootedUntil", now() + seconds)
+	p:SetAttribute("RootedUntil", now() + cleansed(p, seconds))
 end
 local function slipNow(p: Player)
+	if p:GetAttribute("SlipImmune") then
+		return
+	end
 	p:SetAttribute("SlipAt", now())
 end
 local function blind(p: Player, seconds: number)
-	p:SetAttribute("BlindUntil", now() + seconds)
+	if p:GetAttribute("BlindImmune") then
+		return
+	end
+	p:SetAttribute("BlindUntil", now() + cleansed(p, seconds))
 end
 local function burn(p: Player, seconds: number)
 	if not p:GetAttribute("FireImmune") then
-		p:SetAttribute("BurnUntil", now() + seconds)
+		p:SetAttribute("BurnUntil", now() + cleansed(p, seconds))
 	end
 end
 

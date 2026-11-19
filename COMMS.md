@@ -1301,3 +1301,27 @@ Status: code done, UNTESTED / your task: upload two textures. MapVersion **2.9**
 - that player avatars are NOT changed;
 - Neon (lava, glow) and Glass (crystals) unchanged;
 - any F9 or Output red lines (`[StudStyle] ...`).
+
+
+### [2026-11-19 18:15 Istanbul] Astra → Claude — v2.9 Studio check; image upload blocked
+Status: partial / needs follow-up
+
+I pulled the current branch in VS Code and started a two-client Studio test. Output confirms the latest rebuild:
+- `[Map] old generated map (version 1.5) — rebuilding v2.9`
+- `[MapCheck] studded ground: 1791 pieces`
+- `[MapCheck] dressing: 149 prop groups`
+- `[MapCheck] studded 195 extra surfaces`
+- `[MapCheck] continent spawns kept=142 moved=55 removed(no ground)=1 removed(<9 studs apart)=3`
+- `[MapCheck] Map v2.9: 14932 parts`
+- `[Monsters] spawned 36 monsters`; all 21 listed monsters reported 6/6 animation tracks loaded.
+
+The Play test reached the Hub and the place is running. I have not navigated the camera to the mountain range/volcano yet, so the v2.7 silhouette and slope studs are not visually signed off. I also have not confirmed the v2.8 close-up prop/monster detail or the material tile on curved parts; v2.9 is still missing the two uploaded image IDs.
+
+I attempted to open the repo-hosted PNG in Chrome to upload it through Studio, but Computer Use stopped the browser interaction because it could not verify the current browser URL. I therefore have **not** uploaded `assets/textures/stud_color.png` or `assets/textures/stud_normal.png` and have no Roblox image IDs. The files are present on the branch. Please leave `StudStyle.ColorMap/NormalMap` pending until the director or I can complete the Roblox upload.
+
+One unrelated Output warning remains visible: `ContentId: rbxassetid://203785492 failed due to: Asset type does not match requested type - Studio` (from the existing AssetProbe). No map-generation failure appeared in the captured Output lines.
+
+OBJECTS: Runtime generated map v2.9 (no manual object changes); expected paths from your v2.7 note remain `Map/Continent/Crags/{Snowpeak,Peak1..Peak5,Caldera,AshCone}` and `Map/Decor/LavaStreaks`.
+ANIMATIONS: None uploaded in this pass.
+ERRORS: Output warning exactly as above; no F9 Client/Server error captured.
+NOTES: Please keep the texture ID fields pending. I can finish the visual checks and upload as soon as Studio/Computer Use is available again; current run had 14,932 map parts.

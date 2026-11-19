@@ -1770,3 +1770,165 @@ Please test: egg prompt and spawn, boss damage attribution with at least two pla
 ## [2026-11-19 23:20 Istanbul] Director → Claude — increase spacing between bases
 
 Additional clarification for the base layout request: move every player base farther from the map center **and farther apart from the other bases**. Keep clear travel lanes and enough open space around each expanded base so their footprints, decorations, and neighboring plots do not overlap or feel crowded. Please check the layout from both top-down and player-level views after repositioning.
+
+### [2026-11-19 Istanbul] Claude → Director/Astra — 23:15 + 23:20 requests: all 16 items done in code (MapVersion 2.14), UNTESTED
+Status: done in code / needs Studio + multiplayer QA from you (I cannot run Studio or a 2-player test).
+
+**Eggs (1-4):**
+1. **Why eggs did not appear:**
+   - The old flow dropped the egg straight into your inventory without anything visible. Taking it showed nothing in your hands.
+   - Also, if any boss-death VFX step errored, the reward callback never ran.
+   - **Fixed:** the reward now always fires (`MonsterDeaths` calls it after the sequence even on an error). The egg is a **visible carried object on your back** (`<Character>/<Biome>Egg`, attribute `CarryingEgg`). Reaching your own Egg Nursery (within 16 studs) **delivers** it to `Data.Eggs`, and it starts incubating if the incubator is empty.
+2. **Eggs are larger and much more detailed:**
+   - an 11-layer stepped studded silhouette with 45°-rounded corners;
+   - a zig-zag crack band, raised spots and glowing seam rings;
+   - a **themed topper per boss**: sprout, snow cap with icicles, spotted cap, lightning rod, crystal crown, lava crater with cracks, seashell;
+   - world pickups sit in a straw nest, with a name tag, light and sparkles.
+3. **Most-damage winner:** the egg is reserved for the player with the **most total damage** (ties go to the final hit). Its tag shows the owner, other players get "X wins the egg", and the Output prints `[Eggs] <Boss> dropped a <egg> for <player> (<dmg> dmg)`.
+4. **Carrier killed:** if the carrier dies (or leaves), the egg drops at that spot as a **free pickup** ("· free!") that anyone can take.
+
+**Bosses and temples (5-8, 12):**
+5. **Respawn effect:** a sky beam, three shock rings and bursts, plus a "⚡ <Boss> has appeared!" banner within 220 studs.
+6. **"QA Boss Respawner (test only)":** same guard as the other QA tools (UserId 2459147914, Studio/private only, checked on the server). It respawns the boss of the **nearest temple**: the living one is removed without reward and a fresh one arrives with the effect. Only one of each boss can exist at a time.
+7. **Aggro, threat, detail, labels:**
+   - Bosses now attack **anyone who enters their aggro range** (no carry needed).
+   - Aura particles about doubled: a ground smoke ring, plus emitters on up to 24 neon parts.
+   - An extra boss detail layer: rivets, glowing trim lines on big blocks, spikes on big balls.
+   - **Nameplates** for every monster now sit above the model's real top (bounding box), not inside the body.
+   - Body parts intersecting each other inside rigs are **not fully solved**; please send screenshots of the worst cases.
+8. **Prism Sovereign temple:** crystal palette (lavender stone, indigo trim, blue accents), and every intact column is crowned with blue crystal prisms.
+12. **Temple approach:** the gate's lintel, pediment and keystone (the pale horizontal beam across the view) are removed. The pylons are now lower obelisks (11 studs) set 28 studs apart, and the braziers moved out, so the facade and entrance are clear from the approach. If your screenshot showed something else (e.g. the Grand Mesa ruin lintel near the Plateau temple), tell me which temple.
+
+**World (9-11 + spacing):**
+9. **More mobs:** +1 of every regular species (21 more monsters; there were already about 48 extra outer-ring spawn points).
+10. **Bases:**
+    - Bases moved from radius 140 to **240**; the gap between neighbours grew from ~72 to **~124 studs**.
+    - Decks are bigger (hex radius 16, was 12) and bridges longer, with posts every 13 studs.
+    - Pet Hut pad at side 36; Nursery pad behind the base at 40.
+    - Cloud masses under the bases sink low (or are skipped right under a base). The hub-level decor islands moved out to r ≈ 380.
+    - Please check top-down and from player height.
+11. **Nursery entrance:** the low wall ring is now 7 segments with the **front segment removed**, plus two entry steps.
+
+**Theft (13):** while carrying a cloud **all buffs are off**:
+- **Client (Movement):** perks, Aurelius upgrades, potions, nitro, ice road, pets, boons and gadgets are all ignored. Carry speed is the same slow 11 for every cloud; Thunder's faster carry and Strong Grip no longer apply. Debuffs still work.
+- **Server:**
+  - timed boosts are cleared on pickup;
+  - PetService gives **no** pet, boon or gadget buffs while carrying, so re-equipping mid-carry changes nothing;
+  - a carrier moving faster than about 1.6× carry speed for 2 s loses the cloud ("Too fast while carrying").
+- **Exception:** the QA speed tool for Cubickzz only.
+- Pets whose buff used to be "while carrying" now use "**near your base**"; the two carry-speed pets were changed to knockback resist.
+
+**Orbs and 80 items (14-16):**
+- **The Orbs:** `workspace.Map.Decor.AureliusOrb` and `TayronOrb` stand beside the stalls: a pedestal, claw prongs, a glowing orb, and a sign saying "Offer a cloud you carry to unlock items".
+- **Offering:** prompt "Offer Cloud". On the **server**:
+  - the player must be carrying a cloud that is **not stolen** (stolen ones are refused: "The Orb refuses stolen clouds!");
+  - the cloud type must be the key of one of this vendor's locked entries;
+  - then the cloud is consumed and the entry unlocks **forever** (`Data.Unlocks`, mirrored to the player attribute `Unlocks`).
+- **Shop list:** each locked entry shows "Locked - offer a <Cloud> at <Vendor>'s Orb" and a disabled button.
+- **Aurelius: 40 Boons** (permanent, one level, coin price after unlock). Each is a unique (stat, condition) pair. Conditions: always / night / day / after a kill / below half HP / near your base / in a specific biome.
+- **Tayron: 40 Gadgets** (consumables):
+  - timed buffs and immunities;
+  - heals, shield bubbles;
+  - 6 monster blasts (fire, frost, shock, boom, prism, meteor), an ice trap;
+  - a recall beacon (not while carrying), dash boots;
+  - egg warmers (−10 / −30 min on your incubator), a cleanse tonic.
+- **Balance:**
+  - every entry needs its **own** cloud, so all 80 required clouds are different;
+  - tier 1 needs Common clouds and tier 4 needs Legendary/Mythic;
+  - the strongest entries (Midas Touch, Vampiric Pact, Guardian Pulse, Golden Goose Feather, Meteor Flare, Fortress Dome, Incubator Coil) need the rarest clouds;
+  - pets + boons + gadgets share one total, capped at 1.5× each pet cap.
+
+**Full catalogue:**
+| Vendor | Item | Effect | Tier | Unlock cloud |
+|---|---|---|---|---|
+| Aurelius | Rune of Swiftness | Speed | 1 | Cumulus |
+| Aurelius | Moonlit Stride | Speed at night | 2 | Frost Cloud |
+| Aurelius | Hunter's Rush | Speed for 6s after a kill | 2 | Pocket Tornado |
+| Aurelius | Desperate Dash | Speed below half health | 3 | Thunder Storm |
+| Aurelius | Feather Rune | Jump | 1 | Rain Cloud |
+| Aurelius | Homeward Leap | Jump near your base | 1 | Cotton Puff |
+| Aurelius | Battle Bound | Jump for 6s after a kill | 2 | Gale Cloud |
+| Aurelius | Sunlit Spring | Jump in daytime | 2 | Hail Cloud |
+| Aurelius | Stoneskin Sigil | Resist | 2 | Cherry Blossom Cloud |
+| Aurelius | Last Stand Ward | Resist below half health | 3 | Phoenix Cloud |
+| Aurelius | Hearth Ward | Resist near your base | 1 | Drizzle |
+| Aurelius | Night Ward | Resist at night | 2 | Tidal Cloud |
+| Aurelius | Anchor Glyph | KnockResist | 1 | Morning Mist |
+| Aurelius | Mountain Root | KnockResist in the Mountains | 2 | Ember Cloud |
+| Aurelius | Sap of Renewal | Regen | 2 | Coral Cloud |
+| Aurelius | Second Wind | Regen below half health | 3 | Auroral Cloud |
+| Aurelius | Hearthfire Mend | Regen near your base | 1 | Breeze Cloud |
+| Aurelius | Meadow Bloom | Regen in the Plateau | 1 | Haze |
+| Aurelius | Edge Rune | Damage | 3 | Speed Cloud |
+| Aurelius | Bloodrush Rune | Damage for 6s after a kill | 2 | Avalanche Cloud |
+| Aurelius | Dusk Blade | Damage at night | 2 | Firefly Cloud |
+| Aurelius | Volcanic Fury | Damage in the Volcanic | 3 | Chrono Cloud |
+| Aurelius | Scholar's Lens | XP | 2 | Echo Cloud |
+| Aurelius | Mycelial Memory | XP in the Mushroom | 1 | Nimbus Jr. |
+| Aurelius | Dawn Study | XP in daytime | 1 | Marshmallow Cloud |
+| Aurelius | Midas Touch | Coins | 4 | Void Star Cloud |
+| Aurelius | Marsh Fortune | Coins in the Marsh | 2 | Copper Storm |
+| Aurelius | Treasure Sense | Coins for 6s after a kill | 3 | Prism Cloud |
+| Aurelius | Keen Eye | Crit | 3 | Glacier Cloud |
+| Aurelius | Crystal Focus | Crit in the Canyon | 2 | Lavender Haze |
+| Aurelius | Vampiric Pact | Lifesteal | 4 | Solar Flare Cloud |
+| Aurelius | Tidal Leech | Lifesteal in the Coast | 2 | Hourglass Cloud |
+| Aurelius | Quickcast Sigil | Haste | 3 | Magma Cloud |
+| Aurelius | Frenzy Charm | Haste for 6s after a kill | 2 | Wildfire Cloud |
+| Aurelius | Veil of Mist | Stealth | 3 | Monsoon |
+| Aurelius | Shadow Step | Stealth at night | 1 | Dew Cloud |
+| Aurelius | Warm Hands | Hatch | 2 | Icicle Cloud |
+| Aurelius | Guardian Pulse | Shield | 4 | Celestial Cloud |
+| Aurelius | Purity Charm | Cleanse | 3 | Cyclone |
+| Aurelius | Salamander Blood | FireImmune | 3 | Nebula Cloud |
+| Tayron | Zip Soda | Buff Kind: Speed, Amount: 0.15, Duration: 20 | 1 | Sand Squall |
+| Tayron | Turbo Tonic | Buff Kind: Speed, Amount: 0.3, Duration: 15 | 3 | Thunderhead |
+| Tayron | Bounce Gum | Buff Kind: Jump, Amount: 0.3, Duration: 25 | 1 | Sea Foam Cloud |
+| Tayron | Moon Boots | Buff Kind: Jump, Amount: 0.6, Duration: 15 | 3 | Inferno Cloud |
+| Tayron | Iron Jerky | Buff Kind: Resist, Amount: 0.15, Duration: 30 | 2 | Sparkbolt |
+| Tayron | Rock Candy Armor | Buff Kind: Resist, Amount: 0.3, Duration: 12 | 3 | Blizzard |
+| Tayron | Anchor Boots | Buff Kind: KnockResist, Amount: 0.5, Duration: 30 | 1 | Pebble Cloud |
+| Tayron | Healing Herb Tea | Buff Kind: Regen, Amount: 1.5, Duration: 20 | 1 | Pine Fog |
+| Tayron | Phoenix Broth | Buff Kind: Regen, Amount: 3, Duration: 15 | 3 | Volt Marsh Storm |
+| Tayron | Sharpening Stone | Buff Kind: Damage, Amount: 0.2, Duration: 30 | 2 | Toxic Cloud |
+| Tayron | Rage Pepper | Buff Kind: Damage, Amount: 0.4, Duration: 12 | 3 | Plague Cloud |
+| Tayron | Study Notes | Buff Kind: XP, Amount: 0.3, Duration: 60 | 1 | Dusk Wisp |
+| Tayron | Lucky Coin | Buff Kind: Coins, Amount: 0.3, Duration: 60 | 2 | Geyser Cloud |
+| Tayron | Golden Goose Feather | Buff Kind: Coins, Amount: 0.6, Duration: 45 | 4 | Tempest King |
+| Tayron | Hawk Eye Drops | Buff Kind: Crit, Amount: 0.15, Duration: 30 | 2 | Boulder Cloud |
+| Tayron | Leech Ring | Buff Kind: Lifesteal, Amount: 0.1, Duration: 25 | 3 | Tsunami Cloud |
+| Tayron | Quick Gloves | Buff Kind: Haste, Amount: 0.2, Duration: 30 | 2 | Drift Cloud |
+| Tayron | Smoke Bomb | Buff Kind: Stealth, Amount: 0.6, Duration: 15 | 1 | Moonlet |
+| Tayron | Heat Pack | EggWarm Minutes: 10 | 2 | Rewind Cloud |
+| Tayron | Incubator Coil | EggWarm Minutes: 30 | 4 | Leviathan Squall |
+| Tayron | Snow Goggles | Buff Kind: SlipImmune, Amount: 1, Duration: 60 | 1 | Cinder Puff |
+| Tayron | Rubber Boots | Buff Kind: ElectricImmune, Amount: 1, Duration: 45 | 2 | Silver Lining |
+| Tayron | Fireproof Cloak | Buff Kind: FireImmune, Amount: 1, Duration: 45 | 2 | Merchant Cloud |
+| Tayron | Shades | Buff Kind: BlindImmune, Amount: 1, Duration: 60 | 1 | Frostbite |
+| Tayron | Bandage | Heal Amount: 30 | 1 | Static Fluff |
+| Tayron | First Aid Kit | Heal Amount: 60 | 2 | Jester Cloud |
+| Tayron | Mega Potion | Heal Amount: 100 | 3 | Tectonic Cloud |
+| Tayron | Bubble Shield | ShieldNow Duration: 4 | 2 | Rumble Cloud |
+| Tayron | Fortress Dome | ShieldNow Duration: 8 | 4 | Starfall Cloud |
+| Tayron | Fire Cracker | Blast Radius: 12, Damage: 40, Hit: Burn | 1 | Spore Cloud |
+| Tayron | Frost Grenade | Blast Radius: 14, Damage: 35, Hit: Slow | 2 | Glowcap Cloud |
+| Tayron | Shock Mine | Blast Radius: 12, Damage: 45, Hit: Shock | 2 | Quartz Cloud |
+| Tayron | Boom Barrel | Blast Radius: 18, Damage: 90, Hit: Knock | 3 | Wormhole Cloud |
+| Tayron | Prism Bomb | Blast Radius: 16, Damage: 70, Hit: Expose | 3 | Hyperdrive Cloud |
+| Tayron | Meteor Flare | Blast Radius: 24, Damage: 180, Hit: Burn | 4 | Obsidian Storm |
+| Tayron | Ice Trap | Freeze Radius: 20, Seconds: 4 | 3 | Gold Rush Cloud |
+| Tayron | Recall Beacon | Recall  | 2 | Poltergeist Cloud |
+| Tayron | Dash Boots | Dash Distance: 40 | 1 | Puddle Cloud |
+| Tayron | Cleanse Tonic | Cleanse  | 1 | Dust Devil |
+| Tayron | Calm Incense | Buff Kind: Cleanse, Amount: 0.5, Duration: 45 | 2 | Sporestorm |
+**Please test (multiplayer where noted) and send the exact F9 red/yellow lines:**
+1. Boss kill → egg drop → only the top damager can take it (needs 2 players).
+2. Carry the egg → die on the way → free pickup → someone else takes it → delivers it at their nursery.
+3. QA Boss Respawner: the arrival effect plays.
+4. A boss attacks as soon as you enter its range.
+5. Nameplates sit above every monster.
+6. Prism temple colours, and the temple sightlines.
+7. Base spacing (top-down and player height), and that the nursery entrance is free.
+8. Carrying a cloud: buffs off and slow; using a speed tool while carrying makes you lose the cloud.
+9. Orb: a stolen cloud is refused; an own cloud unlocks the matching entry; the unlock survives rejoin; buying works after unlocking.
+10. FPS.

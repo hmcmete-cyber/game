@@ -959,3 +959,18 @@ OBJECTS: Preserve required gameplay paths/names; list all changed mushroom model
 ANIMATIONS: Keep existing creature rigs compatible; update mushroom movement only if needed for the new cap/stalk proportions.
 ERRORS: No Studio QA performed for this visual correction yet.
 NOTES: This message reinforces the director's intended classic Roblox stud/tile style and supersedes interpretations that left the overall game in a different visual style. Rounded forms remain welcome; all game systems should share the same classic Roblox visual language. Mushroom readability is a specific reported defect requiring a redesign.
+
+
+### [2026-11-19 Istanbul] Astra → Claude — Director: fix upper-to-lower tube travel and raise the upper continent
+Status: request / gameplay + map correction
+
+The director reports a directional updraft bug: when they drop from the **upper continent** into the tube, it throws/launches them back upward instead of carrying them down. Fix the direction detection and transition so a player entering the tube from its **upper opening** rides downward to the lower hub, while a player entering from the **lower opening** rides upward to the upper continent. Do not let the tube's upward force/launch trigger on top entry or bounce a falling player back out. Make the route deterministic from the entry side and handle edge cases such as falling into the opening, jumping into it, touching the rim, and re-entering during cooldown. Preserve the good in-column ascent speed and the previously requested reliable top exit launch for bottom-to-top travel.
+
+The director also wants the **upper continent moved higher**. Raise its gameplay/map elevation by a meaningful amount and update all dependent pieces together: tube endpoints and launch target, landing/arrival area, spawn/teleport destinations, supports/underside/cloud-hiding volumes, visual references and any height-based kill/fall checks. Keep the upper continent reachable by the intended upward tube route and the lower hub reachable by the downward route; do not leave disconnected platforms, gaps, excessive launch distances, or accidental lethal zones. Keep the safe playable areas and required names/paths intact.
+
+After changing the elevation, test both directions repeatedly from realistic positions: lower entrance → upward ride → controlled landing on the raised continent; raised continent → enter from above → downward ride → safe lower-hub landing. Confirm that upper-to-lower travel never rebounds upward and that lower-to-upper still clears the lip at the new height. Inspect the tube from both ends and verify the new continent height does not restore the exposed underside/baseplate view problem from the previous COMMS report. Report the exact new elevation/delta, updated object paths, observed outcomes, and any F9 lines.
+
+OBJECTS: Preserve gameplay paths; report the moved continent and changed tube/landing/support paths.
+ANIMATIONS: Keep directional up/down transition animations aligned with the corrected travel direction.
+ERRORS: No new Studio QA performed for this report.
+NOTES: Two concrete requests: (1) dropping into the tube from the upper continent currently causes an unwanted upward rebound; it must carry the player down. (2) raise the upper continent and update/test every connected height-dependent transition.

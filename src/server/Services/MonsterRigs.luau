@@ -244,38 +244,70 @@ BUILD.Smoldlet = function(s)
 	return r
 end
 
--- (g) Capstride: tall walking mushroom with a broad red spotted cap
-BUILD.Capstride = function(s)
-	local r = rig("Capstride", s, 3)
-	local stem, cap, spot = RGB(240, 228, 205), RGB(210, 50, 50), RGB(255, 250, 240)
-	add(r, "Body", "HumanoidRootPart", V(2.6, 5, 2.4), V(0, 2.4, 0), V(0, 0, 0), stem, { Role = "body" })
-	-- the cap is a cylinder turned upright: in its own space X points up
-	add(r, "Head", "Body", V(1.6, 7, 7), V(0, 2.5, 0), V(-0.8, 0, 0), cap, { Role = "head", Shape = "Cylinder", Rot = A(0, 0, rad(90)) })
-	for i = 1, 5 do
-		local a = i * 1.25
-		add(r, "Spot" .. i, "Head", V(0.5, 1.1, 1.1), V(0.7, math.cos(a) * 2.2, math.sin(a) * 2.2), V(0, 0, 0), spot, { Shape = "Ball" })
+-- v2.4 MUSHROOM KIT (director: mushrooms must read as mushrooms): a cap is
+-- an upright-cylinder brim + two smaller dome layers, darker gills under the
+-- brim, white spots stuck ON the cap. In a turned cylinder's own space X
+-- points up, so children of the brim use (up, y, z) offsets.
+local UPRIGHT = A(0, 0, rad(90))
+local GILL, SPOT = RGB(225, 200, 180), RGB(255, 252, 245)
+local function capKit(r, name: string, parent: string, at: Vector3, radius: number, thick: number, color: Color3, role: string?)
+	add(r, name, parent, V(thick, radius * 2, radius * 2), at, V(-thick / 2, 0, 0), color, { Shape = "Cylinder", Rot = UPRIGHT, Role = role or "deco" })
+	local light = color:Lerp(RGB(255, 255, 255), 0.08)
+	add(r, name .. "Dome", name, V(thick * 0.85, radius * 1.44, radius * 1.44), V(thick / 2, 0, 0), V(-thick * 0.42, 0, 0), light, { Shape = "Cylinder" })
+	add(r, name .. "DomeTop", name .. "Dome", V(thick * 0.7, radius * 0.86, radius * 0.86), V(thick * 0.42, 0, 0), V(-thick * 0.35, 0, 0), light, { Shape = "Cylinder" })
+	add(r, name .. "Gills", name, V(thick * 0.45, radius * 1.7, radius * 1.7), V(-thick / 2, 0, 0), V(thick * 0.22, 0, 0), GILL, { Shape = "Cylinder" })
+	for k = 1, 5 do
+		local ang = k / 5 * math.pi * 2
+		add(r, name .. "Spot" .. k, name, V(0.2, radius * 0.26, radius * 0.26), V(thick / 2 + 0.05, math.cos(ang) * radius * 0.82, math.sin(ang) * radius * 0.82), V(0, 0, 0), SPOT, { Shape = "Cylinder" })
 	end
-	add(r, "EyeL", "Body", V(0.5, 0.6, 0.2), V(-0.6, 1.2, -1.2), V(0, 0, 0), RGB(30, 30, 30), {})
-	add(r, "EyeR", "Body", V(0.5, 0.6, 0.2), V(0.6, 1.2, -1.2), V(0, 0, 0), RGB(30, 30, 30), {})
-	biped(r, "Body", -2.5, 0.8, V(1.1, 3, 1.1), 1.2, 1.8, V(0.8, 3.4, 0.8), stem, stem, M.SmoothPlastic)
-	add(r, "MiniCapL", "Body", V(0.6, 1.8, 1.8), V(-1.4, 2.1, 0.4), V(0, 0, 0), RGB(240, 140, 60), { Shape = "Cylinder", Rot = A(0, 0, rad(90)) })
-	add(r, "MiniCapR", "Body", V(0.6, 1.4, 1.4), V(1.4, 1.6, 0.6), V(0, 0, 0), RGB(240, 140, 60), { Shape = "Cylinder", Rot = A(0, 0, rad(90)) })
+	add(r, name .. "SpotTop", name .. "Dome", V(0.2, radius * 0.3, radius * 0.3), V(thick * 0.43, radius * 0.25, radius * 0.25), V(0, 0, 0), SPOT, { Shape = "Cylinder" })
+end
+-- a small whole mushroom (stem + cap) sprouting from a part
+local function sprout(r, name: string, parent: string, at: Vector3, stemH: number, capR: number, color: Color3)
+	add(r, name .. "Stem", parent, V(stemH, capR * 0.6, capR * 0.6), at, V(-stemH / 2, 0, 0), RGB(240, 230, 210), { Shape = "Cylinder", Rot = UPRIGHT })
+	add(r, name .. "Cap", name .. "Stem", V(0.6, capR * 2, capR * 2), V(stemH / 2, 0, 0), V(-0.3, 0, 0), color, { Shape = "Cylinder" })
+	add(r, name .. "CapDome", name .. "Cap", V(0.5, capR * 1.3, capR * 1.3), V(0.3, 0, 0), V(-0.25, 0, 0), color:Lerp(RGB(255, 255, 255), 0.08), { Shape = "Cylinder" })
+	add(r, name .. "Dot", name .. "CapDome", V(0.12, capR * 0.4, capR * 0.4), V(0.26, capR * 0.2, 0), V(0, 0, 0), SPOT, { Shape = "Cylinder" })
+end
+
+-- (g) Capstride: tall walking mushroom — round cream stalk body with its
+-- face under a wide red spotted cap, stubby arms and feet, a small
+-- mushroom sprouting from each shoulder
+BUILD.Capstride = function(s)
+	local r = rig("Capstride", s, 2.4)
+	local stem, cap = RGB(240, 228, 205), RGB(215, 50, 50)
+	-- invisible core keeps the limb maths simple; the round stalk is a child
+	add(r, "Body", "HumanoidRootPart", V(2.4, 5, 2.4), V(0, 2.4, 0), V(0, 0, 0), stem, { Role = "body", Transparency = 1 })
+	add(r, "Stalk", "Body", V(5.2, 3, 3), V(0, 0, 0), V(0, 0, 0), stem, { Shape = "Cylinder", Rot = UPRIGHT })
+	add(r, "StalkRing", "Body", V(0.5, 3.8, 3.8), V(0, 0.4, 0), V(0, 0, 0), SPOT, { Shape = "Cylinder", Rot = UPRIGHT })
+	capKit(r, "Head", "Body", V(0, 2.6, 0), 3.8, 1.5, cap, "head")
+	add(r, "EyeL", "Body", V(0.55, 0.65, 0.2), V(-0.6, 1.4, -1.5), V(0, 0, 0), RGB(30, 30, 30), {})
+	add(r, "EyeR", "Body", V(0.55, 0.65, 0.2), V(0.6, 1.4, -1.5), V(0, 0, 0), RGB(30, 30, 30), {})
+	add(r, "Mouth", "Body", V(0.9, 0.2, 0.15), V(0, 0.6, -1.52), V(0, 0, 0), RGB(120, 60, 50), {})
+	biped(r, "Body", -2.4, 0.8, V(1, 2.2, 1.2), 0.9, 1.7, V(0.8, 2.4, 0.8), stem, stem, M.SmoothPlastic)
+	sprout(r, "ShoulderShroomL", "Body", V(-1.1, 1.9, 0.6), 1.2, 0.9, RGB(240, 140, 60))
+	sprout(r, "ShoulderShroomR", "Body", V(1.1, 1.6, 0.5), 1, 0.75, RGB(240, 140, 60))
 	return r
 end
 
--- (h) Sporeback: hunched purple-grey fungal beast, pink cap, spine ridge
+-- (h) Sporeback: hunched purple-grey fungal beast — a big pink mushroom cap
+-- on its back, a grove of small mushrooms along its spine, low head, legs
 BUILD.Sporeback = function(s)
 	local r = rig("Sporeback", s, 2.6)
-	local hide, cap, spine = RGB(115, 95, 125), RGB(240, 130, 190), RGB(200, 190, 205)
-	add(r, "Body", "HumanoidRootPart", V(5, 3.6, 6.4), V(0, 0.8, 0), V(0, 0, 0), hide, { Role = "body", Material = M.Slate })
-	add(r, "Cap", "Body", V(1.2, 6, 6), V(0, 2.2, 0.4), V(0, 0, 0), cap, { Shape = "Cylinder", Rot = A(0, 0, rad(90)) })
-	add(r, "Head", "Body", V(2.6, 2.2, 2.6), V(0, -0.4, -3.6), V(0, 0, 1.1), hide, { Role = "head", Material = M.Slate })
+	local hide, cap = RGB(115, 95, 125), RGB(240, 130, 190)
+	add(r, "Body", "HumanoidRootPart", V(5, 3.6, 6.4), V(0, 0.8, 0), V(0, 0, 0), hide, { Role = "body" })
+	add(r, "CapStem", "Body", V(1.6, 2.2, 2.2), V(0, 1.8, 0.4), V(-0.8, 0, 0), RGB(235, 220, 230), { Shape = "Cylinder", Rot = UPRIGHT })
+	capKit(r, "Cap", "Body", V(0, 3.4, 0.4), 3.3, 1.2, cap)
+	add(r, "Head", "Body", V(2.6, 2.2, 2.6), V(0, -0.4, -3.6), V(0, 0, 1.1), hide, { Role = "head" })
 	add(r, "Jaw", "Head", V(2.2, 0.7, 2), V(0, -1.1, -0.2), V(0, 0, 0.9), RGB(70, 55, 80), { Role = "jawBot" })
-	add(r, "EyeL", "Head", V(0.5, 0.4, 0.2), V(-0.7, 0.4, -1.3), V(0, 0, 0), RGB(255, 200, 240), { Material = M.Neon })
-	add(r, "EyeR", "Head", V(0.5, 0.4, 0.2), V(0.7, 0.4, -1.3), V(0, 0, 0), RGB(255, 200, 240), { Material = M.Neon })
+	add(r, "EyeL", "Head", V(0.5, 0.4, 0.2), V(-0.7, 0.4, -1.3), V(0, 0, 0), RGB(255, 200, 240), {})
+	add(r, "EyeR", "Head", V(0.5, 0.4, 0.2), V(0.7, 0.4, -1.3), V(0, 0, 0), RGB(255, 200, 240), {})
 	legs4(r, "Body", 2, 2.4, 1.2, V(1.5, 3, 1.5), hide, M.Slate)
-	for i = 1, 6 do
-		add(r, "Spine" .. i, "Body", V(0.5, 1.8, 1.4), V(0, 1.9 + (i % 2) * 0.2, -2.4 + i * 0.9), V(0, -0.9, 0), spine, { Class = "WedgePart", Rot = A(rad(-25), 0, 0) })
+	sprout(r, "BackShroomA", "Body", V(-1.4, 1.8, -1.8), 1.4, 1, RGB(250, 160, 205))
+	sprout(r, "BackShroomB", "Body", V(1.5, 1.8, 2.3), 1.1, 0.8, RGB(250, 160, 205))
+	sprout(r, "BackShroomC", "Body", V(-1.2, 1.8, 2.6), 0.9, 0.65, RGB(200, 150, 230))
+	for i = 1, 3 do
+		add(r, "Spine" .. i, "Body", V(0.5, 1.6, 1.2), V(0, 1.9, -2.9 + i * 0.5), V(0, -0.8, 0), RGB(200, 190, 205), { Class = "WedgePart", Rot = A(rad(-25), 0, 0) })
 	end
 	return r
 end
@@ -427,11 +459,15 @@ BUILD.Skyfin = function(s)
 	return r
 end
 
--- Sprout (Capstride's summon): tiny mushroom
+-- Sprout (Capstride's summon): a tiny walking mushroom — stalk with a
+-- face, orange spotted cap, two stubby feet
 BUILD.Shroomling = function(s)
 	local r = rig("Shroomling", s, 1)
-	add(r, "Body", "HumanoidRootPart", V(1.6, 2, 1.6), V(0, 0.5, 0), V(0, 0, 0), RGB(240, 228, 205), { Role = "body" })
-	add(r, "Head", "Body", V(0.8, 3, 3), V(0, 1.3, 0), V(0, 0, 0), RGB(240, 140, 60), { Role = "head", Shape = "Cylinder", Rot = A(0, 0, rad(90)) })
+	add(r, "Body", "HumanoidRootPart", V(1.6, 2, 1.6), V(0, 0.5, 0), V(0, 0, 0), RGB(240, 228, 205), { Role = "body", Transparency = 1 })
+	add(r, "Stalk", "Body", V(2.2, 1.7, 1.7), V(0, 0, 0), V(0, 0, 0), RGB(240, 228, 205), { Shape = "Cylinder", Rot = UPRIGHT })
+	capKit(r, "Head", "Body", V(0, 1.1, 0), 1.7, 0.8, RGB(240, 140, 60), "head")
+	add(r, "EyeL", "Body", V(0.35, 0.4, 0.15), V(-0.35, 0.35, -0.85), V(0, 0, 0), RGB(30, 30, 30), {})
+	add(r, "EyeR", "Body", V(0.35, 0.4, 0.15), V(0.35, 0.35, -0.85), V(0, 0, 0), RGB(30, 30, 30), {})
 	add(r, "LegL", "Body", V(0.6, 1.2, 0.6), V(-0.4, -1, 0), V(0, 0.6, 0), RGB(220, 210, 190), { Role = "legA" })
 	add(r, "LegR", "Body", V(0.6, 1.2, 0.6), V(0.4, -1, 0), V(0, 0.6, 0), RGB(220, 210, 190), { Role = "legB" })
 	return r

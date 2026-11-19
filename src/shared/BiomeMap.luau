@@ -10,7 +10,7 @@
 
 local BiomeMap = {}
 
-BiomeMap.UP = 200 -- continent top
+BiomeMap.UP = 320 -- continent top (v2.4: raised from 200)
 BiomeMap.HEART = 70 -- authoring radius of the heart edge
 BiomeMap.COAST = 262 -- authoring radius where the coast begins
 BiomeMap.EDGE = 314 -- authoring radius of the outer shoreline

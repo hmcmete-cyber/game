@@ -403,7 +403,7 @@ local function updateBeam()
 			return
 		end
 		local goal: Vector3?
-		if root.Position.Y > 150 then
+		if root.Position.Y > BiomeMap.UP - 50 then
 			goal = Vector3.new(0, root.Position.Y, 0) -- the Sky Heart hole: ride the updraft down
 		else
 			local nest = getNest()
@@ -531,7 +531,7 @@ local function zoneLoop()
 						end
 					end
 				end
-				if fallback == "Skylands" and root and root.Position.Y > 150 then
+				if fallback == "Skylands" and root and root.Position.Y > BiomeMap.UP - 50 then
 					fallback = "Floating Continent"
 				end
 				zoneText.Text = fallback

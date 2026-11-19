@@ -294,7 +294,13 @@ updateAir = function(root: BasePart, hum: Humanoid)
 	local bottomY = column:GetAttribute("BottomY") or (column.Position.Y - column.Size.X / 2)
 
 	if airMode == nil then
-		local fromAbove = exitHeight ~= nil and root.Position.Y > exitHeight - 12 and root.AssemblyLinearVelocity.Y <= 2
+		-- v2.4: direction comes from WHERE you enter, never from your speed.
+		-- Anyone entering in the top part of the column (the Sky Heart hole,
+		-- jumping, falling or brushing the rim) rides DOWN; anyone entering
+		-- in the lower part rides UP. (Before, jumping into the hole still had
+		-- upward speed, counted as "from below" and got launched back up.)
+		local topY = column.Position.Y + column.Size.X / 2 -- cylinder stands on its X axis
+		local fromAbove = exitHeight ~= nil and root.Position.Y > math.min(exitHeight, topY) - 40
 		airMode = fromAbove and "Down" or "Up"
 	end
 
@@ -330,7 +336,7 @@ updateAir = function(root: BasePart, hum: Humanoid)
 		return
 	end
 
-	if exitHeight and typeof(target) == "Vector3" and root.Position.Y >= exitHeight then
+	if airMode == "Up" and exitHeight and typeof(target) == "Vector3" and root.Position.Y >= exitHeight then
 		-- Ballistic launch: reach `target` in exactly T seconds under gravity.
 		-- v2.0: a Humanoid in the air pulls its sideways speed back toward
 		-- walking speed, which ate the launch and dropped players back into

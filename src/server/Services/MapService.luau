@@ -27,6 +27,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local BaseBuilder = require(script.Parent:WaitForChild("BaseBuilder"))
 local ContinentBuilder = require(script.Parent:WaitForChild("ContinentBuilder"))
 
@@ -249,7 +250,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.3"
+local MAP_VERSION = "2.4"
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
 -- v2.2 CLASSIC STUDDED STYLE PASS over the whole generated map: every solid
@@ -281,7 +282,7 @@ local function buildPlaceholder(): Instance
 	m.Name = "Map"
 
 	local Y = 40 -- hub level
-	local UP = 200 -- top of the floating continent
+	local UP = BiomeMap.UP -- top of the floating continent (v2.4: 320, was 200)
 	local DEATH = DEATH_Y -- death cloud floor (Y 0; hub/base undersides end around Y 23)
 	local hubR = 60
 	local hubColor = Color3.fromRGB(235, 238, 248)

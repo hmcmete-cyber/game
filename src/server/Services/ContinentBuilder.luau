@@ -443,11 +443,41 @@ function ContinentBuilder.Build(ctx)
 	------------------------------------------------------------------
 	local capColors = { Color3.fromRGB(230, 80, 90), Color3.fromRGB(170, 110, 230), Color3.fromRGB(90, 170, 240), Color3.fromRGB(250, 170, 80) }
 	local stemC = Color3.fromRGB(240, 230, 210)
+	-- v2.4 READABLE MUSHROOM (director: must read as a mushroom from the
+	-- gameplay camera): round stem with a white ring, darker gills under the
+	-- cap, a cap WIDER than the stem built as a stepped dome (brim + 2 dome
+	-- layers), and white spots stuck onto the cap. The brim top stays at the
+	-- old cap height, so mushroom staircases and spawns still work.
+	local gillC = Color3.fromRGB(225, 200, 180)
+	local spotC = Color3.fromRGB(255, 252, 245)
+	local function mushroomCap(name: string, base: Vector3, brimTop: number, capR: number, color: Color3)
+		disc(continent, name .. "Gills", base, capR * 0.86, 0.6, brimTop - 1.2, gillC, Enum.Material.Plastic, Z.Mushroom)
+		local brim = disc(continent, name .. "Cap", base, capR, 1.2, brimTop, color, Enum.Material.Plastic, Z.Mushroom)
+		brim:SetAttribute("Shelter", true)
+		local lighter = color:Lerp(Color3.new(1, 1, 1), 0.08)
+		disc(continent, name .. "Dome", base, capR * 0.72, 1.1, brimTop + 1.1, lighter, Enum.Material.Plastic, Z.Mushroom)
+		disc(continent, name .. "DomeTop", base, capR * 0.44, 0.9, brimTop + 2, lighter:Lerp(Color3.new(1, 1, 1), 0.06), Enum.Material.Plastic, Z.Mushroom)
+		local spots = math.clamp(math.floor(capR / 2.2), 3, 8)
+		for k = 1, spots do
+			local ang = k / spots * math.pi * 2 + capR
+			local pos = base + Vector3.new(math.cos(ang) * capR * 0.86, 0, math.sin(ang) * capR * 0.86)
+			disc(decor, name .. "Spot" .. k, pos, math.max(0.5, capR * 0.11), 0.25, brimTop + 0.2, spotC, Enum.Material.Plastic, nil, { CanCollide = false })
+		end
+		for k = 1, 3 do
+			local ang = k * 2.1 + capR
+			local pos = base + Vector3.new(math.cos(ang) * capR * 0.55, 0, math.sin(ang) * capR * 0.55)
+			disc(decor, name .. "TopSpot" .. k, pos, math.max(0.4, capR * 0.08), 0.25, brimTop + 1.3, spotC, Enum.Material.Plastic, nil, { CanCollide = false })
+		end
+		return brim
+	end
 	local function mushroom(name: string, base: Vector3, height: number, capR: number, color: Color3)
-		disc(continent, name .. "Stem", base, math.max(2, capR * 0.22), height, UP + height, stemC, Enum.Material.SmoothPlastic, Z.Mushroom)
-		local cap = disc(continent, name .. "Cap", base, capR, 2, UP + height + 2, color, Enum.Material.SmoothPlastic, Z.Mushroom)
-		cap:SetAttribute("Shelter", true)
-		return cap
+		local stemR = math.max(1.6, capR * 0.22)
+		local brimTop = UP + height + 2
+		disc(continent, name .. "Stem", base, stemR, brimTop - 1.8 - UP, brimTop - 1.8, stemC, Enum.Material.Plastic, Z.Mushroom)
+		if height > 6 then
+			disc(continent, name .. "Ring", base, stemR * 1.5, 0.5, UP + height * 0.62, spotC, Enum.Material.Plastic, Z.Mushroom)
+		end
+		return mushroomCap(name, base, brimTop, capR, color)
 	end
 	local clusters = { A(130, 105, UP), A(205, 128, UP), A(150, 142, UP), A(100, 140, UP), A(240, 100, UP), A(185, 95, UP) }
 	for c, center in clusters do
@@ -730,8 +760,9 @@ function ContinentBuilder.Build(ctx)
 
 	-- MUSHROOM: the Elder Shroom — climb the shelf caps spiralling up its stem
 	local elderC = A(205, 110, UP)
-	disc(continent, "ElderStem", elderC, 8, 62, UP + 62, Color3.fromRGB(235, 225, 205), Enum.Material.SmoothPlastic, Z.Mushroom)
-	local elderCap = disc(continent, "ElderCap", elderC, 40, 3, UP + 65, Color3.fromRGB(150, 90, 220), Enum.Material.SmoothPlastic, Z.Mushroom)
+	disc(continent, "ElderStem", elderC, 8, 63.2, UP + 63.2, Color3.fromRGB(235, 225, 205), Enum.Material.SmoothPlastic, Z.Mushroom)
+	local elderCap = mushroomCap("Elder", elderC, UP + 65, 40, Color3.fromRGB(150, 90, 220))
+	disc(continent, "ElderRing", elderC, 12, 1, UP + 40, spotC, Enum.Material.Plastic, Z.Mushroom)
 	elderCap:SetAttribute("Shelter", true)
 	for i = 1, 15 do
 		local a = math.rad(i * 48)

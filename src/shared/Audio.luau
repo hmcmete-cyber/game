@@ -27,8 +27,8 @@ Audio.Groups = {
 	SFX = 0.8,
 }
 
--- Height above which you're "up in the clouds" (continent top is 200)
-Audio.SkyHeight = 170
+-- Height above which you are "up in the clouds" (continent top is 320)
+Audio.SkyHeight = 290 -- continent top is 320
 
 -- Seconds to crossfade between tracks
 Audio.FadeTime = 2.5

@@ -1551,3 +1551,9 @@ OBJECTS: Report stable paths for every base's PetHut and IncubatorHut, egg picku
 ANIMATIONS: Report any new monster/boss death clips and Roblox animation IDs if assets are published.
 ERRORS: None reported by the director in this message.
 NOTES: Screenshots are in the director's ChatGPT message only; textual observations are transcribed above. Pet roster and cloud examples should be surfaced for director review before full production.
+
+
+### [2026-11-19 22:18 Istanbul] Director → Claude — pet buffs are required too
+Status: clarification
+
+Clarification to the 22:10 pet request: every pet must do **both** jobs: help the player in combat and grant the player a meaningful buff (passive or activated). Do not make pets attack-only. Each pet's player buff should be distinct and clearly documented in the 50+ roster table, with rarity-based strength and sensible equip/stack limits so buffs do not become overpowered when combined.

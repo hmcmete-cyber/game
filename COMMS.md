@@ -1378,3 +1378,97 @@ NOTES: User’s two reference screenshots are attached in the director’s messa
 Status: info
 
 The two screenshots themselves are in the director's ChatGPT message and are not embedded in COMMS.md. The written descriptions in my 21:45 request are the reference available here: screenshot 1 shows the current purple canyon/player view; screenshot 2 shows the “Watch the holes!” zone banner overlapping the HUD. Please use those observations unless the director forwards the images separately.
+
+### [2026-11-19 Istanbul] Claude → Director/Astra — v2.10 world-art pass (all 8 points) — code done, UNTESTED + cloud design PROPOSAL
+Status: done in code (MapVersion **2.10**) / cloud design waiting for director feedback. Everything is in the generator, so runtime rebuilds keep it.
+
+**1) Crystal Canyon rebuilt** (`Map/Continent/CanyonMesas/MesaN`, `Map/Decor/CrystalLandmarkN`)
+- **Terrain:**
+  - The purple floor is now warm sandstone, so the blue crystals stand out.
+  - The canyon floor is filled with **layered strata mesas**: 2-5 stacks of 4-stud layers that step inward, so the ledges are climbable. They are taller toward the canyon rims and have broken rim chips.
+  - The mesas leave **three deep winding ravines**: a main ravine from the heart to the coast, a west branch that crosses the chasm on the Storm Bridge, and an east branch running into the caves. The crystal river is a cross-ravine.
+- **Holes:** the random pits are gone. There is ONE intentional chasm, under the Storm Bridge. The stone arches and cave roofs remain as real crossings and shelters.
+- **Crystals:** 7 big glowing blue crystal landmarks sit at the ravine bends (main prism 18-28 studs tall, 5 shards, frost base, light and sparkles).
+- **QA:** `PitMarker` was moved to the new chasm.
+
+**2) Plateau:** the round hills are gone. There are 8 **tablelands** plus the **Grand Mesa** (`Map/Continent/Crags/TablelandN`, `GrandMesa`), built with the crag kit:
+- steep escarpment, stretched asymmetric outline, branching spur ridges;
+- eroded outcrop steps and ramps, gaps between blocks acting as gullies;
+- a flat grassy playable top, layered sandstone sides, debris rocks at the foot.
+
+The ruins still stand on the Grand Mesa.
+
+**3) Continent much larger:**
+- The X/Z footprint is about **1.45x wider** (shoreline ~810-1180 studs, was ~555-805), and every layout point scales with it (`BiomeMap.R`). The sky islands, terrain clear, cloud sea and canopy were moved out to match.
+- New outer content:
+  - 2 more **mountain ranges** (3 crags each, ridges following the chain);
+  - 3 **volcanic ridges** and 2 **craters** with lava pools and broken rims;
+  - about 48 extra spawns in the outer ring;
+  - 1.5-1.7x more dressing per habitat.
+
+**4) Temples and bosses:** one temple per biome at its far end, at `Map/Temples/<Plateau|Mountains|Mushroom|Marsh|Canyon|Volcanic|Coast>`.
+- **Temple build:**
+  - a stepped octagonal arena and a ring of 12 columns (some broken, with rubble);
+  - a gate facing the centre: pylons, lintel, pediment and fire braziers;
+  - ruined back walls with crenellations and banners;
+  - a shrine dais with a themed glowing emblem (sun, snowflake, mushroom, lightning, crystals, flame, wave);
+  - an inlaid floor ring, a seal, themed particles and lights;
+  - a `BossSpawn` marker.
+- **Bosses** (big multi-part rigs, Scale 2.4-2.7, 3600-4400 HP, 600+ XP). They spawn on their arena and are leashed to it (Tether 60). On first aggro they roar with a shockwave and show a "⚠ <Name> awakens!" banner. The gold name and health bar are visible from 320 studs.
+  - Mesa Colossus: Pillar Rise / Ridge Shockwave
+  - Frostpeak Warden: Avalanche Sweep / Ice Ring (jump to dodge)
+  - Mycelium Monarch: Spore Doubles / Root Snare
+  - Bogstorm Croaker: Thunder Wave / Tongue Sweep (pulls you in)
+  - Prism Sovereign: Refracting Shard Barrage / Crystal-Wall Lanes
+  - Caldera Titan: Erupting Lava Lanes / Crater Stomp (jump to dodge)
+  - Tidebreaker: Advancing Tide Wall / Ink Sweep (blind)
+- Every hit is telegraphed first by a ground circle, line strip or lanes.
+- **Animations:** the animation export now has **28 monsters × 6 = 168 clips** (ExportAll covers the bosses automatically).
+
+**5) Underside:**
+- The canopy grid now covers the whole bigger plate.
+- A second, lower **cloud deck** of wide flattened lobes closes every gap between the hanging masses.
+- A **skirt** of masses around the shoreline hides the plate's side faces from low, far angles.
+- The haze layers are kept.
+
+**6) Clouds — design PROPOSAL (not built yet; director please pick or adjust).** The idea: each collectible is a **Cloudkin**, made of interlocking lobes of very different sizes, in the studded classic style. Rarity changes the **silhouette + accent + motion + catch reveal**, not just colour.
+- **Common: "Puff" (Cumulus).**
+  - Look: low, broad, cosy heap (3 big base lobes, 2 mid, 1 crown); flat soft belly; two dot eyes and a tiny smile on the front lobe (cute, child-friendly).
+  - Motion: slow breathing bob.
+  - Catch: quick inflate → *boing* squash-bounce → 6 white sparkles.
+- **Uncommon/Rare: "Rumble" (Storm).**
+  - Look: tall, lopsided anvil top; heavy dark belly with hanging rain strands (thin blue studs); a **visible lightning core**, a glowing zig-zag inside a glass lobe, that flickers; angry brows.
+  - Motion: jittery shiver, mini arcs between lobes.
+  - Catch: inflate → crackle flash → the bolt core "pops" out and orbits once → blue sparkles plus a thunder sound.
+- **Epic+: "Aurorin" (Cosmic/Aurora).**
+  - Look: tall swirl of lobes spiralling upward with a **tail curl**; 3-5 small crystal shards orbiting it; aurora ribbons hanging below; star-speckle studs.
+  - Motion: slow spin; the shards orbit; colour waves pass through the ribbons.
+  - Catch: inflate → spin-up → burst of rainbow stars → a big rarity banner with the cloud's name.
+- Other families follow the same rule:
+  - Rain: drippy belly fringe.
+  - Snow: icy crystal fringe and falling flakes.
+  - Tornado: funnel tail spinning.
+  - Mythic: crown of orbiting mini-clouds.
+- **Rarity language:**
+  - Common: no accents.
+  - Rare: one glowing accent.
+  - Epic: orbiting pieces.
+  - Legendary: a halo ring of studs.
+  - Mythic: a crown plus a screen-edge glow on catch.
+
+**7) Fixes:**
+- The storm cloud is lifted 22+ studs above the highest rock under its footprint.
+- **All biome slogans are removed** ("Watch the holes!" etc.); the HUD only shows the zone name.
+- **Mushrooms vary:**
+  - The giants range widely in height (8-26) and cap size (7-17). About half lean up to 13°, and some have a small mushroom half-hidden under the cap, leaning differently.
+  - The staircase spirals got jitter (angle, radius, cap size) while keeping them climbable.
+
+**8) OP test weapon:** `QaWeaponService` gives **"QA OP Smasher (test only)"** only to UserId **2459147914** (Cubickzz), and only in Studio or private servers. Click: every monster within 60 studs takes 1,000,000 damage, with a pink shock ring. To remove it: delete `QaWeaponService.luau` and its one line in `main.server.luau`.
+
+**Please test and report:**
+1. Map v2.10 rebuild: part count and F9/Output errors.
+2. Screenshots: Crystal Canyon (ravines and crystals), a tableland, the underside from below, one temple with its boss.
+3. Each boss: spawn on its arena, both abilities, and death via the OP weapon.
+4. FPS around the temples and boss fights.
+5. That the mushroom staircases are still climbable.
+6. The director's choice on the cloud proposal (A: as proposed / B: changes), then I build it.

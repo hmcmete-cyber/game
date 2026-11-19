@@ -112,53 +112,113 @@ function ContinentBuilder.Build(ctx)
 		})
 		return p
 	end
+	-- classic studs on every face (v2.7 rugged props)
+	local function studAll(p: BasePart): BasePart
+		p.TopSurface = Enum.SurfaceType.Studs
+		p.FrontSurface = Enum.SurfaceType.Studs
+		p.BackSurface = Enum.SurfaceType.Studs
+		p.LeftSurface = Enum.SurfaceType.Studs
+		p.RightSurface = Enum.SurfaceType.Studs
+		p.BottomSurface = Enum.SurfaceType.Inlet
+		return p
+	end
+	-- a block chunk with random yaw and a small tilt (rugged, broken look)
+	local function chunk(model: Instance, name: string, size: Vector3, pos: Vector3, color: Color3, tilt: number?, collide: boolean?): BasePart
+		local t = math.rad(tilt or 6)
+		return studAll(piece(model, name, size, CFrame.new(pos) * CFrame.Angles(rng:NextNumber(-t, t), rng:NextNumber(0, math.pi), rng:NextNumber(-t, t)), color, nil, collide))
+	end
 	local function upright(c: Vector3, h: number): CFrame
 		return CFrame.new(c + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2)
 	end
-	-- leafy tree: root flare, trunk, two branches, four-ball canopy
+	-- v2.7 rugged leafy tree: splayed roots, a trunk of offset twisted
+	-- segments with knots, three jointed branches, and a canopy of many
+	-- studded leaf chunks in three greens (no smooth balls)
 	dressTree = function(name: string, c: Vector3)
 		local m = Instance.new("Model")
 		m.Name = name
 		local h = rng:NextNumber(9, 13)
 		local bark, leaf = Color3.fromRGB(125, 88, 60), Color3.fromRGB(85, 170, 85)
-		piece(m, "Flare", Vector3.new(1.2, 3.4, 3.4), upright(c, 1.2), bark:Lerp(Color3.new(0, 0, 0), 0.15), "Cylinder", true)
-		piece(m, "Trunk", Vector3.new(h, 2, 2), upright(c, h), bark, "Cylinder", true)
-		for k = -1, 1, 2 do
-			piece(m, "Branch" .. k, Vector3.new(0.8, 4, 0.8), CFrame.new(c + Vector3.new(k * 1.4, h * 0.65, 0)) * CFrame.Angles(0, rng:NextNumber(0, 1), math.rad(-k * 45)), bark)
+		local dark = bark:Lerp(Color3.new(0, 0, 0), 0.2)
+		for k = 1, 4 do
+			local a = k * math.pi / 2 + rng:NextNumber(-0.3, 0.3)
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			studAll(piece(m, "Root" .. k, Vector3.new(1, 1.2, 3), CFrame.lookAt(c + dir * 1.6 + Vector3.new(0, 0.4, 0), c + dir * 3) * CFrame.Angles(math.rad(-15), 0, 0), dark))
 		end
-		local top = c + Vector3.new(0, h + 1.5, 0)
-		local main = piece(m, "Canopy", Vector3.one * 9, CFrame.new(top), leaf, "Ball")
-		main:SetAttribute("Shelter", true)
+		local segs, lean = 4, Vector3.new(rng:NextNumber(-0.25, 0.25), 0, rng:NextNumber(-0.25, 0.25))
+		local segH = h / segs
+		local p = c
+		for k = 1, segs do
+			local w = 2.2 - k * 0.15
+			studAll(piece(m, "Trunk" .. k, Vector3.new(w, segH + 0.5, w), CFrame.new(p + Vector3.new(0, segH / 2, 0)) * CFrame.Angles(0, k * 0.5 + rng:NextNumber(0, 0.4), 0), k % 2 == 0 and bark or bark:Lerp(dark, 0.4), nil, true))
+			p += Vector3.new(0, segH, 0) + lean
+		end
+		for k = 1, 2 do
+			local a = rng:NextNumber(0, math.pi * 2)
+			piece(m, "Knot" .. k, Vector3.new(0.9, 0.9, 0.9), CFrame.new(c + Vector3.new(math.cos(a), h * (0.25 + k * 0.2), math.sin(a)) + lean * k) * CFrame.Angles(0, a, 0.5), dark)
+		end
+		local top = p + Vector3.new(0, 1.5, 0)
+		local canopy = studAll(piece(m, "Canopy", Vector3.new(7, 5, 7), CFrame.new(top) * CFrame.Angles(0, rng:NextNumber(0, 1.5), 0), leaf))
+		canopy:SetAttribute("Shelter", true)
+		local greens = { leaf, leaf:Lerp(Color3.fromRGB(140, 210, 100), 0.5), leaf:Lerp(Color3.fromRGB(40, 110, 60), 0.4) }
+		for k = 1, 9 do
+			local a = k * 2.4 + rng:NextNumber(0, 0.6)
+			local off = Vector3.new(math.cos(a) * rng:NextNumber(2.5, 4), rng:NextNumber(-1.5, 2.8), math.sin(a) * rng:NextNumber(2.5, 4))
+			local sz = rng:NextNumber(2.6, 4.4)
+			chunk(m, "Leaf" .. k, Vector3.new(sz, sz * 0.8, sz), top + off, greens[k % 3 + 1], 14)
+		end
 		for k = 1, 3 do
-			local a = k * 2.1 + rng:NextNumber(0, 1)
-			piece(m, "Leaves" .. k, Vector3.one * rng:NextNumber(5, 6.5), CFrame.new(top + Vector3.new(math.cos(a) * 3.4, rng:NextNumber(-1.5, 0.5), math.sin(a) * 3.4)),
-				leaf:Lerp(Color3.fromRGB(140, 210, 100), k / 4), "Ball")
+			local a = k * 2.1 + rng:NextNumber(0, 0.8)
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local base = c + lean * 2 + Vector3.new(0, h * (0.5 + k * 0.1), 0)
+			local tip = base + dir * 3.2 + Vector3.new(0, 2, 0)
+			studAll(piece(m, "Branch" .. k, Vector3.new(0.7, 0.7, (tip - base).Magnitude), CFrame.lookAt((base + tip) / 2, tip), bark))
+			local twig = tip + dir * 1.2 + Vector3.new(0, 0.9, 0)
+			piece(m, "Twig" .. k, Vector3.new(0.45, 0.45, 1.6), CFrame.lookAt((tip + twig) / 2, twig), bark)
+			chunk(m, "BranchLeaf" .. k, Vector3.new(2.6, 2, 2.6), twig + Vector3.new(0, 0.6, 0), greens[(k + 1) % 3 + 1], 12)
 		end
 		m.Parent = dressFolder("Plateau")
 	end
-	-- snowy pine: trunk + three stacked shrinking tiers with snow caps
+	-- v2.7 rugged snowy pine: segmented trunk, four tiers of crossed square
+	-- blocks (an eight-point star from above), snow slabs on top and snow
+	-- clumps drooping from the branch tips
 	local function dressPine(name: string, c: Vector3)
 		local m = Instance.new("Model")
 		m.Name = name
-		piece(m, "Trunk", Vector3.new(4, 1.4, 1.4), upright(c, 4), Color3.fromRGB(110, 80, 55), "Cylinder", true)
-		for t = 0, 2 do
-			local rT = 4.5 - t * 1.3
-			local y = 3 + t * 2.6
-			piece(m, "Tier" .. t, Vector3.new(2.6, rT * 2, rT * 2), CFrame.new(c + Vector3.new(0, y + 1.3, 0)) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(45, 120, 70), "Cylinder")
-			piece(m, "Snow" .. t, Vector3.new(0.5, rT * 1.4, rT * 1.4), CFrame.new(c + Vector3.new(0, y + 2.85, 0)) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(245, 250, 255), "Cylinder")
+		local trunkC, needle, snow = Color3.fromRGB(110, 80, 55), Color3.fromRGB(45, 120, 70), Color3.fromRGB(245, 250, 255)
+		for k = 0, 2 do
+			studAll(piece(m, "Trunk" .. k, Vector3.new(1.4 - k * 0.15, 1.6, 1.4 - k * 0.15), CFrame.new(c + Vector3.new(0, 0.8 + k * 1.4, 0)) * CFrame.Angles(0, k * 0.6, 0), trunkC, nil, true))
 		end
+		local spin = rng:NextNumber(0, math.pi)
+		for t = 0, 3 do
+			local w = 7 - t * 1.6
+			local y = 3 + t * 2.2
+			local col = needle:Lerp(Color3.fromRGB(30, 90, 55), t / 4)
+			for x = 0, 1 do
+				studAll(piece(m, "Tier" .. t .. "_" .. x, Vector3.new(w, 2, w), CFrame.new(c + Vector3.new(0, y + 1, 0)) * CFrame.Angles(0, spin + t * 0.35 + x * math.pi / 4, 0), col))
+			end
+			studAll(piece(m, "Snow" .. t, Vector3.new(w * 0.62, 0.6, w * 0.62), CFrame.new(c + Vector3.new(0, y + 2.3, 0)) * CFrame.Angles(0, spin + t * 0.35 + math.pi / 8, 0), snow))
+			for k = 0, 1 do
+				local a = spin + t * 0.35 + k * math.pi + rng:NextNumber(-0.2, 0.2)
+				piece(m, "Clump" .. t .. "_" .. k, Vector3.new(1.1, 0.7, 1.1), CFrame.new(c + Vector3.new(math.cos(a) * w * 0.6, y + 1.9, math.sin(a) * w * 0.6)) * CFrame.Angles(0, a, 0.2), snow)
+			end
+		end
+		studAll(piece(m, "Tip", Vector3.new(1, 1.6, 1), CFrame.new(c + Vector3.new(0, 12.6, 0)) * CFrame.Angles(0, math.pi / 4, 0), snow))
 		m.Parent = dressFolder("Mountains")
 	end
-	-- rock cluster: one big tilted block, two medium balls, two pebbles
+	-- v2.7 rugged rock cluster: broken studded blocks of different sizes and
+	-- tilts with small chips and pebbles around them
 	local function dressRocks(name: string, c: Vector3, base: Color3, habitat: string)
 		local m = Instance.new("Model")
 		m.Name = name
 		local s = rng:NextNumber(0.8, 1.4)
-		piece(m, "Big", Vector3.new(5, 3.4, 4) * s, CFrame.new(c + Vector3.new(0, 1.3 * s, 0)) * CFrame.Angles(rng:NextNumber(-0.2, 0.2), rng:NextNumber(0, 3), rng:NextNumber(-0.2, 0.2)), base, nil, true)
-		piece(m, "MidA", Vector3.one * 3 * s, CFrame.new(c + Vector3.new(2.8, 0.9, 1.2) * s), base:Lerp(Color3.new(1, 1, 1), 0.08), "Ball", true)
-		piece(m, "MidB", Vector3.one * 2.4 * s, CFrame.new(c + Vector3.new(-2.6, 0.7, -1) * s), base:Lerp(Color3.new(0, 0, 0), 0.1), "Ball", true)
-		piece(m, "PebbleA", Vector3.one * 1.1 * s, CFrame.new(c + Vector3.new(1.2, 0.4, -2.4) * s), base, "Ball")
-		piece(m, "PebbleB", Vector3.one * 0.9 * s, CFrame.new(c + Vector3.new(-1.5, 0.35, 2.3) * s), base, "Ball")
+		chunk(m, "Big", Vector3.new(5, 3.4, 4) * s, c + Vector3.new(0, 1.3 * s, 0), base, 12, true)
+		chunk(m, "Cap", Vector3.new(3, 1.4, 2.6) * s, c + Vector3.new(0.4, 3.1 * s, -0.2), base:Lerp(Color3.new(1, 1, 1), 0.1), 14)
+		chunk(m, "MidA", Vector3.new(3, 2.6, 2.6) * s, c + Vector3.new(2.8, 1, 1.2) * s, base:Lerp(Color3.new(1, 1, 1), 0.08), 18, true)
+		chunk(m, "MidB", Vector3.new(2.4, 2, 2.2) * s, c + Vector3.new(-2.6, 0.8, -1) * s, base:Lerp(Color3.new(0, 0, 0), 0.1), 18, true)
+		for k = 1, 4 do
+			local a = k * 1.6 + rng:NextNumber(0, 0.5)
+			chunk(m, "Chip" .. k, Vector3.one * rng:NextNumber(0.7, 1.3) * s, c + Vector3.new(math.cos(a) * 3.4, 0.35, math.sin(a) * 3.4) * s, base:Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.15)), 25)
+		end
 		m.Parent = dressFolder(habitat)
 	end
 	-- flower patch: five stems with coloured heads + two leaves
@@ -269,13 +329,24 @@ function ContinentBuilder.Build(ctx)
 	end
 	-- basalt columns: five hexagon-ish columns of mixed height, one glowing vent
 	local function dressBasalt(name: string, c: Vector3)
+		-- v2.7: octagonal basalt columns (two crossed blocks) with broken,
+		-- tilted caps, glowing cracks at the foot and a vent with embers
 		local m = Instance.new("Model")
 		m.Name = name
 		for k = 1, 5 do
 			local a = k / 5 * math.pi * 2
 			local h = rng:NextNumber(2, 7)
 			local pos = c + Vector3.new(math.cos(a) * 1.8, 0, math.sin(a) * 1.8)
-			piece(m, "Column" .. k, Vector3.new(h, 2, 2), upright(pos, h), Color3.fromRGB(55, 48, 50):Lerp(Color3.fromRGB(85, 75, 75), k / 5), "Cylinder", true)
+			local col = Color3.fromRGB(55, 48, 50):Lerp(Color3.fromRGB(85, 75, 75), k / 5)
+			for x = 0, 1 do
+				studAll(piece(m, "Column" .. k .. "_" .. x, Vector3.new(1.8, h, 1.8), CFrame.new(pos + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, a + x * math.pi / 4, 0), col, nil, x == 0))
+			end
+			chunk(m, "Cap" .. k, Vector3.new(1.6, 0.6, 1.6), pos + Vector3.new(0, h + 0.2, 0), col:Lerp(Color3.new(1, 1, 1), 0.08), 20)
+		end
+		for k = 1, 3 do
+			local a = k * 2.1
+			newPart(m, "Crack" .. k, Vector3.new(0.3, 0.15, 2.4), CFrame.new(c + Vector3.new(math.cos(a) * 3, 0.08, math.sin(a) * 3)) * CFrame.Angles(0, -a, 0), Color3.fromRGB(255, 110, 40),
+				{ Material = Enum.Material.Neon, CanCollide = false, CastShadow = false })
 		end
 		newPart(m, "Vent", Vector3.new(0.3, 1.6, 1.6), CFrame.new(c + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(255, 120, 40),
 			{ Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, CanCollide = false, CastShadow = false })
@@ -866,6 +937,31 @@ function ContinentBuilder.Build(ctx)
 			local pos = base + Vector3.new(math.cos(ang) * capR * 0.55, 0, math.sin(ang) * capR * 0.55)
 			disc(decor, name .. "TopSpot" .. k, pos, math.max(0.4, capR * 0.08), 0.25, brimTop + 1.3, spotC, Enum.Material.Plastic, nil, { CanCollide = false })
 		end
+		-- v2.7 detail: radial gill ribs under the cap and a broken, drooping
+		-- rim lip of studded blocks (all under the brim top: walking unchanged)
+		local detail = Instance.new("Model")
+		detail.Name = name .. "Detail"
+		local ribs = math.clamp(math.floor(capR * 0.9), 8, 14)
+		local spin = capR * 1.7
+		for k = 1, ribs do
+			local ang = k / ribs * math.pi * 2 + spin
+			local dir = Vector3.new(math.cos(ang), 0, math.sin(ang))
+			local mid = base + dir * capR * 0.5
+			newPart(detail, "Gill" .. k, Vector3.new(0.35, 0.7, capR * 0.75), CFrame.lookAt(Vector3.new(mid.X, brimTop - 1.55, mid.Z), Vector3.new(mid.X, brimTop - 1.55, mid.Z) + dir),
+				gillC:Lerp(Color3.new(0, 0, 0), 0.12), { CanCollide = false, CanQuery = false, CastShadow = false })
+		end
+		local lips = math.clamp(math.floor(capR * 0.9), 6, 14)
+		local darker = color:Lerp(Color3.new(0, 0, 0), 0.18)
+		for k = 1, lips do
+			local ang = (k + 0.5) / lips * math.pi * 2 + spin
+			local dir = Vector3.new(math.cos(ang), 0, math.sin(ang))
+			local at = base + dir * (capR - 0.4)
+			local len = 2 * math.pi * capR / lips * rng:NextNumber(0.7, 0.95)
+			local lip = newPart(detail, "Lip" .. k, Vector3.new(len, rng:NextNumber(0.8, 1.3), 1.1), CFrame.lookAt(Vector3.new(at.X, brimTop - 1.2, at.Z), Vector3.new(at.X, brimTop - 1.2, at.Z) + dir) * CFrame.Angles(math.rad(rng:NextNumber(-18, -6)), 0, 0),
+				k % 2 == 0 and color or darker, { CanCollide = false, CanQuery = false, CastShadow = false })
+			studAll(lip)
+		end
+		detail.Parent = decor
 		return brim
 	end
 	local function mushroom(name: string, base: Vector3, height: number, capR: number, color: Color3)
@@ -875,6 +971,23 @@ function ContinentBuilder.Build(ctx)
 		if height > 6 then
 			disc(continent, name .. "Ring", base, stemR * 1.5, 0.5, UP + height * 0.62, spotC, Enum.Material.Plastic, Z.Mushroom)
 		end
+		-- v2.7 detail: root flares and bumps on the stem
+		local roots = Instance.new("Model")
+		roots.Name = name .. "Roots"
+		for k = 1, 4 do
+			local ang = k * math.pi / 2 + stemR
+			local dir = Vector3.new(math.cos(ang), 0, math.sin(ang))
+			local at = base + dir * (stemR + 0.6)
+			studAll(newPart(roots, "Root" .. k, Vector3.new(1.2, 1.4, 2.4), CFrame.lookAt(Vector3.new(at.X, UP + 0.5, at.Z), Vector3.new(at.X, UP + 0.5, at.Z) + dir) * CFrame.Angles(math.rad(-20), 0, 0),
+				stemC:Lerp(Color3.fromRGB(150, 120, 100), 0.4), { CanCollide = false, CanQuery = false, CastShadow = false }))
+		end
+		for k = 1, height > 6 and 3 or 1 do
+			local ang = k * 2.3 + stemR
+			local at = base + Vector3.new(math.cos(ang), 0, math.sin(ang)) * stemR * 0.92
+			newPart(roots, "Bump" .. k, Vector3.new(0.9, 1.2, 0.9), CFrame.new(at.X, UP + height * (0.2 + k * 0.2), at.Z) * CFrame.Angles(0, ang, 0),
+				stemC:Lerp(Color3.new(1, 1, 1), 0.1), { CanCollide = false, CanQuery = false, CastShadow = false })
+		end
+		roots.Parent = decor
 		return mushroomCap(name, base, brimTop, capR, color)
 	end
 	local clusters = { A(130, 105, UP), A(205, 128, UP), A(150, 142, UP), A(100, 140, UP), A(240, 100, UP), A(185, 95, UP) }
@@ -1119,12 +1232,48 @@ function ContinentBuilder.Build(ctx)
 			lava("LavaPool" .. i, pos, Vector3.new(rng:NextNumber(8, 14), 0.4, rng:NextNumber(8, 14)))
 		end
 	end
+	-- v2.7 rugged obsidian spires: stacked twisted segments narrowing upward,
+	-- shards breaking off the sides, glowing lava cracks, a broken tip
+	local spireFolder = Instance.new("Folder")
+	spireFolder.Name = "Spires"
+	spireFolder.Parent = continent
 	for i = 1, 22 do
-		local pos = place(habGen(85, 255, 273, 327, "Volcanic", UP), 4)
+		local pos = place(habGen(85, 255, 273, 327, "Volcanic", UP), 5)
 		if pos then
+			local m = Instance.new("Model")
+			m.Name = "Spire" .. i
 			local h = rng:NextNumber(10, 24)
-			newPart(continent, "Spire" .. i, Vector3.new(4, h, 4), CFrame.new(pos + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, 3), math.rad(rng:NextNumber(-8, 8))),
-				Color3.fromRGB(30, 25, 35), { Material = Enum.Material.Glass, Reflectance = 0.1, CastShadow = false })
+			local segs = math.clamp(math.floor(h / 5), 2, 5)
+			local segH = h / segs
+			local lean = Vector3.new(rng:NextNumber(-0.35, 0.35), 0, rng:NextNumber(-0.35, 0.35))
+			local p = pos
+			local obsidian = Color3.fromRGB(30, 25, 35)
+			for k = 1, segs do
+				local w = 4.4 - (k - 1) * (3 / segs)
+				local seg = newPart(m, "Seg" .. k, Vector3.new(w, segH + 0.4, w), CFrame.new(p + Vector3.new(0, segH / 2, 0)) * CFrame.Angles(0, k * 0.45 + rng:NextNumber(0, 0.3), math.rad(rng:NextNumber(-4, 4))),
+					k % 2 == 0 and obsidian or obsidian:Lerp(Color3.fromRGB(60, 45, 60), 0.4), { CastShadow = false })
+				studAll(seg)
+				if rng:NextNumber() < 0.7 then
+					local a = rng:NextNumber(0, math.pi * 2)
+					local sh = newPart(m, "Shard" .. k, Vector3.new(0.9, segH * 0.9, 1.4), CFrame.new(p + Vector3.new(math.cos(a) * w * 0.55, segH * 0.55, math.sin(a) * w * 0.55)) * CFrame.Angles(0, -a, math.rad(rng:NextNumber(18, 30))),
+						obsidian, { CanCollide = false, CastShadow = false })
+					studAll(sh)
+				end
+				if k <= 2 then
+					local a = rng:NextNumber(0, math.pi * 2)
+					newPart(m, "Crack" .. k, Vector3.new(0.25, segH * 0.8, 0.5), CFrame.new(p + Vector3.new(math.cos(a) * w * 0.5, segH * 0.5, math.sin(a) * w * 0.5)) * CFrame.Angles(0, -a, 0),
+						Color3.fromRGB(255, 110, 40), { Material = Enum.Material.Neon, CanCollide = false, CastShadow = false })
+				end
+				p += Vector3.new(0, segH, 0) + lean
+			end
+			studAll(newPart(m, "Tip", Vector3.new(1.2, 2.4, 1.2), CFrame.new(p + Vector3.new(0, 1, 0)) * CFrame.Angles(math.rad(rng:NextNumber(-20, 20)), rng:NextNumber(0, 3), math.rad(rng:NextNumber(-20, 20))),
+				obsidian, { CanCollide = false, CastShadow = false }))
+			for k = 1, 3 do
+				local a = k * 2.1 + rng:NextNumber(0, 0.5)
+				studAll(newPart(m, "Rubble" .. k, Vector3.one * rng:NextNumber(0.8, 1.6), CFrame.new(pos + Vector3.new(math.cos(a) * 3.2, 0.4, math.sin(a) * 3.2)) * CFrame.Angles(0, a, 0.3),
+					obsidian, { CastShadow = false }))
+			end
+			m.Parent = spireFolder
 		end
 	end
 	local altar3 = ctx.altar(decor, altars, "Altar3", A(240, 326, UP))
@@ -1470,6 +1619,11 @@ function ContinentBuilder.Build(ctx)
 			local off = Vector3.new(rng:NextNumber(-0.2, 0.2) * w, w * 0.2, rng:NextNumber(-0.08, 0.08) * w)
 			lobe(model, "Crown" .. i, Vector3.new(size, size * 0.85, size), CFrame.new(center) * yaw * CFrame.new(off), top, 0.06)
 		end
+		for k = 1, 4 do
+			local cs = w * rng:NextNumber(0.12, 0.2)
+			lobe(model, "Curl" .. k, Vector3.new(cs, cs * 0.85, cs), CFrame.new(center) * yaw * CFrame.new(rng:NextNumber(-0.4, 0.4) * w, w * rng:NextNumber(0.1, 0.24), rng:NextNumber(-0.2, 0.2) * w),
+				belly:Lerp(top, rng:NextNumber(0.6, 1)), 0.06)
+		end
 		model.Parent = underClouds
 	end
 	-- two rings; footprints never overlap (own registry)
@@ -1501,6 +1655,12 @@ function ContinentBuilder.Build(ctx)
 			local size = w * rng:NextNumber(0.4, 0.52)
 			local off = Vector3.new(t * w * 0.62, -w * rng:NextNumber(0.1, 0.16), rng:NextNumber(-0.18, 0.18) * w)
 			lobe(model, "Bulge" .. i, Vector3.new(size, size * 0.8, size * 0.9), yaw * CFrame.new(off), belly:Lerp(top, 0.45), 0.05)
+		end
+		-- v2.7 detail: smaller curls hanging off the bulges
+		for k = 1, 4 do
+			local cs = w * rng:NextNumber(0.14, 0.22)
+			lobe(model, "Curl" .. k, Vector3.new(cs, cs * 0.8, cs), yaw * CFrame.new(rng:NextNumber(-0.4, 0.4) * w, -w * rng:NextNumber(0.2, 0.3), rng:NextNumber(-0.25, 0.25) * w),
+				belly:Lerp(top, rng:NextNumber(0.3, 0.6)), 0.05)
 		end
 		model.Parent = underClouds
 	end

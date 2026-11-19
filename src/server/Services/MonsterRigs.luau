@@ -890,9 +890,98 @@ local function cartoonEyes(r)
 	end
 end
 
+-- v2.7 detail pass (director: more parts, more detail on every monster):
+-- every sizable body piece gets classic Roblox build detailing, welded on
+-- (WeldConstraint, so animations and published clips are unaffected):
+--   blocks     a lighter studded panel inset on top + a darker trim lip at
+--              the bottom edge + side plates on long pieces
+--   balls      three small bumps/scales on the upper half
+--   cylinders  a raised band around the middle
+-- Eyes, teeth, glowing, glass and see-through parts are left alone.
+local SKIP_NAME = { "Eye", "Pupil", "Brow", "Tooth", "Teeth", "Fang", "Claw", "Iris", "Spot", "Mouth" }
+local function detailPass(model: Model)
+	local list = {}
+	for _, p in model:GetDescendants() do
+		if p:IsA("Part") and p.Name ~= "HumanoidRootPart" and p.Transparency < 0.3
+			and p.Material ~= M.Neon and p.Material ~= M.Glass and p.Material ~= M.ForceField
+			and not p:FindFirstChildOfClass("SpecialMesh") then
+			local skip = false
+			for _, k in SKIP_NAME do
+				if string.find(p.Name, k) then
+					skip = true
+					break
+				end
+			end
+			local sz = p.Size
+			if not skip and math.min(sz.X, sz.Y, sz.Z) >= 0.7 and math.max(sz.X, sz.Y, sz.Z) >= 1.3 then
+				table.insert(list, p)
+			end
+		end
+	end
+	local rnd = Random.new(#list * 7 + 3)
+	local function bit(base: Part, name: string, size: Vector3, cf: CFrame, color: Color3, shape: Enum.PartType?)
+		local d = Instance.new("Part")
+		d.Name = base.Name .. name
+		d.Size = size
+		d.CFrame = cf
+		d.Color = color
+		d.Material = M.Plastic
+		if shape then
+			d.Shape = shape
+		end
+		d.TopSurface = shape == nil and Enum.SurfaceType.Studs or Enum.SurfaceType.Smooth
+		d.BottomSurface = Enum.SurfaceType.Smooth
+		d.Anchored = false
+		d.CanCollide = false
+		d.CanTouch = false
+		d.CanQuery = false
+		d.Massless = true
+		d.CastShadow = false
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = base
+		w.Part1 = d
+		w.Parent = d
+		d.Parent = base.Parent
+		return d
+	end
+	for _, p in list do
+		local sz, cf = p.Size, p.CFrame
+		local light = p.Color:Lerp(Color3.new(1, 1, 1), 0.14)
+		local dark = p.Color:Lerp(Color3.new(0, 0, 0), 0.22)
+		if p.Shape == Enum.PartType.Block then
+			if sz.X >= 1 and sz.Z >= 1 then
+				bit(p, "Panel", Vector3.new(sz.X * 0.68, 0.14, sz.Z * 0.68), cf * CFrame.new(0, sz.Y / 2 + 0.05, 0), light)
+			end
+			local lip = math.max(0.16, sz.Y * 0.14)
+			bit(p, "Trim", Vector3.new(sz.X + 0.12, lip, sz.Z + 0.12), cf * CFrame.new(0, -sz.Y / 2 + lip / 2, 0), dark)
+			if math.max(sz.X, sz.Z) >= 2.4 then
+				-- plates on the two long sides
+				local alongX = sz.X >= sz.Z
+				for _, sgn in { -1, 1 } do
+					local off = alongX and CFrame.new(0, sz.Y * 0.08, sgn * (sz.Z / 2 + 0.05)) or CFrame.new(sgn * (sz.X / 2 + 0.05), sz.Y * 0.08, 0)
+					local psz = alongX and Vector3.new(sz.X * 0.5, sz.Y * 0.4, 0.14) or Vector3.new(0.14, sz.Y * 0.4, sz.Z * 0.5)
+					bit(p, "Plate" .. sgn, psz, cf * off, dark:Lerp(p.Color, 0.5))
+				end
+			end
+		elseif p.Shape == Enum.PartType.Ball then
+			local rad = sz.X / 2
+			for k = 1, 3 do
+				local a = k * 2.1 + rnd:NextNumber(0, 0.7)
+				local el = rnd:NextNumber(0.35, 1.0)
+				local dir = Vector3.new(math.cos(a) * math.cos(el), math.sin(el), math.sin(a) * math.cos(el))
+				local bs = rad * rnd:NextNumber(0.28, 0.4)
+				bit(p, "Bump" .. k, Vector3.one * bs, cf * CFrame.new(dir * (rad - bs * 0.25)), k == 2 and light or dark:Lerp(p.Color, 0.6), Enum.PartType.Ball)
+			end
+		elseif p.Shape == Enum.PartType.Cylinder then
+			bit(p, "Band", Vector3.new(math.max(0.2, sz.X * 0.18), sz.Y + 0.14, sz.Z + 0.14), cf, dark, Enum.PartType.Cylinder)
+		end
+	end
+end
+
 function MonsterRigs.Build(typeName: string, scale: number): Model
 	local r = BUILD[typeName](scale)
 	cartoonEyes(r)
+	detailPass(r.Model)
 	local hum = Instance.new("Humanoid")
 	hum.RigType = Enum.HumanoidRigType.R15
 	hum.HipHeight = r.Hip * scale

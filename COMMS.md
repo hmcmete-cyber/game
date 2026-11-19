@@ -1217,3 +1217,53 @@ Status: done in code / needs your Studio check + the before/after screenshots (I
 3. That no spawn, road end or the lava river is buried. The road at 60° ends near the Snowpeak foot, so please check it there.
 4. Part count and FPS (estimate: +~800 parts).
 5. Any red lines in F9 or Output.
+
+### [2026-11-19 Istanbul] Claude → Astra — v2.8: rugged detail pass on props, monsters and clouds (director request) — code done, UNTESTED
+Status: done in code / needs your Studio check. MapVersion **2.8**.
+
+**Director's request (Turkish, paraphrased):** apply the rugged, broken, many-piece construction of the v2.7 mountains to trees, the volcanic spires and the mushrooms, without turning them into mountains: more parts, more detail. Also more parts on all monsters and on the clouds.
+
+**Props (ContinentBuilder, shared helpers `studAll` + `chunk` = studded block with random yaw and tilt):**
+- **Leafy trees** (`Dressing/Plateau/TreeN`, about 32 parts, was 7):
+  - 4 splayed roots;
+  - a trunk of 4 offset, twisted segments with a slight lean, plus 2 knots;
+  - 3 jointed branches with twigs and leaf chunks;
+  - a canopy of a central `Canopy` block (Shelter kept) plus 9 studded leaf chunks in 3 greens.
+- **Snowy pines** (`Dressing/Mountains`, about 23 parts):
+  - a segmented trunk;
+  - 4 tiers of two crossed square blocks (an 8-point star from above);
+  - snow slabs, drooping snow clumps and a snow tip.
+- **Rock clusters** (all habitats): broken, tilted studded blocks plus a cap and chips; no more balls.
+- **Basalt groups:** octagonal columns (two crossed blocks) with broken caps, glowing cracks and the vent.
+- **Volcanic spires** (`Map/Continent/Spires/SpireN`, was single glass blocks):
+  - 2-5 stacked twisted segments narrowing upward with a lean;
+  - side shards, neon lava cracks, a broken tilted tip and rubble at the foot;
+  - studded obsidian plastic.
+- **Mushrooms** (all stair and giant shrooms; collision and walking surfaces unchanged):
+  - 4 root flares and bumps on the stem;
+  - 8-14 radial gill ribs under the cap;
+  - a broken, drooping rim lip of 6-14 studded blocks under the brim (`Decor/<Shroom>Detail`, `<Shroom>Roots`; non-colliding).
+
+**Monsters (`MonsterRigs.detailPass`, runs for every species at build):**
+- Every sizable body part gets classic build detailing: blocks get a lighter studded top panel, a darker bottom trim lip and side plates on long pieces; balls get 3 bumps/scales; cylinders get a raised band.
+- Eyes, teeth, claws, neon, glass and see-through parts are skipped.
+- All of it is attached with WeldConstraint (massless, no collide/query/touch), so gaits, the animation export and published clips are unaffected.
+- Rough estimate: +60-120 parts per monster.
+
+**Clouds:**
+- **Catchable clouds (`CloudVisuals`):** every lobe gets 2-3 brighter curls bulging from its upper/outer side; big lobes get a darker belly lobe. That is roughly 2-3x the lobes, and they breathe with the existing client animation.
+- **Map clouds:** the cloud-sea banks get +5 top curls each, and the hanging canopy masses and floating masses get +4 curls each.
+
+**Risk: performance.** This is a large part increase. My estimate is about +1.7k mushroom detail, +1k trees/pines, +0.3k spires, +1.5k map-cloud lobes, plus roughly +3k welded parts across the live monsters. Please report:
+- the part count printed after the rebuild;
+- server and client FPS on a mid device;
+- F9 Server memory.
+
+If it is too heavy, I can reduce it per category: canopy curls, mushroom ribs and monster plates are the easiest to trim.
+
+**Please check:**
+- trees, pines, spires and mushrooms up close and from a distance;
+- every monster walking (details must stay attached and move with the limbs);
+- catchable clouds while carried and in vaults;
+- the underside cloud canopy;
+- any red F9 or Output lines.

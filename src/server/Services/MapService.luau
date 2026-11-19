@@ -264,7 +264,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.7"
+local MAP_VERSION = "2.8"
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
 -- v2.2 CLASSIC STUDDED STYLE PASS over the whole generated map: every solid
@@ -563,6 +563,12 @@ local function buildPlaceholder(): Instance
 				lobe(mass, Vector3.new(w * 0.5, w * 0.42, w * 0.46), yaw * CFrame.new(w * 0.14, w * 0.15, w * 0.04), belly:Lerp(top, 0.75))
 				lobe(mass, Vector3.new(w * 0.32, w * 0.3, w * 0.3), yaw * CFrame.new(w * 0.36, w * 0.08, -w * 0.06), belly:Lerp(top, 0.6))
 				lobe(mass, Vector3.new(w * 0.3, w * 0.28, w * 0.3), yaw * CFrame.new(-w * 0.02, w * 0.28, 0), top)
+				-- v2.7 detail: small curls along the top and the rim break up the outline
+				for k = 1, 5 do
+					local cs = w * rng:NextNumber(0.13, 0.22)
+					lobe(mass, Vector3.new(cs, cs * 0.85, cs), yaw * CFrame.new(rng:NextNumber(-0.42, 0.42) * w, w * rng:NextNumber(0.14, 0.3), rng:NextNumber(-0.2, 0.2) * w),
+						belly:Lerp(top, rng:NextNumber(0.6, 1)))
+				end
 				mass.Parent = sea
 			end
 		end

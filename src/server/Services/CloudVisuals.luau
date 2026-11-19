@@ -259,6 +259,80 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 		end
 	end
 
+	-- v2.7 detail pass (director: more parts, more detail): every lobe gets
+	-- small bumps bulging out of its upper/outer surface (brighter, like
+	-- sunlit cauliflower tops) and the big lobes a darker lobe under the belly,
+	-- so the outline breaks into many soft curls instead of a few balls
+	local lobes = {}
+	for _, ch in center:GetChildren() do
+		if ch:IsA("BasePart") then
+			table.insert(lobes, ch)
+		end
+	end
+	table.insert(lobes, center)
+	local bumpN = 0
+	for _, lobe in lobes do
+		local half = lobe.Size / 2
+		local out = lobe.Position - center.Position
+		out = Vector3.new(out.X, 0, out.Z)
+		local big = lobe.Size.X > d * 0.38
+		for k = 1, big and 3 or 2 do
+			local a = rng:NextNumber(0, math.pi * 2)
+			local dir = Vector3.new(math.cos(a), rng:NextNumber(0.35, 1.1), math.sin(a))
+			if out.Magnitude > 0.01 then
+				dir += out.Unit * 0.8 -- lean toward the outside of the cloud
+			end
+			dir = dir.Unit
+			local pos = lobe.Position + Vector3.new(dir.X * half.X, dir.Y * half.Y, dir.Z * half.Z) * 0.78
+			local sz = lobe.Size * rng:NextNumber(0.34, 0.48)
+			bumpN += 1
+			local b = Instance.new("Part")
+			b.Name = "Curl" .. bumpN
+			b.Size = Vector3.new(sz.X, sz.Y * 0.9, sz.Z)
+			b.CFrame = CFrame.new(pos)
+			b.Color = shade(lobe.Color, 1.05)
+			b.Material = style.Material
+			b.Transparency = style.Alpha
+			b.Anchored = false
+			b.CanCollide = false
+			b.CanQuery = false
+			b.CanTouch = false
+			b.CastShadow = false
+			b.Massless = true
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = b
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = center
+			weld.Part1 = b
+			weld.Parent = b
+			b.Parent = center
+		end
+		if big then
+			bumpN += 1
+			local b = Instance.new("Part")
+			b.Name = "Belly" .. bumpN
+			b.Size = Vector3.new(lobe.Size.X * 0.7, lobe.Size.Y * 0.35, lobe.Size.Z * 0.7)
+			b.CFrame = CFrame.new(lobe.Position - Vector3.new(0, half.Y * 0.62, 0))
+			b.Color = shade(lobe.Color, 0.86)
+			b.Material = style.Material
+			b.Transparency = style.Alpha
+			b.CanCollide = false
+			b.CanQuery = false
+			b.CanTouch = false
+			b.CastShadow = false
+			b.Massless = true
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = b
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = center
+			weld.Part1 = b
+			weld.Parent = b
+			b.Parent = center
+		end
+	end
+
 	center:SetAttribute("Motion", visual)
 
 	-- Puffy smoke breathing out of the center

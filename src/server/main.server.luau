@@ -85,6 +85,7 @@ EventService.Start(MapService, WeatherService, remoteTable)
 DummyService.Start(WeatherService) -- Studio only
 MonsterService.Start(MapService, DataService, remoteTable)
 CombatService.Start(remoteTable, InventoryService, MonsterService, DummyService)
+require(Services.QaWeaponService).Start(MonsterService) -- TEST ONLY: director QA weapon (Studio/private servers)
 StyleSample.Start(require(Services.MonsterRigs)) -- Studio only: v2.1 style review island
 
 local function onPlayerAdded(player: Player)

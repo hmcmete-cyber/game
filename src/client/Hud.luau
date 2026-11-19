@@ -538,7 +538,7 @@ local function zoneLoop()
 				zoneText.TextColor3 = Color3.fromRGB(220, 230, 255)
 			end
 			zonePill.Visible = zoneText.Text ~= ""
-			gateWarning = zone and zone.Warning or nil
+			gateWarning = nil -- director: zone name only, no slogan under biome labels
 			if gateWarning then
 				showAlert(`{gateWarning}`, false, 4)
 			elseif alert.BackgroundColor3 == AMBER then

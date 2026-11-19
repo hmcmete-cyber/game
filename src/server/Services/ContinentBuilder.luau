@@ -32,7 +32,7 @@ function ContinentBuilder.Build(ctx)
 	local spawnPoint, hazardFlag = ctx.spawnPoint, ctx.hazardFlag
 
 	local function zone(name, color, biome, warning)
-		return { ZoneName = name, ZoneColor = color, Biome = biome, Warning = warning }
+		return { ZoneName = name, ZoneColor = color, Biome = biome } -- director: no slogans (warning unused)
 	end
 	local Z = {
 		Heart = zone("Sky Heart", Color3.fromRGB(190, 235, 255), "Plateau"),
@@ -994,10 +994,10 @@ function ContinentBuilder.Build(ctx)
 	for c, center in clusters do
 		local steps = 9
 		for i = 1, steps do
-			local a = i * 55 + c * 40
-			local pos = center + polar(9 + i * 1.6, a, 0)
+			local a = i * 55 + c * 40 + rng:NextNumber(-5, 5)
+			local pos = center + polar(9 + i * 1.6 + rng:NextNumber(-1.2, 1.2), a, 0)
 			local last = i == steps
-			mushroom(`Shroom{c}_{i}`, pos, 4 * i - 2, last and 13 or 7, capColors[(i + c) % #capColors + 1])
+			mushroom(`Shroom{c}_{i}`, pos, 4 * i - 2, last and 13 or rng:NextNumber(6.8, 8.5), capColors[rng:NextInteger(1, #capColors)])
 			if last then
 				spawnPoint(Vector3.new(pos.X, UP + 4 * i + 3, pos.Z), "Mushroom")
 				local glow = newPart(decor, `SporeGlow{c}`, Vector3.one * 2, CFrame.new(pos + Vector3.new(0, 4 * i + 5, 0)), Color3.fromRGB(180, 255, 200), {
@@ -1012,11 +1012,43 @@ function ContinentBuilder.Build(ctx)
 			end
 		end
 	end
-	for i = 1, 18 do
-		local capR = rng:NextNumber(10, 16)
-		local pos = place(habGen(90, 250, 93, 147, "Mushroom", UP), capR + 2)
+	-- lean a whole built mushroom around its foot (every piece named <prefix>...)
+	local function leanMushroom(prefix: string, base: Vector3, ax: number, az: number)
+		local pivot = CFrame.new(base.X, UP, base.Z)
+		local turn = pivot * CFrame.Angles(math.rad(ax), 0, math.rad(az)) * pivot:Inverse()
+		for _, folder in { continent, decor } do
+			for _, ch in folder:GetChildren() do
+				local rest = string.sub(ch.Name, #prefix + 1, #prefix + 1)
+				if string.sub(ch.Name, 1, #prefix) == prefix and rest ~= "" and not string.match(rest, "%d") then
+					if ch:IsA("BasePart") then
+						ch.CFrame = turn * ch.CFrame
+					elseif ch:IsA("Model") then
+						ch:PivotTo(turn * ch:GetPivot())
+					end
+				end
+			end
+		end
+	end
+	-- v2.10 (director: break up the rows): giants vary a lot in height and cap
+	-- size, about half of them lean or bend, some grow in tight pairs with a
+	-- small one half-hidden under the big cap
+	for i = 1, 22 do
+		local capR = rng:NextNumber(7, 17)
+		local pos = place(habGen(90, 250, 93, 147, "Mushroom", UP), capR + 1)
 		if pos then
-			mushroom("GiantShroom" .. i, pos, rng:NextNumber(14, 22), capR, capColors[i % #capColors + 1])
+			local name = "GiantShroom" .. i
+			local height = rng:NextNumber(8, 26)
+			mushroom(name, pos, height, capR, capColors[rng:NextInteger(1, #capColors)])
+			if rng:NextNumber() < 0.55 then
+				leanMushroom(name, pos, rng:NextNumber(-13, 13), rng:NextNumber(-13, 13))
+			end
+			if rng:NextNumber() < 0.4 then
+				local a = rng:NextNumber(0, math.pi * 2)
+				local small = pos + Vector3.new(math.cos(a), 0, math.sin(a)) * capR * 0.6
+				local sName = name .. "Kid"
+				mushroom(sName, small, rng:NextNumber(3, 6), rng:NextNumber(3, 5), capColors[rng:NextInteger(1, #capColors)])
+				leanMushroom(sName, small, rng:NextNumber(-20, 20), rng:NextNumber(-20, 20))
+			end
 		end
 	end
 	for _ = 1, 10 do

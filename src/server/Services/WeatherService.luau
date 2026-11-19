@@ -792,6 +792,21 @@ local function setupStorm()
 	end
 	local center = #spawns > 0 and sum / #spawns or Vector3.new(0, 40, 0)
 	stormPos = center + Vector3.new(0, Config.StormHeight, 0)
+	-- director: the storm sat inside a mountain. Keep it 22+ studs above the
+	-- highest rock under its whole footprint (puffs reach ~17 studs out).
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { workspace.Map }
+	local highest = -math.huge
+	for _, off in { Vector3.zero, Vector3.new(17, 0, 0), Vector3.new(-17, 0, 0), Vector3.new(0, 0, 17), Vector3.new(0, 0, -17) } do
+		local hit = workspace:Raycast(Vector3.new(stormPos.X, 2000, stormPos.Z) + off, Vector3.new(0, -2100, 0), params)
+		if hit and hit.Position.Y > highest then
+			highest = hit.Position.Y
+		end
+	end
+	if highest > -math.huge and stormPos.Y < highest + 22 then
+		stormPos = Vector3.new(stormPos.X, highest + 22, stormPos.Z)
+	end
 
 	local storm = Instance.new("Model")
 	storm.Name = "StormCloud"

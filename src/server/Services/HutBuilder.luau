@@ -129,11 +129,17 @@ function HutBuilder.IncubatorHut(parent: Instance, i: number, base: CFrame, acce
 	m.Name = "IncubatorHut" .. i
 	local stone, trim, glassC, warm = RGB(240, 232, 220), accent:Lerp(RGB(255, 255, 255), 0.3), RGB(200, 235, 255), RGB(255, 190, 90)
 	part(m, "Floor", V(18, 0.6, 18), base * CF(0, 0.3, 0), RGB(230, 220, 205))
-	-- octagonal low wall ring (two crossed squares)
+	-- raised round-ish floor + an octagonal low wall with an OPEN front
+	-- (v2.13 director: nothing may block the entrance)
 	for x = 0, 1 do
-		part(m, "Wall" .. x, V(15, 2, 15), base * CF(0, 1.6, 0) * A(0, x * math.pi / 4, 0), stone)
+		part(m, "Inner" .. x, V(13, 2.3, 13), base * CF(0, 1.75, 0) * A(0, x * math.pi / 4, 0), RGB(250, 240, 225))
 	end
-	part(m, "Inner", V(13, 2.3, 13), base * CF(0, 1.75, 0), RGB(250, 240, 225))
+	for k = 0, 7 do
+		local a = k / 8 * math.pi * 2
+		if k ~= 6 then -- k = 6 points at -Z: the entrance faces the base
+			part(m, "Wall" .. k, V(5.6, 1.4, 0.8), base * CF(math.cos(a) * 7.1, 3.6, math.sin(a) * 7.1) * A(0, -a + math.pi / 2, 0), stone)
+		end
+	end
 	-- glass dome (readable from outside) on 8 posts
 	for k = 0, 7 do
 		local a = k / 8 * math.pi * 2
@@ -157,7 +163,8 @@ function HutBuilder.IncubatorHut(parent: Instance, i: number, base: CFrame, acce
 	-- where the egg sits (EggService puts the egg model here)
 	part(m, "EggSpot", V(1, 0.2, 1), base * CF(0, 4.2, 0), RGB(255, 0, 0), { Transparency = 1, CanCollide = false, CanQuery = false, CanTouch = false })
 	-- entrance gap in the low wall: steps over it
-	part(m, "Step", V(4, 1, 2), base * CF(0, 0.9, -7.6), trim)
+	part(m, "Step", V(5, 1, 2), base * CF(0, 1.1, -8), trim)
+	part(m, "Step2", V(5, 1, 1.2), base * CF(0, 1.9, -7), trim)
 	-- timer sign facing the base
 	local board = part(m, "TimerBoard", V(6, 3, 0.4), base * CF(0, 16.5, -2), RGB(60, 50, 70))
 	local gui = Instance.new("BillboardGui")

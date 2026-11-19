@@ -315,6 +315,10 @@ M.Recovery = 0.9
 M.PackRadius = 70
 for _, def in M.Types do
 	if not def.Summon then
+		-- v2.13 (director: the bigger map felt empty): one more of every regular species
+		if not def.Boss then
+			def.Count = def.Count + 1
+		end
 		local hpK = def.Boss and 1.6 or 1.9
 		local dmgK = def.Boss and 1.25 or 1.4
 		def.HP = math.floor(def.HP * hpK)

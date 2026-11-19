@@ -18,7 +18,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 
 local BaseBuilder = {}
 
-BaseBuilder.Radius = 12 -- hexagon circumradius (studs)
+BaseBuilder.Radius = 16 -- hexagon circumradius (studs); v2.13: was 12
 
 local METAL = Color3.fromRGB(205, 212, 225)
 local ROCK = Color3.fromRGB(120, 98, 82)

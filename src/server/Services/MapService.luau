@@ -265,7 +265,8 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.13"
+local MAP_VERSION = "2.14"
+local BASE_RING = 240 -- v2.13: distance of the 12 bases from the hub centre
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
 -- v2.2 CLASSIC STUDDED STYLE PASS over the whole generated map: every solid
@@ -431,25 +432,30 @@ local function buildPlaceholder(): Instance
 		local a = math.rad((i - 1) * 30 + 15)
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 		local side = Vector3.new(-dir.Z, 0, dir.X)
-		local center = dir * 140 + Vector3.new(0, Y, 0)
+		-- v2.13 (director): bases much farther out and farther apart (radius
+		-- 240 -> ~124 studs between neighbours), bigger decks (R 16)
+		local center = dir * BASE_RING + Vector3.new(0, Y, 0)
 		BaseBuilder.Build(roofs, "Rooftop" .. i, center, Color3.fromHSV((i - 1) / 12, 0.45, 1), Vector3.new(0, Y, 0))
-		local mid = dir * 92 + Vector3.new(0, Y - 0.5, 0)
-		local bridge = newPart(route, "BaseBridge" .. i, Vector3.new(6, 1, 78), CFrame.lookAt(mid, mid + dir), hubColor, { Material = Enum.Material.Marble })
+		local bridgeFrom, bridgeTo = 53, BASE_RING - BaseBuilder.Radius * 0.85
+		local mid = dir * ((bridgeFrom + bridgeTo) / 2) + Vector3.new(0, Y - 0.5, 0)
+		local bridgeLen = bridgeTo - bridgeFrom
+		local bridge = newPart(route, "BaseBridge" .. i, Vector3.new(6, 1, bridgeLen), CFrame.lookAt(mid, mid + dir), hubColor, { Material = Enum.Material.Marble })
 		-- v2.5: posts + handrails on both sides (path stays 6 wide)
 		for side = -1, 1, 2 do
-			for k = -3, 3 do
-				newPart(decor, "BridgePost" .. i .. "_" .. side .. "_" .. k, Vector3.new(0.6, 2.4, 0.6), bridge.CFrame * CFrame.new(side * 3.2, 1.6, k * 12.5), Color3.fromRGB(235, 238, 248), {})
+			local posts = math.floor(bridgeLen / 13)
+			for k = -math.floor(posts / 2), math.floor(posts / 2) do
+				newPart(decor, "BridgePost" .. i .. "_" .. side .. "_" .. k, Vector3.new(0.6, 2.4, 0.6), bridge.CFrame * CFrame.new(side * 3.2, 1.6, k * 13), Color3.fromRGB(235, 238, 248), {})
 			end
-			newPart(decor, "BridgeRail" .. i .. "_" .. side, Vector3.new(0.4, 0.4, 76), bridge.CFrame * CFrame.new(side * 3.2, 2.7, 0), Color3.fromHSV((i - 1) / 12, 0.45, 1), {})
+			newPart(decor, "BridgeRail" .. i .. "_" .. side, Vector3.new(0.4, 0.4, bridgeLen - 2), bridge.CFrame * CFrame.new(side * 3.2, 2.7, 0), Color3.fromHSV((i - 1) / 12, 0.45, 1), {})
 		end
 		-- expansion pad (empty) + short connector
-		local padPos = center + side * 30 + Vector3.new(0, -0.5, 0)
+		local padPos = center + side * 36 + Vector3.new(0, -0.5, 0)
 		local pad = newPart(expansion, "ExpansionPad" .. i, Vector3.new(20, 1, 20), CFrame.lookAt(padPos, padPos + dir), Color3.fromRGB(220, 225, 235), {
 			Material = Enum.Material.Concrete,
 		})
 		pad:SetAttribute("ExpansionSlot", i)
-		local linkPos = center + side * 16 + Vector3.new(0, -0.5, 0)
-		newPart(expansion, "ExpansionLink" .. i, Vector3.new(8, 1, 6), CFrame.lookAt(linkPos, linkPos + dir), hubColor, { Material = Enum.Material.Marble })
+		local linkPos = center + side * 20 + Vector3.new(0, -0.5, 0)
+		newPart(expansion, "ExpansionLink" .. i, Vector3.new(14, 1, 6), CFrame.lookAt(linkPos, linkPos + dir), hubColor, { Material = Enum.Material.Marble })
 		-- v2.12: pet hut on this pad. The egg nursery gets its own pad on the far
 		-- side of the base (straight across from the bridge): the pad mirrored
 		-- across the base would overlap the neighbouring base's pet hut (bases
@@ -457,13 +463,13 @@ local function buildPlaceholder(): Instance
 		local accent = Color3.fromHSV((i - 1) / 12, 0.45, 1)
 		local padTop = padPos + Vector3.new(0, 0.5, 0)
 		HutBuilder.PetHut(expansion, i, CFrame.lookAt(padTop, Vector3.new(center.X, padTop.Y, center.Z)), accent)
-		local nurseryPos = center + dir * 32 + Vector3.new(0, -0.5, 0)
+		local nurseryPos = center + dir * 40 + Vector3.new(0, -0.5, 0)
 		local nursery = newPart(expansion, "NurseryPad" .. i, Vector3.new(20, 1, 20), CFrame.lookAt(nurseryPos, nurseryPos + dir), Color3.fromRGB(220, 225, 235), {
 			Material = Enum.Material.Concrete,
 		})
 		nursery:SetAttribute("NurserySlot", i)
-		local link2 = center + dir * 17 + Vector3.new(0, -0.5, 0)
-		newPart(expansion, "NurseryLink" .. i, Vector3.new(6, 1, 8), CFrame.lookAt(link2, link2 + dir), hubColor, { Material = Enum.Material.Marble })
+		local link2 = center + dir * 22 + Vector3.new(0, -0.5, 0)
+		newPart(expansion, "NurseryLink" .. i, Vector3.new(6, 1, 17), CFrame.lookAt(link2, link2 + dir), hubColor, { Material = Enum.Material.Marble })
 		local nurseryTop = nurseryPos + Vector3.new(0, 0.5, 0)
 		HutBuilder.IncubatorHut(expansion, i, CFrame.lookAt(nurseryTop, Vector3.new(center.X, nurseryTop.Y, center.Z)), accent)
 	end
@@ -556,21 +562,28 @@ local function buildPlaceholder(): Instance
 				if rr < 85 then
 					clear = false
 				end
-				for b = 1, 12 do
-					local a = math.rad((b - 1) * 30 + 15)
-					if (Vector2.new(c.X, c.Z) - Vector2.new(math.cos(a) * 140, math.sin(a) * 140)).Magnitude < 45 then
-						clear = false
-					end
+			end
+			-- under the bases (deck, pet hut, nursery): masses sink low so their
+			-- tops stay below the base rock; right under a base there is none
+			local nearBase = false
+			for b = 1, 12 do
+				local a = math.rad((b - 1) * 30 + 15)
+				local dist = (Vector2.new(c.X, c.Z) - Vector2.new(math.cos(a) * BASE_RING, math.sin(a) * BASE_RING)).Magnitude
+				if dist < 30 then
+					clear = false
+				elseif dist < 95 then
+					c = Vector3.new(c.X, math.min(c.Y, DEATH - 12), c.Z)
+					nearBase = true
 				end
 			end
-			for _, isl in { Vector2.new(-260, 120), Vector2.new(270, -80), Vector2.new(-120, 260) } do -- hub-level decor islands
+			for _, isl in { Vector2.new(-345, 160), Vector2.new(365, -108), Vector2.new(-160, 345) } do -- hub-level decor islands
 				if (Vector2.new(c.X, c.Z) - isl).Magnitude < 90 then
 					clear = false
 				end
 			end
 			if clear then
 				i += 1
-				local w = rr <= 230 and rng:NextNumber(55, 70) or rng:NextNumber(70, 105) -- <= 105 wide on a 160 grid with 25 jitter: masses never touch
+				local w = (rr <= 230 or nearBase) and rng:NextNumber(55, 70) or rng:NextNumber(70, 105) -- <= 105 wide on a 160 grid with 25 jitter: masses never touch
 				local mass = Instance.new("Model")
 				mass.Name = "Bank" .. i
 				local yaw = CFrame.new(c) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
@@ -596,9 +609,9 @@ local function buildPlaceholder(): Instance
 	------------------------------------------------------------------
 	local islandSpots = {
 		-- hub-level islands stay below the continent's keel (Y ~96); sky islands sit beyond its coast (v2.10: r > 1300)
-		{ Vector3.new(-260, Y + 22, 120), 28 }, { Vector3.new(270, Y + 25, -80), 32 },
+		{ Vector3.new(-345, Y + 22, 160), 28 }, { Vector3.new(365, Y + 25, -108), 32 },
 		{ Vector3.new(-1150, UP - 20, -720), 26 }, { Vector3.new(1040, UP + 30, 950), 30 },
-		{ Vector3.new(180, UP + 70, -1340), 24 }, { Vector3.new(-120, Y - 5, 260), 26 },
+		{ Vector3.new(180, UP + 70, -1340), 24 }, { Vector3.new(-160, Y - 5, 345), 26 },
 	}
 	for i, spot in islandSpots do
 		local pos, size = spot[1], spot[2]

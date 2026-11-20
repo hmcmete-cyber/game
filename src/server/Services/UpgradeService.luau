@@ -61,6 +61,12 @@ local function buy(player: Player, id: unknown)
 	end
 	d.Coins -= cost
 	lv[id] = level + 1
+	do
+		local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if r then
+			require(game:GetService("ReplicatedStorage").Shared.Sfx).At("Buy", r.Position)
+		end
+	end
 	DataService.Sync(player)
 	UpgradeService.Sync(player)
 	Remotes.Hint:FireClient(player, `Upgraded!`, 3)

@@ -18,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PetDefs = require(ReplicatedStorage.Shared.PetDefs)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
 local PetModels = require(script.Parent:WaitForChild("PetModels"))
+local Sfx = require(game:GetService("ReplicatedStorage").Shared.Sfx)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 
 local PetService = {}
@@ -324,6 +325,7 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 	local special = kind == "Pulse" or kind == "Chain" or kind == "Lob"
 	lp.Model:SetAttribute("AnimKind", special and "Special" or "Attack")
 	lp.Model:SetAttribute("AnimAt", now())
+	Sfx.At("Pet" .. kind, from.Position, 1 + (lp.Level or 1) * -0.08)
 	task.spawn(function()
 		if kind == "Bite" then
 			-- dash in, bite, hop back

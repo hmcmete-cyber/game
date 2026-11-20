@@ -13,6 +13,7 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Catalog = require(ReplicatedStorage.Shared.VendorCatalog)
+local Sfx = require(ReplicatedStorage.Shared.Sfx)
 
 local VendorOrbService = {}
 
@@ -155,6 +156,7 @@ local function offer(player: Player, vendor: string, orb: BasePart)
 		return
 	end
 	if player:GetAttribute("CarryingStolen") then
+		Sfx.At("OrbRefuse", orb.Position)
 		hint(player, "The Orb refuses stolen clouds!", 4)
 		return
 	end
@@ -180,6 +182,7 @@ local function offer(player: Player, vendor: string, orb: BasePart)
 		return
 	end
 	u[want.Id] = true
+	Sfx.At("OrbOffer", orb.Position)
 	syncAttr(player)
 	DataService.SaveSoon(player)
 	local entry = Catalog.Boons[want.Id] or Catalog.Gadgets[want.Id]

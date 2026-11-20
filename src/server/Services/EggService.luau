@@ -24,6 +24,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PetDefs = require(ReplicatedStorage.Shared.PetDefs)
 local PetModels = require(script.Parent:WaitForChild("PetModels"))
+local Sfx = require(game:GetService("ReplicatedStorage").Shared.Sfx)
 
 local EggService = {}
 
@@ -194,6 +195,7 @@ spawnPickup = function(eggKey: string, pos: Vector3, owner: Player?, life: numbe
 			return
 		end
 		if carryEgg(player, eggKey) then
+			Sfx.At("EggTake", root.Position)
 			done = true
 			egg:Destroy()
 		end
@@ -359,6 +361,7 @@ local function hatch(player: Player, forceTop: boolean?)
 					task.wait(0.04)
 				end
 				light.Brightness = step * 1.2
+				Sfx.At("HatchPulse", egg:GetPivot().Position, 1 + step * 0.18)
 				light.Range = 10 + step * 6
 				emit(egg.PrimaryPart, step >= 3 and rcolor or Color3.fromRGB(255, 255, 255), 8 + step * 10, 6 + step * 3, 0.4 + step * 0.1, "rbxasset://textures/particles/sparkles_main.dds")
 				task.wait(0.35)
@@ -381,6 +384,10 @@ local function hatch(player: Player, forceTop: boolean?)
 				end
 			end
 			emit(egg.PrimaryPart, rcolor, 30 + rar * 25, 18 + rar * 4, 1)
+			Sfx.At("HatchBurst", pos)
+			if rar >= 5 then
+				Sfx.Global("HatchLegendary")
+			end
 			Debris:AddItem(egg, 1)
 			-- the pet pops out, spins and lands
 			local pet = PetModels.Build(petId)
@@ -605,6 +612,7 @@ function EggService.Start(dataService, petService, remotes, monsterDeaths)
 						local key = c.Key
 						dropCarried(player, nil)
 						table.insert(d.Eggs, key)
+						Sfx.At("EggDeliver", root.Position)
 						hint(player, `{PetDefs.Eggs[key].Name} delivered to your nursery!`, 4)
 						if not d.Incubator then
 							startIncubating(player)

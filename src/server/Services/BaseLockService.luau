@@ -121,6 +121,7 @@ local function tryLock(player: Player, roof: Model, nest: BasePart)
 	if st and st.Shield then
 		st.Shield:Destroy()
 	end
+	require(game:GetService("ReplicatedStorage").Shared.Sfx).At("BaseLock", nest.Position)
 	state[roof] = {
 		Owner = player,
 		LockedUntil = now + Config.LockDuration,

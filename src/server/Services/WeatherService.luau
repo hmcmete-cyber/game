@@ -574,6 +574,7 @@ local function startCarry(player: Player, root: BasePart, sphere: BasePart, type
 	}
 	player:SetAttribute("Carrying", typeName)
 	player:SetAttribute("CarryingStolen", victim ~= nil)
+	require(ReplicatedStorage.Shared.Sfx).At("CloudCatch", root.Position)
 	-- v2.13 theft rule: timed boosts end the moment you pick a cloud up
 	for _, attr in { "SpeedUntil", "JumpUntil", "NitroUntil" } do
 		if player:GetAttribute(attr) then
@@ -618,6 +619,7 @@ end
 
 local function deliver(player: Player, c, nest: BasePart)
 	local def = Weather.Types[c.Type]
+	require(ReplicatedStorage.Shared.Sfx).At("CloudDeliver", nest.Position)
 	local reward = math.floor(rewardOf(c.Type, c.Shiny) * coinMult(player))
 	local data = DataService.Get(player)
 	if data then

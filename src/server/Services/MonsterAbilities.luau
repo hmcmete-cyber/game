@@ -8,6 +8,7 @@
 --     Play(animName), Summon(typeName, pos), SetDamageMult(mult, seconds) }
 
 local Debris = game:GetService("Debris")
+local Sfx = require(game:GetService("ReplicatedStorage").Shared.Sfx)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -41,6 +42,11 @@ function Abilities.Hurt(p: Player, dmg: number)
 	local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
 	if hum and hum.Health > 0 and not shielded(p) then
 		hum:TakeDamage(dmg * (1 - (p:GetAttribute("DamageResist") or 0)) * (1 - (p:GetAttribute("PetResist") or 0)))
+		local root = p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root and os.clock() - (p:GetAttribute("HurtSfxAt") or 0) > 0.25 then
+			p:SetAttribute("HurtSfxAt", os.clock())
+			Sfx.At("PlayerHurt", root.Position)
+		end
 	end
 end
 local hurt = Abilities.Hurt
@@ -991,6 +997,7 @@ end
 Abilities.BossRoar = function(model: Model, color: Color3)
 	local root = model.PrimaryPart
 	if root then
+		Sfx.At("BossRoar", root.Position)
 		ring(root.Position - Vector3.new(0, 3, 0), 40, color)
 		burst(root.Position + Vector3.new(0, 4, 0), color, 60)
 	end

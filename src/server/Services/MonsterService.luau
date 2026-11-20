@@ -24,6 +24,7 @@ local MonsterRigs = require(script.Parent:WaitForChild("MonsterRigs"))
 local MonsterAnims = require(script.Parent:WaitForChild("MonsterAnims"))
 local Abilities = require(script.Parent:WaitForChild("MonsterAbilities"))
 local MonsterDeaths = require(script.Parent:WaitForChild("MonsterDeaths"))
+local Sfx = require(game:GetService("ReplicatedStorage").Shared.Sfx)
 local HazardService = require(script.Parent:WaitForChild("HazardService"))
 
 local MonsterService = {}
@@ -276,6 +277,7 @@ bossArrival = function(model: Model, pos: Vector3)
 		TweenService:Create(beam, TweenInfo.new(1), { Size = Vector3.new(200, 1, 1), Transparency = 1 }):Play()
 	end)
 	game:GetService("Debris"):AddItem(beam, 3)
+	Sfx.At("BossArrive", pos)
 	for k = 1, 3 do
 		task.delay(k * 0.25, function()
 			Abilities.BossRoar(model, color)
@@ -466,6 +468,13 @@ function MonsterService.Damage(model: Instance, amount: number, player: Player?,
 		play(info, "Hit")
 	end
 	Abilities.Burst(info.Root.Position + Vector3.new(0, 2, 0), Color3.fromRGB(255, 240, 200), 6)
+	-- hit sound (pets play their own); throttled per monster
+	if _kind ~= "Pet" and os.clock() - (info.LastHitSfx or 0) > 0.08 then
+		info.LastHitSfx = os.clock()
+		local cue = (_kind == "Laser" or _kind == "Flare") and "HitLaser" or ((_kind == "Slam" or _kind == "Quake") and "HitQuake")
+			or ((_kind == "Gadget" or _kind == "Blast") and "HitGadget") or "HitPunch"
+		Sfx.At(info.Def.Boss and "HitBoss" or cue, info.Root.Position)
+	end
 	return true
 end
 
@@ -664,12 +673,14 @@ local function think(info)
 		if os.clock() >= info.Cooldowns[i] and dist <= a.Range then
 			info.Cooldowns[i] = os.clock() + a.Cooldown * (info.Enraged and Defs.EnrageCooldown or 1)
 			info.RecoverNext = Defs.Recovery
+			Sfx.At(Sfx.ElementOf(a.Id), info.Root.Position, def.Boss and 0.75 or 1) -- cast sound by element
 			runAction(info, Abilities.F[a.Id], makeCtx(info, target, tRoot), a)
 			return
 		end
 	end
 	if dist <= def.Melee.Range and os.clock() >= info.MeleeReady then
 		info.MeleeReady = os.clock() + def.Melee.Cooldown
+		Sfx.At("Melee", info.Root.Position, def.Boss and 0.7 or 1)
 		runAction(info, Abilities.Melee, makeCtx(info, target, tRoot), def.Melee)
 		return
 	end

@@ -15,6 +15,7 @@
 --   via MonsterDeaths.OnBossDefeated).
 
 local Debris = game:GetService("Debris")
+local Sfx = require(game:GetService("ReplicatedStorage").Shared.Sfx)
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
@@ -739,8 +740,11 @@ function MonsterDeaths.Play(info, onDone: () -> ())
 		local ok, err = pcall(function()
 			if info.Def.Boss then
 				local color = BOSS_COLOR[typeName] or RGB(255, 220, 120)
+				Sfx.At("BossStagger", pos)
 				stagger(model, pos, color)
+				Sfx.At("BossCollapse", pos)
 				collapse(model, pos, color)
+				Sfx.Global("BossDefeat")
 				local f = B[typeName]
 				if f then
 					f(model, pos)
@@ -748,9 +752,11 @@ function MonsterDeaths.Play(info, onDone: () -> ())
 					fling(model, 20, 30)
 				end
 				reward(pos)
+				Sfx.Global("BossReward")
 				fireReward()
 				task.wait(2.5)
 			else
+				Sfx.At("Death" .. Sfx.ElementOf(typeName), pos)
 				local f = D[typeName]
 				local tail
 				if f then

@@ -301,6 +301,12 @@ local function buy(player: Player, id: unknown)
 	end
 	d.Coins -= item.Price
 	DataService.Sync(player)
+	do
+		local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if r then
+			require(game:GetService("ReplicatedStorage").Shared.Sfx).At("Buy", r.Position)
+		end
+	end
 	sync(player)
 	Remotes.Hint:FireClient(player, `Got {item.DisplayName}!`, 2)
 end

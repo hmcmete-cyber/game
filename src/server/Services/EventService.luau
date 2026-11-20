@@ -236,9 +236,9 @@ function EventService.Run(name: string)
 		if not ok then
 			warn("[Events] " .. name .. " failed: " .. tostring(err))
 		end
-		local left = (workspace:GetAttribute("EventEnds") or 0) - workspace:GetServerTimeNow()
-		if left > 0 then
-			task.wait(left)
+		-- wait out the rest (re-checked each second: QA "Clear Event" can end it early)
+		while workspace:GetServerTimeNow() < (workspace:GetAttribute("EventEnds") or 0) do
+			task.wait(0.5)
 		end
 		workspace:SetAttribute("Event", "")
 		workspace:SetAttribute("EventBiome", "")
@@ -255,6 +255,9 @@ function EventService.StopNow(): boolean
 		return false
 	end
 	workspace:SetAttribute("EventEnds", workspace:GetServerTimeNow())
+	-- clear the banner at once (the event thread finishes its cleanup shortly)
+	workspace:SetAttribute("Event", "")
+	workspace:SetAttribute("EventBiome", "")
 	return true
 end
 

@@ -25,6 +25,39 @@ MonsterDeaths.OnBossDefeated = nil :: ((info: any, pos: Vector3) -> ())?
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 
+-- v2.18: flying death debris lands on the ground but never bumps players
+-- (collision group "DeathDebris" ignores the "Players" group)
+local PhysicsService = game:GetService("PhysicsService")
+local Players = game:GetService("Players")
+pcall(function()
+	PhysicsService:RegisterCollisionGroup("DeathDebris")
+	PhysicsService:RegisterCollisionGroup("Players")
+	PhysicsService:CollisionGroupSetCollidable("DeathDebris", "Players", false)
+	PhysicsService:CollisionGroupSetCollidable("DeathDebris", "DeathDebris", false)
+end)
+local function playerGroup(char: Model)
+	for _, p in char:GetDescendants() do
+		if p:IsA("BasePart") then
+			p.CollisionGroup = "Players"
+		end
+	end
+	char.DescendantAdded:Connect(function(p)
+		if p:IsA("BasePart") then
+			p.CollisionGroup = "Players"
+		end
+	end)
+end
+local function hookPlayer(pl: Player)
+	if pl.Character then
+		playerGroup(pl.Character)
+	end
+	pl.CharacterAdded:Connect(playerGroup)
+end
+for _, pl in Players:GetPlayers() do
+	hookPlayer(pl)
+end
+Players.PlayerAdded:Connect(hookPlayer)
+
 local fxFolder = Instance.new("Folder")
 fxFolder.Name = "DeathFx"
 fxFolder.Parent = workspace
@@ -73,6 +106,8 @@ local function fling(model: Model, power: number, up: number, filter: ((BasePart
 		if not filter or filter(p) then
 			p.Anchored = false
 			p.CanCollide = true
+			p.CanTouch = false
+			p.CollisionGroup = "DeathDebris"
 			p.Massless = false
 			local out = p.Position - centre
 			out = Vector3.new(out.X, 0, out.Z)
@@ -389,14 +424,17 @@ D.Voltwraith = function(m, pos)
 	shrinkAll(m, 0.25, pos + Vector3.new(0, 3, 0))
 	return 1.6
 end
--- Cyclonox: spins faster and faster, pieces whirl up and away
-D.Cyclonox = function(m, pos)
-	spin(m, 6, 1.6, 6)
-	stream(pos, RGB(190, 200, 220), 25, 1.6, { Size = 2, Speed = 12, Texture = SMOKE, Alpha = 0.5, Glow = 0 })
-	task.wait(1.4)
-	fling(m, 25, 45)
-	fadeAll(m, 0.6, 0.8)
-	return 2.4
+-- Shardstorm: spins up faster and faster, then bursts into glittering shards
+D.Shardstorm = function(m, pos)
+	spin(m, 5, 1.3, 4)
+	stream(pos + Vector3.new(0, 3, 0), RGB(160, 220, 255), 30, 1.3, { Texture = SPARKLE, Size = 0.8, Speed = 10, Glow = 1 })
+	task.wait(1.2)
+	recolor(m, RGB(200, 235, 255), 0.2, Enum.Material.Glass)
+	emit(pos + Vector3.new(0, 4, 0), RGB(150, 210, 255), 60, { Texture = SPARKLE, Size = 1.3, Speed = 28, Glow = 1 })
+	ring(pos, 18, RGB(160, 220, 255))
+	fling(m, 30, 40)
+	fadeAll(m, 0.8, 0.8)
+	return 2.2
 end
 -- Cindermaw: cools to grey stone, cracks glow one last time and it crumbles
 D.Cindermaw = function(m, pos)

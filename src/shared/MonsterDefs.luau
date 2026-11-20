@@ -19,7 +19,7 @@
 local M = {}
 
 M.Order = {
-	"Prismaw", "Frostback", "Voltwraith", "Cyclonox", "Cindermaw", "Smoldlet", "Capstride",
+	"Prismaw", "Frostback", "Voltwraith", "Shardstorm", "Cindermaw", "Smoldlet", "Capstride",
 	"Sporeback", "Rubbleye", "Bristlehulk", "Gulpvine", "Mossgrave", "Gnashgut", "Skyfin",
 	-- v2.6 second monster per habitat
 	"Puffhorn", "Snowpeck", "Glowmoth", "Croakle", "Geoscuttle", "Scorchtail", "Octoblob",
@@ -122,13 +122,14 @@ M.Types = {
 			{ Id = "StaticBlink", Name = "Static Blink", Cooldown = 10, Range = 45 },
 		},
 	},
-	Cyclonox = {
-		Title = "Living Twister", Gait = "Hover", Habitat = "Plateau", Count = 1, Respawn = 130,
+	-- v2.18: Cyclonox became Shardstorm (crystal whirlwind, Crystal Canyon)
+	Shardstorm = {
+		Title = "Crystal Whirlwind", Gait = "Hover", Habitat = "Canyon", Count = 1, Respawn = 130,
 		HP = 300, Speed = 15, Scale = 1.4, XP = 120, Aggro = 70, Hover = 2,
 		Melee = { Damage = 14, Range = 9, Cooldown = 1.8 },
 		Abilities = {
-			{ Id = "VortexPull", Name = "Vortex Pull", Cooldown = 10, Range = 40, Duration = 2.5, Pull = 26 },
-			{ Id = "GaleBurst", Name = "Gale Burst", Cooldown = 9, Range = 22, Radius = 24, Damage = 12, Knock = 90, Windup = 0.8 },
+			{ Id = "PrismVortex", Name = "Prism Vortex", Cooldown = 10, Range = 40, Duration = 2.5, Pull = 26, Damage = 4, Slow = 0.6 },
+			{ Id = "ShardCyclone", Name = "Shard Cyclone", Cooldown = 9, Range = 30, Shards = 12, Damage = 12, Slow = 0.5, SlowTime = 2, Windup = 0.8 },
 		},
 	},
 	Cindermaw = {
@@ -195,7 +196,7 @@ M.Types = {
 		},
 	},
 	Mossgrave = {
-		Title = "Mossy Golem", Gait = "Stomp", Habitat = "Canyon", Count = 1, Respawn = 120,
+		Title = "Mossy Golem", Gait = "Stomp", Habitat = "Plateau", Count = 1, Respawn = 120,
 		HP = 260, Speed = 11, Scale = 1.35, XP = 95, Aggro = 60,
 		Melee = { Damage = 16, Range = 10, Cooldown = 2 },
 		Abilities = {

@@ -1320,6 +1320,52 @@ F.InkSweep = function(ctx, a)
 	end
 end
 
+-- Shardstorm (v2.18, crystal whirlwind) ---------------------------------
+-- Prism Vortex: a glittering whirl that drags players in and nicks them
+F.PrismVortex = function(ctx, a)
+	ctx.Play("Ability2")
+	local t0 = os.clock()
+	local nextTick = 0
+	while os.clock() - t0 < a.Duration and ctx.Alive() do
+		local c = ctx.Root.Position
+		ring(c - Vector3.new(0, 3, 0), a.Range * 0.6, Color3.fromRGB(150, 210, 255))
+		for k = 1, 3 do
+			local ang = os.clock() * 6 + k * 2.1
+			fx(Vector3.new(0.6, 1.6, 0.6), CFrame.new(c + Vector3.new(math.cos(ang) * 8, 1, math.sin(ang) * 8)) * CFrame.Angles(0, -ang, 0.5), Color3.fromRGB(140, 200, 255),
+				{ Material = Enum.Material.Glass, Transparency = 0.2 }, 0.3)
+		end
+		for _, h in near(c, a.Range) do
+			knock(h[1], flatDir(h[2].Position, c) * a.Pull)
+			if os.clock() >= nextTick and (h[2].Position - c).Magnitude < 14 then
+				hurt(h[1], a.Damage)
+				slow(h[1], a.Slow, 1)
+			end
+		end
+		if os.clock() >= nextTick then
+			nextTick = os.clock() + 0.5
+		end
+		task.wait(0.25)
+	end
+end
+-- Shard Cyclone: spins up, then fires a full ring of crystal shards outward
+F.ShardCyclone = function(ctx, a)
+	ctx.Play("Ability1")
+	local c = circle(ctx.Root.Position, 10, Color3.fromRGB(150, 210, 255), a.Windup)
+	if not ctx.Alive() then
+		return
+	end
+	burst(c, Color3.fromRGB(170, 230, 255), 30)
+	for k = 1, a.Shards do
+		local ang = k / a.Shards * math.pi * 2
+		local dir = Vector3.new(math.cos(ang), 0, math.sin(ang))
+		projectile(ctx.Root.Position + Vector3.new(0, 1, 0), dir, 55, a.Range, 3, k % 2 == 0 and Color3.fromRGB(160, 130, 255) or Color3.fromRGB(110, 190, 255),
+			Vector3.new(0.7, 0.7, 2.6), function(p)
+				hurt(p, a.Damage)
+				slow(p, a.Slow, a.SlowTime)
+			end)
+	end
+end
+
 Abilities.F = F
 Abilities.Burst = burst
 

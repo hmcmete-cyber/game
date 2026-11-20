@@ -251,37 +251,45 @@ BUILD.Voltwraith = function(s)
 	return r
 end
 
--- (d) Cyclonox: living twister — a cloud-crowned storm head with brows and a
--- howling mouth, a six-ring spinning funnel, cloud arms with fists, and
--- debris + tiny bolts orbiting it
-BUILD.Cyclonox = function(s)
-	local r = rig("Cyclonox", s, 5)
-	local storm, dark, eye = RGB(110, 116, 132), RGB(66, 70, 84), RGB(140, 230, 255)
-	add(r, "Body", "HumanoidRootPart", V(4, 3, 4), V(0, 2, 0), V(0, 0, 0), dark, { Role = "body", Shape = "Ball" })
-	add(r, "Head", "Body", V(5.4, 2.6, 5.4), V(0, 2.4, 0), V(0, 0, 0), storm, { Role = "head", Shape = "Ball" })
-	for i = 1, 5 do
-		local a = i / 5 * math.pi * 2
-		add(r, "Crown" .. i, "Head", V(2, 1.6, 2), V(math.cos(a) * 1.8, 1, math.sin(a) * 1.8), V(0, 0, 0), storm:Lerp(RGB(255, 255, 255), 0.1), { Shape = "Ball" })
+-- (d) Shardstorm (v2.18, was Cyclonox): a living CRYSTAL WHIRLWIND — a
+-- faceted glass prism head with a crown of crystal spikes and a glowing
+-- face, a funnel of spinning rings of crystal shards, prism fists on
+-- shard arms, and loose crystals orbiting the storm
+BUILD.Shardstorm = function(s)
+	local r = rig("Shardstorm", s, 5)
+	local blue, violet, pale, glow, deep = RGB(90, 160, 255), RGB(160, 130, 255), RGB(215, 235, 255), RGB(170, 230, 255), RGB(60, 70, 150)
+	add(r, "Body", "HumanoidRootPart", V(3.4, 3, 3.4), V(0, 2, 0), V(0, 0, 0), deep, { Role = "body", Material = M.Glass, Transparency = 0.1 })
+	add(r, "Core", "Body", V(1.6, 1.6, 1.6), V(0, 0, 0), V(0, 0, 0), glow, { Material = M.Neon, Shape = "Ball", Glow = glow })
+	add(r, "Head", "Body", V(4.2, 3, 4.2), V(0, 2.6, 0), V(0, 0, 0), blue, { Role = "head", Material = M.Glass, Transparency = 0.08 })
+	add(r, "HeadTop", "Head", V(2.8, 1.4, 2.8), V(0, 2, 0), V(0, 0, 0), pale, { Material = M.Glass, Transparency = 0.12, Rot = A(0, rad(45), 0) })
+	for i = 1, 6 do
+		local a = i / 6 * math.pi * 2
+		add(r, "CrownSpike" .. i, "Head", V(0.6, 1.8 + (i % 2) * 0.8, 0.6), V(math.cos(a) * 1.7, 1.4, math.sin(a) * 1.7), V(0, -0.9, 0), i % 2 == 0 and violet or blue,
+			{ Material = M.Glass, Rot = A(math.sin(a) * 0.35, rad(45), -math.cos(a) * 0.35) })
 	end
-	face(r, "Head", V(0, 0.4, -2.55), 1, V(0.7, 0.45, 0.25), dark, 18)
-	add(r, "Mouth", "Head", V(1.4, 0.6, 0.3), V(0, -0.5, -2.55), V(0, 0, 0), RGB(30, 32, 45), {})
+	add(r, "FacePlate", "Head", V(3, 1.8, 0.3), V(0, 0, -2.15), V(0, 0, 0), RGB(235, 245, 255), {})
+	face(r, "FacePlate", V(0, 0.25, -0.2), 0.8, V(0.6, 0.45, 0.2), deep, 15)
+	add(r, "Mouth", "FacePlate", V(1.2, 0.3, 0.2), V(0, -0.5, -0.2), V(0, 0, 0), glow, { Material = M.Neon })
 	local last = "Body"
-	for i, w in { 3.8, 3.2, 2.6, 2.0, 1.5, 1.0 } do
-		add(r, "Funnel" .. i, last, V(w, 1.3, w), V(0.12 * i, -1.15, 0), V(0, 0, 0), storm:Lerp(dark, i / 7), { Role = "spin", Shape = "Ball" })
-		last = "Funnel" .. i
+	for i, w in { 3.6, 3.0, 2.4, 1.9, 1.4, 0.9 } do
+		local ring = "Funnel" .. i
+		add(r, ring, last, V(w, 1.1, w), V(0.1 * i, -1.1, 0), V(0, 0, 0), i % 2 == 0 and violet or blue, { Role = "spin", Material = M.Glass, Transparency = 0.15, Rot = A(0, rad(i * 22), 0) })
+		for k = 1, 3 do
+			local a = k / 3 * math.pi * 2
+			add(r, ring .. "Shard" .. k, ring, V(0.35, 0.9, 0.35), V(math.cos(a) * w * 0.55, 0.2, math.sin(a) * w * 0.55), V(0, 0, 0), pale, { Material = M.Glass, Rot = A(0, -a, rad(35)) })
+		end
+		last = ring
 	end
 	for _, side in { -1, 1 } do
 		local n = side < 0 and "ArmL" or "ArmR"
-		limb(r, n, "Head", V(side * 2.9, -0.4, 0), V(1.6, 2.2, 1.6), V(1.3, 2, 1.3), nil, storm, nil, side < 0 and "armL" or "armR")
-		add(r, n .. "Fist", n .. "Lower", V(2.2, 2.2, 2.2), V(0, -1.3, 0), V(0, 0, 0), dark, { Shape = "Ball" })
+		limb(r, n, "Head", V(side * 2.9, -0.6, 0), V(1.2, 2.2, 1.2), V(1, 2, 1), nil, blue, nil, side < 0 and "armL" or "armR")
+		add(r, n .. "Fist", n .. "Lower", V(1.9, 2.4, 1.9), V(0, -1.4, 0), V(0, 0, 0), violet, { Material = M.Glass, Transparency = 0.1, Rot = A(0, rad(45), 0) })
+		add(r, n .. "FistTip", n .. "Fist", V(0.8, 1.2, 0.8), V(0, -1.6, 0), V(0, 0, 0), glow, { Material = M.Neon, Rot = A(0, rad(45), 0) })
 	end
-	for i = 1, 4 do
-		local a = i * 1.6
-		add(r, "Debris" .. i, "Body", V(0.9, 0.7, 0.8), V(math.cos(a) * 3.6, 0.5 * i - 1.5, math.sin(a) * 3.6), V(0, 0, 0), RGB(130, 105, 80), { Role = "orbit" })
-	end
-	for i = 1, 2 do
-		local a = i * 3.1 + 0.8
-		add(r, "Spark" .. i, "Body", V(0.2, 1.2, 0.2), V(math.cos(a) * 3, -0.5, math.sin(a) * 3), V(0, 0, 0), eye, { Role = "orbit", Material = M.Neon, Rot = A(0, 0, rad(30)) })
+	for i = 1, 5 do
+		local a = i * 1.25
+		add(r, "Orbit" .. i, "Body", V(0.7, 1.6, 0.7), V(math.cos(a) * 3.8, 0.5 * i - 1.5, math.sin(a) * 3.8), V(0, 0, 0), i % 2 == 0 and violet or blue,
+			{ Role = "orbit", Material = M.Glass, Rot = A(0, -a, rad(25)) })
 	end
 	return r
 end

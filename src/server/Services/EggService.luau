@@ -628,9 +628,6 @@ function EggService.Start(dataService, petService, remotes, monsterDeaths)
 				if bp and not bp:FindFirstChild("QA Instant Hatch (test only)") then
 					qaTool().Parent = bp
 				end
-				if bp and not bp:FindFirstChild("QA Legendary Hatch (test only)") then
-					qaTool(true).Parent = bp
-				end
 				if bp and not bp:FindFirstChild("QA Max Luck (test only)") then
 					local t = Instance.new("Tool")
 					t.Name = "QA Max Luck (test only)"

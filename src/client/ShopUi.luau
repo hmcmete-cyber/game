@@ -18,6 +18,8 @@ local UserInputService = game:GetService("UserInputService")
 local ShopItems = require(ReplicatedStorage.Shared.ShopItems)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local VendorCatalog = require(ReplicatedStorage.Shared.VendorCatalog)
+local ItemIcons = require(ReplicatedStorage.Shared.ItemIcons)
+local logos = {} -- turning 3D logo models (cleared with the cards)
 -- v2.13: locked catalogue entries (unlocked by offering a cloud at the vendor's Orb)
 local function isUnlocked(id: string): boolean
 	local s = Players.LocalPlayer:GetAttribute("Unlocks") or ""
@@ -108,6 +110,7 @@ local function clearGrid()
 		c:Destroy()
 	end
 	cards = {}
+	logos = {}
 end
 
 -- Every card uses the same layout, all in scale + padding, so it looks
@@ -169,6 +172,33 @@ local function card(i: number, id: string, iconText: string, iconColor: Color3, 
 	ratio.AspectRatio = 1
 	ratio.DominantAxis = Enum.DominantAxis.Height
 	ratio.Parent = icon
+	-- v2.18: a turning 3D logo instead of the letters
+	local def = ShopItems.Types[id] or Upgrades.Types[id]
+	local vp = Instance.new("ViewportFrame")
+	vp.Name = "Logo"
+	vp.Size = UDim2.fromScale(1, 1)
+	vp.BackgroundTransparency = 1
+	vp.Ambient = Color3.fromRGB(200, 200, 210)
+	vp.LightColor = Color3.fromRGB(255, 255, 255)
+	vp.LightDirection = Vector3.new(-1, -1.5, -1)
+	vp.ZIndex = (icon.ZIndex or 1) + 1
+	local model = ItemIcons.Build(ItemIcons.KindFor(id, def), iconColor)
+	model.Parent = vp
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 40
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, 1.6, -8.5), Vector3.zero)
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	vp.Parent = icon
+	for _, d in icon:GetChildren() do
+		if d:IsA("TextLabel") then
+			d.Visible = false
+		end
+	end
+	if icon:IsA("TextLabel") or icon:IsA("TextButton") then
+		(icon :: any).Text = ""
+	end
+	table.insert(logos, model)
 
 	capText(label(c, {
 		Name = "ItemName",
@@ -364,6 +394,17 @@ local function build()
 end
 
 function ShopUi.Start()
+	-- turn the shop logos slowly while the shop is open
+	game:GetService("RunService").RenderStepped:Connect(function()
+		if window and window.Visible then
+			local t = os.clock()
+			for i, m in logos do
+				if m.Parent then
+					m:PivotTo(CFrame.Angles(0, t * 0.8 + i, 0))
+				end
+			end
+		end
+	end)
 	Players.LocalPlayer:GetAttributeChangedSignal("Unlocks"):Connect(function()
 		if window and window.Visible then
 			render()

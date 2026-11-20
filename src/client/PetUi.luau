@@ -55,7 +55,9 @@ local function render()
 		name.TextXAlignment = Enum.TextXAlignment.Left
 		name.TextScaled = true
 		name.TextColor3 = stripe.BackgroundColor3
-		name.Text = `{p.Name}  ·  {p.Rarity}`
+		local lv = p.Level or 1
+		local xpText = lv < 3 and (" (" .. tostring(p.XP or 0) .. "/" .. tostring(p.NextXP or "?") .. " XP)") or " MAX"
+		name.Text = `{p.Name}  ·  {p.Rarity}  ·  Lv {lv}{xpText}`
 		name.Parent = row
 		local info = Instance.new("TextLabel")
 		info.BackgroundTransparency = 1

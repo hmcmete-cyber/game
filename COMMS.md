@@ -2011,3 +2011,72 @@ Status: done in code (MapVersion **2.16**).
   - **"QA Clear Event (test only)"** ends the running sky event (fog, acid rain, meteor shower) at once, through `EventService.StopNow`.
   - **"QA Max Luck (test only)"** is a toggle: while ON, every normal hatch gives the egg's rarest (Legendary) pet. The one-shot **"QA Legendary Hatch"** is still there too.
 - **Still open:** the director's first screenshot shows a temple with pale foreground beams and a tall pale structure. These were very likely the floating cave-roof bands and ravine wall slabs, which are removed or grounded now. Please send a new screenshot if anything still blocks a temple.
+
+### [2026-11-20] Claude → Astra — v2.17: pet levels/forms + animations to add, SFX everywhere, base/lock/save fixes — code done, UNTESTED
+Status: done in code (MapVersion **2.17**) / one TASK for you at the end (animations + sounds).
+
+**Pet levels and forms (3 per pet):**
+- **XP:** pets get **60 % of the monster XP their owner earns** (kills and assists, bosses included), shared by every equipped pet.
+- **Levels:** level 2 at 300 XP, level 3 (max) at 1000 XP.
+- **What changes per form:**
+  - **Name:** Form II = `<biome word> <Name>` (Grand / Glacial / Bloom / Storm / Prism / Blaze / Tidal); Form III = `<Name> <title>` (Titan / Warden / Monarch / King / Sovereign / Inferno / Leviathan). Example: Pebblepup → Grand Pebblepup → Pebblepup Titan.
+  - **Size:** ×1 / ×1.55 / ×2.25. **Form III is taller than a player.**
+  - **Damage:** ×1 / ×1.6 / ×2.4. **Buff:** ×1 / ×1.35 / ×1.75 (team caps still apply).
+  - **New pieces:** Form II adds a neon trim ring, back spikes, shoulder plates and a glowing brow. Form III adds energy wings, horns, a floating halo, a chest gem and an aura particle.
+- **Level-up moment:** a sound, a ring and a light column, the banner "X evolved into Y!", the pet rebuilt in its new form, and a save.
+- **UI:** the pet panel shows Lv and XP. Bigger forms walk a bit farther out from the player.
+- **QA:** "QA Pet Level Up (test only)" gives +500 XP.
+- **Animations now** (procedural, client `PetAnimator`, scaled per form):
+  - Form I: idle / walk / attack / special as before.
+  - Form II: more energetic idle; the attack is a **double strike**.
+  - Form III: majestic: slow, wide wing beats, a bigger float sway, a higher hop, and a **double spin** special.
+
+**Max-rarity hatch cinematic (Epic + Legendary):**
+1. A light pillar from the sky and three counter-rotating rings of glowing motes.
+2. The egg **levitates higher with every pulse**, with a shockwave per pulse.
+3. Burst: 12 spinning light rays, a big flash, 400 confetti/sparkles.
+4. The pet **descends from the sky in a halo**, spinning.
+5. Global sounds. Legendary hatches are still announced to the whole server.
+
+**Sounds (`Shared/Sfx`):** every event has a sound cue. Each cue is layered from Roblox's built-in client sounds with different pitches:
+- player hits by attack type, boss hits;
+- monster ability casts **by element** (Fire, Ice, Electric, Earth, Spore, Water, Wind, Crystal, Slash), melee, the player getting hurt;
+- **every monster death by element**;
+- the boss arrival/roar/stagger/collapse/defeat/reward chain;
+- pet attacks by kind;
+- egg take/deliver, hatch pulses (rising pitch), hatch burst, Legendary hatch, pet level-up;
+- Orb offer/refuse, buying at Tayron/Aurelius, base lock, cloud catch/deliver.
+
+**Fixes:**
+- **Base lock:** you can lock again **right away** after the shield drops (no recharge countdown).
+- **QA Clear Event:** it now really ends acid rain and fog too (their loops re-read the end time), so the top banner clears.
+- **Leash:** longer (16) and the cloud floats higher and farther back, for the 2.2× clouds.
+- **Bases:** bigger (hex radius 22). The vault spheres are now 7.5 studs at radius 10.5, and stored clouds fill their sphere. Pads and the nursery moved out to match.
+- **Saving:**
+  - If loading fails (in Studio this almost always means **Game Settings → Security → Enable Studio Access to API Services** is off, or the place is not published), the player now gets a clear on-screen warning. Data then cannot save in that session.
+  - Hatches, unlocks and level-ups also trigger a save 10 s later, on top of the 60 s autosave and the save on leave.
+
+**TASK for Astra — animations and sounds to add (the director asked me to tell you):**
+1. **Pet animations** are procedural and run on the client (no upload needed), so pets animate in live games too. If you want hand-made clips instead, the per-form list we need is:
+   - **Form I (all 20 body plans):** Idle (breathe + look around), Walk/Run, Attack (Bite: wind-up, lunge, snap; Bolt: rear back, fire, recoil), Special (Lob/Pulse/Chain: crouch, hop-spin, landing slam), Hit react, Happy (on level-up / hatch).
+   - **Form II:** the same set with more energy, plus a double-strike attack and a power-up pose.
+   - **Form III:** a majestic idle (slow wing beats, hover sway), a heavy walk/fly, a combo attack (3 hits), an ultimate special (double spin + shockwave), and an evolve/entrance animation.
+2. **Monster animations:** still the 168-clip export/upload from my earlier guide. The Caldera Titan must be re-exported (its rig changed).
+3. **Sounds:** the built-in sounds work, but Creator Store sounds would be much better. In `src/shared/Sfx.luau`, replace any layer `Id` with `rbxassetid://<id>`. **Wanted cues** (Creator Store search words):
+   - HitPunch (punch impact), HitLaser (laser zap), HitQuake (ground slam), HitBoss (heavy impact);
+   - PetBite (small bite/chomp), PetBolt (magic shot), PetLob (pop/whoosh), PetPulse (magic pulse), PetChain (electric zap);
+   - the element casts: Fire (fire whoosh), Ice (ice crack), Electric (electric zap), Earth (rock rumble), Spore (puff/poof), Water (splash), Wind (wind gust), Crystal (crystal chime), Slash (sword swing);
+   - the 9 element deaths (a "poof" variant per element);
+   - BossRoar (monster roar), BossArrive (dramatic boom), BossDefeat (big explosion), BossReward (victory fanfare);
+   - HatchPulse (magic chime), HatchBurst (egg crack + sparkle), HatchLegendary (epic choir/fanfare), PetLevelUp (level-up jingle);
+   - OrbOffer (magic absorb), OrbRefuse (error buzz), Buy (coin/cash register), BaseLock (lock click), CloudCatch (whoosh pop), CloudDeliver (coin reward).
+   - Use only audio the game is allowed to use (Roblox/APM licensed library).
+
+**Please test:**
+1. A pet levels up: form, name, size, sound, panel.
+2. The Legendary hatch cinematic.
+3. All sounds (volume ok?).
+4. Locking again right after the shield drops.
+5. Clear Event clears the banner.
+6. Clouds in vaults and on the leash.
+7. Saving with Studio API access ON.

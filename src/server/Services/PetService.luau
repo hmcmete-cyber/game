@@ -70,8 +70,9 @@ local function sendData(player: Player)
 		local def = PetDefs.Types[p.Id]
 		if def then
 			table.insert(list, {
-				Uid = p.Uid, Id = p.Id, Name = def.Name, Rarity = def.Rarity, Egg = def.Egg,
-				Buff = PetDefs.BuffText(def), Attack = def.Attack.Kind .. " (" .. def.Attack.Effect .. ")", Hook = def.Hook,
+				Uid = p.Uid, Id = p.Id, Name = PetDefs.FormName(def, p.Level), Rarity = def.Rarity, Egg = def.Egg,
+				Level = p.Level or 1, XP = p.XP or 0, NextXP = PetDefs.LevelXP[math.min((p.Level or 1) + 1, PetDefs.MaxLevel)],
+				Buff = PetDefs.BuffText(def, p.Level), Attack = def.Attack.Kind .. " (" .. def.Attack.Effect .. ")", Hook = def.Hook,
 				Equipped = equipped[p.Uid] == true,
 			})
 		end
@@ -134,7 +135,7 @@ local function placeHutPets(player: Player)
 	for _, p in d.Pets do
 		if not equipped[p.Uid] and PetDefs.Types[p.Id] and n < #spots then
 			n += 1
-			local m = PetModels.Build(p.Id)
+			local m = PetModels.Build(p.Id, p.Level)
 			m:PivotTo(spots[n].CFrame + Vector3.new(0, 0.2 + (m:GetAttribute("Float") or 0) * 0.4, 0))
 			m.Parent = residents
 			table.insert(hutPets[player], m)
@@ -155,9 +156,9 @@ local function spawnLive(player: Player)
 		local owned = ownedById(d, uid)
 		local def = owned and PetDefs.Types[owned.Id]
 		if def and i <= PetDefs.EquipLimit then
-			local m = PetModels.Build(owned.Id)
+			local m = PetModels.Build(owned.Id, owned.Level)
 			m.Parent = pf
-			table.insert(live[player], { Uid = uid, Def = def, Model = m, Slot = i, NextAttack = 0, Busy = false, Phase = math.random() * 6 })
+			table.insert(live[player], { Uid = uid, Def = def, Model = m, Slot = i, NextAttack = 0, Busy = false, Phase = math.random() * 6, Level = owned.Level or 1 })
 		end
 	end
 	placeHutPets(player)
@@ -319,7 +320,7 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 	local color = EFFECT_COLOR[def.Attack.Effect] or rar.Color
 	local from = lp.Model:GetPivot()
 	local tPos = target.PrimaryPart.Position
-	local dmg = rar.Damage
+	local dmg = rar.Damage * PetDefs.LevelDamage[lp.Level or 1]
 	local kind = def.Attack.Kind
 	-- tell the clients which attack animation to play (PetAnimator)
 	local special = kind == "Pulse" or kind == "Chain" or kind == "Lob"
@@ -427,7 +428,7 @@ local function buffTick(player: Player)
 			local on = when == "Always" or (when == "NearBase" and nearBase) or (when == "LowHP" and low)
 				or (when == "AfterKill" and afterKill) or (when == "InHome" and here == def.Egg)
 			if on then
-				local v = PetDefs.BuffValue(def)
+				local v = PetDefs.BuffValue(def, lp.Level)
 				if v == true then
 					flags[def.Buff.Kind] = true
 				else
@@ -520,6 +521,9 @@ end
 ------------------------------------------------------------------------
 function PetService.Start(dataService, monsterService)
 	DataService, MonsterService = dataService, monsterService
+	monsterService.OnPlayerXP = function(player: Player, xp: number)
+		PetService.AddXP(player, xp)
+	end
 	folder = Instance.new("Folder")
 	folder.Name = "Pets"
 	folder.Parent = workspace
@@ -531,6 +535,7 @@ function PetService.Start(dataService, monsterService)
 		Remotes[n] = r
 	end
 	Remotes.PetAction.OnServerEvent:Connect(onAction)
+	Remotes.Hint = remotesFolder:WaitForChild("Hint", 10)
 
 	local function setup(player: Player)
 		live[player] = {}
@@ -588,7 +593,8 @@ function PetService.Start(dataService, monsterService)
 				local target = doCombat and pickTarget(player, root) or nil
 				for _, lp in list do
 					if lp.Model.Parent and not lp.Busy then
-						local slot = SLOTS[lp.Slot] or SLOTS[1]
+						-- bigger forms stand a bit farther out
+						local slot = (SLOTS[lp.Slot] or SLOTS[1]) * (1 + (PetDefs.LevelScale[lp.Level or 1] - 1) * 0.7)
 						local float = lp.Model:GetAttribute("Float") or 0
 						local bob = math.sin(t * 4 + lp.Phase) * (float > 0 and 0.4 or 0.15)
 						local look = root.CFrame.LookVector
@@ -666,6 +672,48 @@ function PetService.Blast(player: Player, pos: Vector3, item)
 			applyEffect(player, m, item.Hit, item.Damage, pos)
 		end
 	end
+end
+
+-- v2.17 pet XP: every equipped pet shares the monster XP its owner earns
+function PetService.AddXP(player: Player, xp: number)
+	local d = data(player)
+	if not d or xp <= 0 then
+		return
+	end
+	local gain = math.max(1, math.floor(xp * PetDefs.PetXPShare))
+	local evolved = {}
+	for _, uid in d.Equipped do
+		local p = ownedById(d, uid)
+		local def = p and PetDefs.Types[p.Id]
+		if p and def then
+			local before = p.Level or 1
+			p.XP = (p.XP or 0) + gain
+			p.Level = PetDefs.LevelOf(p.XP)
+			if p.Level > before then
+				table.insert(evolved, { Def = def, From = before, To = p.Level })
+			end
+		end
+	end
+	if #evolved > 0 then
+		local char = player.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		spawnLive(player) -- rebuild in the new form
+		for _, e in evolved do
+			if root then
+				Sfx.At("PetLevelUp", root.Position)
+				local ring = fxPart(Vector3.new(0.3, 2, 2), CFrame.new(root.Position - Vector3.new(0, 2.6, 0)) * CFrame.Angles(0, 0, math.pi / 2), PetDefs.RARITY[e.Def.Rarity].Color, Enum.PartType.Cylinder, 1)
+				TweenService:Create(ring, TweenInfo.new(0.8), { Size = Vector3.new(0.2, 30, 30), Transparency = 1 }):Play()
+				local col = fxPart(Vector3.new(40, 3, 3), CFrame.new(root.Position + Vector3.new(0, 18, 0)) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(255, 235, 150), Enum.PartType.Cylinder, 1.4)
+				col.Transparency = 0.4
+				TweenService:Create(col, TweenInfo.new(1.3), { Size = Vector3.new(40, 0.5, 0.5), Transparency = 1 }):Play()
+			end
+			if Remotes.Hint then
+				Remotes.Hint:FireClient(player, `✨ {PetDefs.FormName(e.Def, e.From)} evolved into {PetDefs.FormName(e.Def, e.To)}! (Level {e.To})`, 5)
+			end
+		end
+		DataService.SaveSoon(player)
+	end
+	sendData(player)
 end
 
 PetService.SendData = sendData

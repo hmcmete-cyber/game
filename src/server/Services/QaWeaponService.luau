@@ -172,6 +172,10 @@ local EXTRA_TOOLS = {
 		game:GetService("Lighting").ClockTime = 12
 		print(`[QA] {player.Name} set midday`)
 	end },
+	{ "QA Pet Level Up (test only)", "Test tool: +500 XP for every equipped pet", Color3.fromRGB(255, 160, 255), function(player)
+		require(script.Parent:WaitForChild("PetService")).AddXP(player, 500 / 0.6)
+		print(`[QA] {player.Name} gave pets 500 XP`)
+	end },
 	{ "QA Clear Event (test only)", "Test tool: end the running sky event (fog, acid rain, meteors)", Color3.fromRGB(150, 220, 255), function(player)
 		local ok = require(script.Parent:WaitForChild("EventService")).StopNow()
 		print(`[QA] {player.Name} clear event: {ok and "stopped" or "none running"}`)

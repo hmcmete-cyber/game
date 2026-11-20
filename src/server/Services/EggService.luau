@@ -65,6 +65,21 @@ local function nurseryOf(i: number?): Model?
 	return exp and exp:FindFirstChild("IncubatorHut" .. i) or nil
 end
 
+local function fx(size: Vector3, cf: CFrame, color: Color3, shape: Enum.PartType?): BasePart
+	local p = Instance.new("Part")
+	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+	p.Material = Enum.Material.Neon
+	p.Size = size
+	p.CFrame = cf
+	p.Color = color
+	if shape then
+		p.Shape = shape
+	end
+	p.Parent = workspace
+	game:GetService("Debris"):AddItem(p, 15)
+	return p
+end
+
 local function emit(parent: Instance, color: Color3, count: number, speed: number, size: number, texture: string?)
 	local e = Instance.new("ParticleEmitter")
 	e.Color = ColorSequence.new(color)
@@ -353,9 +368,45 @@ local function hatch(player: Player, forceTop: boolean?)
 			light.Brightness = 0
 			light.Parent = egg.PrimaryPart
 			-- escalating charge: one wobble+pulse per rarity step
+			-- v2.17 EPIC / LEGENDARY CINEMATIC: a light pillar from the sky, three
+			-- orbiting rings of glowing motes, the egg levitates higher with every
+			-- pulse, shockwaves; at the burst: spinning light rays, a giant flash,
+			-- confetti, and the pet descends from above in a halo
+			local show = rar >= 4
+			local showParts = {}
+			if show then
+				local top = base.Position
+				local pillar = fx(Vector3.new(220, 1, 1), CFrame.new(top + Vector3.new(0, 110, 0)) * CFrame.Angles(0, 0, math.pi / 2), rcolor, Enum.PartType.Cylinder)
+				pillar.Transparency = 0.35
+				TweenService:Create(pillar, TweenInfo.new(1.2), { Size = Vector3.new(220, 9, 9) }):Play()
+				table.insert(showParts, pillar)
+				for ringN = 1, 3 do
+					for k = 1, 8 do
+						local mote = fx(Vector3.one * 0.7, CFrame.new(top), ringN == 2 and Color3.fromRGB(255, 240, 180) or rcolor, Enum.PartType.Ball)
+						table.insert(showParts, mote)
+						task.spawn(function()
+							local t0 = os.clock()
+							while mote.Parent do
+								local t = os.clock() - t0
+								local a = k / 8 * math.pi * 2 + t * (1.5 + ringN * 0.8) * (ringN % 2 == 0 and -1 or 1)
+								local r = 4 + ringN * 1.6
+								mote.CFrame = CFrame.new(egg:GetPivot().Position + Vector3.new(math.cos(a) * r, ringN * 1.5 + math.sin(t * 2 + k) * 0.4, math.sin(a) * r))
+								task.wait()
+							end
+						end)
+					end
+				end
+				Sfx.Global("BossArrive")
+			end
 			for step = 1, 1 + rar do
 				local grow = 0.8 + step * 0.08
 				egg:ScaleTo(grow)
+				if show then
+					base += Vector3.new(0, 0.7, 0) -- levitate
+					local ring = fx(Vector3.new(0.3, 2, 2), CFrame.new(spot.Position + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.pi / 2), rcolor, Enum.PartType.Cylinder)
+					TweenService:Create(ring, TweenInfo.new(0.6), { Size = Vector3.new(0.2, 26 + step * 4, 26 + step * 4), Transparency = 1 }):Play()
+					game:GetService("Debris"):AddItem(ring, 0.7)
+				end
 				for k = 1, 8 do
 					egg:PivotTo(base * CFrame.Angles(0, 0, math.sin(k * 1.6) * 0.18 * (step / 2)))
 					task.wait(0.04)
@@ -385,6 +436,29 @@ local function hatch(player: Player, forceTop: boolean?)
 			end
 			emit(egg.PrimaryPart, rcolor, 30 + rar * 25, 18 + rar * 4, 1)
 			Sfx.At("HatchBurst", pos)
+			if show then
+				-- spinning light rays + flash + confetti
+				local flash = Instance.new("PointLight")
+				flash.Color = rcolor
+				flash.Range = 60
+				flash.Brightness = 10
+				flash.Parent = spot
+				TweenService:Create(flash, TweenInfo.new(2), { Brightness = 0 }):Play()
+				game:GetService("Debris"):AddItem(flash, 2.2)
+				for k = 1, 12 do
+					local a = k / 12 * math.pi * 2
+					local ray = fx(Vector3.new(0.6, 0.6, 30), CFrame.new(pos) * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, -15), k % 2 == 0 and rcolor or Color3.fromRGB(255, 245, 200))
+					ray.Transparency = 0.2
+					TweenService:Create(ray, TweenInfo.new(1.6), { CFrame = CFrame.new(pos) * CFrame.Angles(0, a + 1.2, 0) * CFrame.new(0, 0, -15), Transparency = 1 }):Play()
+					game:GetService("Debris"):AddItem(ray, 1.7)
+				end
+				emit(spot, Color3.fromRGB(255, 230, 120), 200, 35, 0.9)
+				emit(spot, rcolor, 200, 30, 0.8)
+				for _, part in showParts do
+					TweenService:Create(part, TweenInfo.new(1), { Transparency = 1 }):Play()
+					game:GetService("Debris"):AddItem(part, 1.1)
+				end
+			end
 			if rar >= 5 then
 				Sfx.Global("HatchLegendary")
 			end
@@ -395,10 +469,21 @@ local function hatch(player: Player, forceTop: boolean?)
 			pet:PivotTo(spot.CFrame + Vector3.new(0, 1, 0))
 			pet:ScaleTo(0.3)
 			pet.Parent = hut
-			for k = 1, 12 do
-				pet:ScaleTo(0.3 + 0.7 * (k / 12))
-				pet:PivotTo(spot.CFrame * CFrame.new(0, 1 + math.sin(k / 12 * math.pi) * 3, 0) * CFrame.Angles(0, k / 12 * math.pi * 4, 0))
+			local frames = show and 40 or 12
+			local halo = show and fx(Vector3.new(0.3, 5, 5), spot.CFrame, Color3.fromRGB(255, 235, 150), Enum.PartType.Cylinder) or nil
+			for k = 1, frames do
+				local f = k / frames
+				pet:ScaleTo(0.3 + 0.7 * f)
+				local h = show and (14 * (1 - f) + 1) or (1 + math.sin(f * math.pi) * 3)
+				pet:PivotTo(spot.CFrame * CFrame.new(0, h, 0) * CFrame.Angles(0, f * math.pi * (show and 6 or 4), 0))
+				if halo then
+					halo.CFrame = CFrame.new(spot.Position + Vector3.new(0, h + 4, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+				end
 				task.wait(0.04)
+			end
+			if halo then
+				TweenService:Create(halo, TweenInfo.new(1), { Transparency = 1 }):Play()
+				game:GetService("Debris"):AddItem(halo, 1.1)
 			end
 			task.wait(1.6)
 			pet:Destroy()

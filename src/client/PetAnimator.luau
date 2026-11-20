@@ -50,7 +50,9 @@ local function watchFolder(folder: Instance)
 end
 
 -- pose for one joint
-local function pose(j, t: number, moving: number, act: string?, k: number): CFrame
+-- lvl (PetLevel 1-3): Form II moves with more energy (double strike), Form III
+-- is majestic: slow wide wing beats, a bigger float sway, double spin specials
+local function pose(j, t: number, moving: number, act: string?, k: number, lvl: number): CFrame
 	local base = j.Base
 	local role = j.Role
 	local s = math.sin
@@ -64,8 +66,9 @@ local function pose(j, t: number, moving: number, act: string?, k: number): CFra
 		local swing = moving * math.rad(32) * s(t * 10) * pair + (1 - moving) * math.rad(2) * s(t * 2)
 		out = base * hip * A(swing, 0, 0) * hip:Inverse()
 	elseif role == "Wing" then
-		local beat = moving > 0.3 and 14 or 4
-		out = base * A(0, 0, j.Side * math.rad((moving > 0.3 and 32 or 12) * s(t * beat)))
+		local beat = (moving > 0.3 and 14 or 4) * (lvl >= 3 and 0.55 or 1)
+		local width = (moving > 0.3 and 32 or 12) * (lvl >= 3 and 1.6 or 1)
+		out = base * A(0, 0, j.Side * math.rad(width * s(t * beat)))
 	elseif role == "Tail" then
 		out = base * A(math.rad(5 * s(t * 3)), math.rad((14 + moving * 14) * s(t * (3 + moving * 5))), 0)
 	elseif role == "Arm" then
@@ -76,9 +79,15 @@ local function pose(j, t: number, moving: number, act: string?, k: number): CFra
 		out = A(0, t * 1.5, 0) * base
 	end
 	-- whole-body: breathing bob + walking bounce
-	local bob = CFrame.new(0, 0.06 * s(t * 2.4) + moving * 0.18 * math.abs(s(t * 10)), 0)
+	local bob = CFrame.new(0, 0.06 * (1 + (lvl - 1) * 0.9) * s(t * 2.4) + moving * 0.18 * math.abs(s(t * 10)), 0)
+	if lvl >= 3 then
+		bob *= A(0, 0, 0.05 * s(t * 0.8)) -- majestic sway
+	end
 	out = bob * out
 	-- action overlays (k = 0..1 progress)
+	if act == "Attack" and lvl >= 2 then
+		k = (k * 2) % 1 -- Form II/III strike twice
+	end
 	if act == "Attack" then
 		-- wind up (lean back), lunge (lean forward + push), recoil
 		local lean = k < 0.3 and (k / 0.3) * 0.25 or (k < 0.6 and -0.45 * s((k - 0.3) / 0.3 * math.pi / 2) or -0.45 * (1 - (k - 0.6) / 0.4))
@@ -89,9 +98,9 @@ local function pose(j, t: number, moving: number, act: string?, k: number): CFra
 		end
 	elseif act == "Special" then
 		-- crouch, hop + full spin, land squash
-		local hop = k > 0.2 and k < 0.8 and 2.4 * s((k - 0.2) / 0.6 * math.pi) or 0
+		local hop = k > 0.2 and k < 0.8 and 2.4 * (1 + (lvl - 1) * 0.5) * s((k - 0.2) / 0.6 * math.pi) or 0
 		local crouch = (k < 0.2 and -0.3 * (k / 0.2)) or (k > 0.8 and -0.3 * (1 - (k - 0.8) / 0.2)) or 0
-		local spin = k > 0.2 and k < 0.8 and ((k - 0.2) / 0.6) * math.pi * 2 or 0
+		local spin = k > 0.2 and k < 0.8 and ((k - 0.2) / 0.6) * math.pi * 2 * (lvl >= 3 and 2 or 1) or 0
 		out = CFrame.new(0, hop + crouch, 0) * A(0, spin, 0) * out
 		if role == "Wing" or role == "Arm" then
 			out = out * A(0, 0, j.Side * math.rad(50) * s(math.clamp((k - 0.2) / 0.6, 0, 1) * math.pi))
@@ -100,7 +109,7 @@ local function pose(j, t: number, moving: number, act: string?, k: number): CFra
 	return out
 end
 
-local DURATION = { Attack = 0.55, Special = 0.9 }
+local DURATION = { Attack = { 0.55, 0.8, 0.9 }, Special = { 0.9, 1, 1.3 } }
 
 function PetAnimator.Start()
 	task.spawn(function()
@@ -127,14 +136,16 @@ function PetAnimator.Start()
 				local moving = math.clamp(st.Speed / 12, 0, 1)
 				local kind = model:GetAttribute("AnimKind")
 				local at = model:GetAttribute("AnimAt") or -100
+				local lvl = model:GetAttribute("PetLevel") or 1
 				local act, k = nil, 0
-				if kind and DURATION[kind] and nowS - at < DURATION[kind] then
-					act, k = kind, (nowS - at) / DURATION[kind]
+				local dur = kind and DURATION[kind] and DURATION[kind][lvl]
+				if dur and nowS - at < dur then
+					act, k = kind, (nowS - at) / dur
 				end
 				local tt = t + st.Phase
 				for _, j in st.Joints do
 					if j.Weld.Parent then
-						j.Weld.C0 = pose(j, tt, moving, act, k)
+						j.Weld.C0 = pose(j, tt, moving, act, k, lvl)
 					end
 				end
 			end

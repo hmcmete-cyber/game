@@ -182,6 +182,9 @@ local function onDeath(info)
 			local share = (p == info.LastHitBy) and 1 or ((total > 0 and d / total >= 0.1) and Defs.AssistShare or 0)
 			local xp = math.floor(info.Def.XP * share * (1 + (p:GetAttribute("PetXP") or 0)))
 			if xp > 0 then
+				if MonsterService.OnPlayerXP then
+					task.spawn(MonsterService.OnPlayerXP, p, xp) -- pets level up from this
+				end
 				local levelUp = DataService.AddXP(p, xp)
 				Remotes.Hint:FireClient(p, `+{xp} XP!`, 3)
 				if levelUp then

@@ -162,23 +162,53 @@ for _, row in LIST do
 	table.insert(PetDefs.ByEgg[def.Egg], id)
 end
 
+-- v2.17 LEVELS / FORMS: pets gain XP whenever their owner earns monster XP.
+-- Level 2 and 3 are new FORMS: bigger (Form III is bigger than a player),
+-- extra body pieces, a new name, more damage and a stronger buff.
+PetDefs.MaxLevel = 3
+PetDefs.LevelXP = { 0, 300, 1000 } -- total pet XP needed for level 1 / 2 / 3
+PetDefs.LevelScale = { 1, 1.55, 2.25 } -- model size
+PetDefs.LevelDamage = { 1, 1.6, 2.4 } -- attack damage
+PetDefs.LevelBuff = { 1, 1.35, 1.75 } -- buff value (team caps still apply)
+PetDefs.PetXPShare = 0.6 -- pets get 60 % of the monster XP their owner earns
+local FORM2 = { Plateau = "Grand", Mountains = "Glacial", Mushroom = "Bloom", Marsh = "Storm", Canyon = "Prism", Volcanic = "Blaze", Coast = "Tidal" }
+local FORM3 = { Plateau = "Titan", Mountains = "Warden", Mushroom = "Monarch", Marsh = "King", Canyon = "Sovereign", Volcanic = "Inferno", Coast = "Leviathan" }
+function PetDefs.FormName(def, level: number?): string
+	level = level or 1
+	if level >= 3 then
+		return def.Name .. " " .. FORM3[def.Egg]
+	elseif level == 2 then
+		return FORM2[def.Egg] .. " " .. def.Name
+	end
+	return def.Name
+end
+function PetDefs.LevelOf(xp: number): number
+	local lv = 1
+	for i, need in PetDefs.LevelXP do
+		if xp >= need then
+			lv = i
+		end
+	end
+	return math.min(lv, PetDefs.MaxLevel)
+end
+
 -- value of one pet's buff (before the team cap); flags return true
-function PetDefs.BuffValue(def): number | boolean
+function PetDefs.BuffValue(def, level: number?): number | boolean
 	local b = PetDefs.BUFF[def.Buff.Kind]
 	if b.Flag then
 		return true
 	end
-	return b.Base * PetDefs.RARITY[def.Rarity].Power * PetDefs.WHEN[def.Buff.When].Mult
+	return b.Base * PetDefs.RARITY[def.Rarity].Power * PetDefs.WHEN[def.Buff.When].Mult * PetDefs.LevelBuff[level or 1]
 end
 
 -- player-facing description of a pet's buff
-function PetDefs.BuffText(def): string
+function PetDefs.BuffText(def, level: number?): string
 	local b = PetDefs.BUFF[def.Buff.Kind]
 	local when = PetDefs.WHEN[def.Buff.When].Label
 	if b.Flag then
 		return b.Label .. when
 	end
-	local v = PetDefs.BuffValue(def) :: number
+	local v = PetDefs.BuffValue(def, level) :: number
 	if def.Buff.Kind == "Shield" then
 		return string.format(b.Label, math.floor(30 / v)) .. when
 	elseif b.Flat then

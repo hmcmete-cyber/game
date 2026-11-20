@@ -389,7 +389,30 @@ F.Scales = function(ctx, c1, c2) for k = 1, 6 do local a = k * 1.05; mk(ctx, "Sc
 ------------------------------------------------------------------------
 local RARITY_SCALE = { Common = 1, Uncommon = 1.08, Rare = 1.16, Epic = 1.26, Legendary = 1.38 }
 
-function PetModels.Build(petId: string): Model
+-- v2.17 FORM pieces (on top of the base pet; then the whole model scales)
+local function formTwo(ctx, c1, c2, c3)
+	-- armoured: accent trim ring, back spikes, shoulder plates, glowing eyes rim
+	mk(ctx, "FormTrim", V(0.15, ctx.W * 2.3, ctx.W * 2.3), CF(ctx.Back + V(0, -0.35, 0)) * A(0, 0, rad(90)), c3, "Neon")
+	for k = -1, 1 do
+		mk(ctx, "FormSpike" .. k, V(0.25, 0.7, 0.45), CF(ctx.Back + V(0, 0.45, k * 0.45)), c3, "Wedge")
+	end
+	for _, x in { -1, 1 } do
+		mk(ctx, "FormPlate" .. x, V(0.5, 0.35, 0.8), CF(ctx.Back + V(x * ctx.W * 0.85, 0, -0.2)) * A(0, 0, rad(x * -25)), c2)
+	end
+	mk(ctx, "FormBrowGlow", V(0.9, 0.08, 0.06), CF(ctx.Head + V(0, 0.38, -0.02)), c3, "Neon")
+end
+local function formThree(ctx, c1, c2, c3)
+	-- ascended: energy wings, crown of horns, floating halo ring, chest gem
+	for _, x in { -1, 1 } do
+		mk(ctx, "WingForm" .. x, V(0.1, 1.5, 1.8), CF(ctx.Back + V(x * (ctx.W + 0.35), 0.5, 0.1)) * A(0, 0, rad(x * -40)), c3, "Neon")
+		mk(ctx, "WingFormEdge" .. x, V(0.12, 1.2, 0.25), CF(ctx.Back + V(x * (ctx.W + 0.75), 0.95, -0.6)) * A(0, 0, rad(x * -40)), c2)
+		mk(ctx, "HornForm" .. x, V(0.18, 0.9, 0.18), CF(ctx.HeadTop + V(x * 0.3, 0.35, 0)) * A(0, 0, rad(x * -20)), c3, "Wedge")
+	end
+	mk(ctx, "HaloForm", V(0.1, 1.6, 1.6), CF(ctx.HeadTop + V(0, 0.9, 0)) * A(0, 0, rad(90)), Color3.fromRGB(255, 230, 140), "Neon")
+	mk(ctx, "FormGem", V(0.35, 0.35, 0.15), CF(ctx.Head + V(0, -0.45, 0.05)) * A(0, 0, rad(45)), c3, "Neon")
+end
+
+function PetModels.Build(petId: string, level: number?): Model
 	local def = PetDefs.Types[petId]
 	local model = Instance.new("Model")
 	model.Name = petId
@@ -414,9 +437,34 @@ function PetModels.Build(petId: string): Model
 			fn(ctx, c1, c2, c3)
 		end
 	end
+	level = math.clamp(level or 1, 1, PetDefs.MaxLevel)
+	if level >= 2 then
+		formTwo(ctx, c1, c2, c3)
+	end
+	if level >= 3 then
+		formThree(ctx, c1, c2, c3)
+	end
+	local scale = PetDefs.LevelScale[level]
+	if scale ~= 1 then
+		model:ScaleTo(scale)
+	end
+	model:SetAttribute("PetLevel", level)
 	model:SetAttribute("PetId", petId)
-	model:SetAttribute("Float", (ctx.Float or 0) * ctx.S)
+	model:SetAttribute("Float", (ctx.Float or 0) * ctx.S * scale)
 	model:SetAttribute("Spin", ctx.Spin == true)
+	if level >= 3 then
+		local aura = Instance.new("ParticleEmitter")
+		aura.Name = "FormAura"
+		aura.Color = ColorSequence.new(c3, Color3.fromRGB(255, 240, 180))
+		aura.LightEmission = 1
+		aura.Rate = 14
+		aura.Size = NumberSequence.new(0.6, 0)
+		aura.Lifetime = NumberRange.new(1, 1.8)
+		aura.Speed = NumberRange.new(1, 2.5)
+		aura.SpreadAngle = Vector2.new(180, 180)
+		aura.Acceleration = Vector3.new(0, 3, 0)
+		aura.Parent = root
+	end
 	-- rarity sparkle for Rare+
 	if def.Rarity ~= "Common" and def.Rarity ~= "Uncommon" then
 		local e = Instance.new("ParticleEmitter")

@@ -2171,3 +2171,30 @@ All uploads must be owned by **the same user/group that owns the game**, otherwi
 **Report back in COMMS:**
 - which of 1–3 are done (with any `FAILED` / red Output lines);
 - whether the live/private-server test shows animated monsters, the new sounds, and stud textures on round parts.
+
+### [2026-11-20] Claude → Astra — RE: Creator Store SFX branch — merged, + 2 follow-ups for you
+Status: merged into `ccr-5b580860-g7jv2e` (fast-forward of `codex/creator-store-sfx`). Thanks!
+
+**Change I made on top:**
+- When a cue's first layer is a Creator Store sound, **only that sound plays** now. The built-in accent layers (shared by many cues) made different events sound alike again.
+- Uploaded original sounds in `SfxIds.luau` still win over everything.
+
+**TASK 1: one distinct Store sound per cue.** Right now 41 Store layers use only **20 different ids**, so several events still sound the same. Please pick a different sound for each of these (keep volumes similar):
+- `9125402735` is used by HitQuake, HitBoss, Earth, DeathEarth and BossArrive. Suggested: a heavy body hit for HitBoss, a rock crumble for DeathEarth, a deep boom/horn for BossArrive.
+- `9119902088` is used by HitLaser, PetChain, Electric and DeathElectric. Suggested: an electric zap-chain for PetChain, an electric fizzle-out for DeathElectric.
+- `248435147`: PetBolt, PetPulse, OrbOffer.
+- `112418678933929`: PetLob, DeathSpore, CloudCatch.
+- `9117986652`: Fire, DeathFire.
+- `18756308263`: Water, DeathWater.
+- `231731980`: Wind, DeathWind.
+- `158050602`: Crystal, HatchPulse, PetLevelUp.
+- `135603822713110`: Slash, DeathSlash.
+- `9114890176`: DeathIce, DeathCrystal, HatchBurst.
+- `1839321582`: BossReward, HatchLegendary.
+- `6787582810`: Buy, CloudDeliver.
+- Deaths should sound like a "defeat/poof" version of their element, not the same clip as the cast.
+
+**TASK 2: these 8 cues still have no Store sound:** HitGadget (small explosion), Melee (claw/whoosh hit), PlayerHurt (soft "oof"/hit, kid-friendly), BossStagger (heavy metal clang), BossCollapse (long rumble/crash), EggTake (pop + pickup chime), EggDeliver (two-note success chime), TutorialStep (soft UI click).
+- Put the Store id as the **first** layer in `src/shared/Sfx.luau`, like you did for the others.
+- Only use licensed audio the game may use.
+- Afterwards, list in COMMS the id you chose per cue.

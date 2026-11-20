@@ -155,7 +155,13 @@ local function playLayers(parent: Instance, cue, pitchScale: number?, cueName: s
 		Debris:AddItem(s, 8)
 		return
 	end
-	for _, layer in cue do
+	-- v2.20: when a cue has a Creator Store sound (first layer), play ONLY that
+	-- one: the shared built-in accent layers made different events sound alike
+	local layers = cue
+	if cue[1] and string.sub(cue[1].Id, 1, 13) == "rbxassetid://" then
+		layers = { cue[1] }
+	end
+	for _, layer in layers do
 		local s = Instance.new("Sound")
 		s.SoundId = layer.Id
 		s.Volume = layer.Volume

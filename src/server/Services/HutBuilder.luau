@@ -171,12 +171,15 @@ function HutBuilder.IncubatorHut(parent: Instance, i: number, base: CFrame, acce
 		part(m, "SignPost" .. x, V(0.5, 11, 0.5), base * CF(x, 5.5, -10.2), trim)
 	end
 	local board = part(m, "TimerBoard", V(7.4, 3, 0.5), base * CF(0, 12.2, -10.2), RGB(60, 50, 70))
-	local gui = Instance.new("BillboardGui")
+	-- v2.16: the text is painted ON the board's front face (a floating label
+	-- used to sink into the board)
+	local gui = Instance.new("SurfaceGui")
 	gui.Name = "Timer"
-	gui.Size = UDim2.fromOffset(240, 70)
-	gui.StudsOffset = V(0, 0, 0)
-	gui.MaxDistance = 120
-	gui.AlwaysOnTop = false
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 40
+	gui.LightInfluence = 0
+	gui.MaxDistance = 150
 	local label = Instance.new("TextLabel")
 	label.Name = "Text"
 	label.Size = UDim2.fromScale(1, 1)

@@ -209,7 +209,7 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 	local def = Weather.Types[typeName]
 	local visual = def.Visual or "Cumulus"
 	local style = STYLE[visual] or STYLE.Cumulus
-	local d = def.Size * 0.9 * scale * 1.35 -- cloud width (v2.15: 35 % bigger)
+	local d = def.Size * 0.9 * scale * 2.2 -- cloud width (v2.16: 2.2x, readable from far away)
 	-- CloudDB can recolour any style (Tint); smoke follows the tint
 	local tint = shiny and Weather.ShinyColor or (def.Tint or style.Tint)
 	local smoke = def.Tint and def.Tint:Lerp(Color3.new(1, 1, 1), 0.15) or style.Smoke

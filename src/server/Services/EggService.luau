@@ -321,6 +321,9 @@ local function hatch(player: Player, forceTop: boolean?)
 	hatching[player] = true
 	local eggKey = inc.Egg
 	local petId = PetDefs.Roll(eggKey)
+	if not forceTop and qaAllowed(player) and player:GetAttribute("QaMaxLuck") then
+		forceTop = true -- QA Max Luck: every hatch gives the rarest pet
+	end
 	if forceTop then
 		-- QA: the rarest pet of this egg
 		for _, id in PetDefs.ByEgg[eggKey] do
@@ -534,6 +537,28 @@ function EggService.Start(dataService, petService, remotes, monsterDeaths)
 				end
 				if bp and not bp:FindFirstChild("QA Legendary Hatch (test only)") then
 					qaTool(true).Parent = bp
+				end
+				if bp and not bp:FindFirstChild("QA Max Luck (test only)") then
+					local t = Instance.new("Tool")
+					t.Name = "QA Max Luck (test only)"
+					t.ToolTip = "Test tool: toggle max hatch luck (every hatch = rarest pet)"
+					t.CanBeDropped = false
+					local h = Instance.new("Part")
+					h.Name = "Handle"
+					h.Size = Vector3.new(1, 1, 1)
+					h.Shape = Enum.PartType.Ball
+					h.Color = Color3.fromRGB(120, 255, 160)
+					h.Material = Enum.Material.Neon
+					h.CanCollide = false
+					h.Parent = t
+					t.Activated:Connect(function()
+						if qaAllowed(player) then
+							local on = not player:GetAttribute("QaMaxLuck")
+							player:SetAttribute("QaMaxLuck", on)
+							hint(player, on and "Max hatch luck ON: every hatch gives the rarest pet." or "Max hatch luck OFF.", 3)
+						end
+					end)
+					t.Parent = bp
 				end
 			end
 			player.CharacterAdded:Connect(function()

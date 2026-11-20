@@ -141,6 +141,43 @@ local function makeBossTool(monsterService): Tool
 	return tool
 end
 
+-- TEST ONLY: simple one-click QA tools (same guard as the others)
+local function makeClickTool(name: string, tip: string, color: Color3, onUse: (Player) -> ()): Tool
+	local tool = Instance.new("Tool")
+	tool.Name = name
+	tool.ToolTip = tip
+	tool.CanBeDropped = false
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(1, 1.6, 1)
+	handle.Color = color
+	handle.Material = Enum.Material.Neon
+	handle.CanCollide = false
+	handle.Parent = tool
+	local busy = false
+	tool.Activated:Connect(function()
+		local player = Players:GetPlayerFromCharacter(tool.Parent)
+		if busy or not player or not allowed(player) then
+			return
+		end
+		busy = true
+		onUse(player)
+		task.wait(0.5)
+		busy = false
+	end)
+	return tool
+end
+local EXTRA_TOOLS = {
+	{ "QA Daytime (test only)", "Test tool: set the time to midday", Color3.fromRGB(255, 230, 120), function(player)
+		game:GetService("Lighting").ClockTime = 12
+		print(`[QA] {player.Name} set midday`)
+	end },
+	{ "QA Clear Event (test only)", "Test tool: end the running sky event (fog, acid rain, meteors)", Color3.fromRGB(150, 220, 255), function(player)
+		local ok = require(script.Parent:WaitForChild("EventService")).StopNow()
+		print(`[QA] {player.Name} clear event: {ok and "stopped" or "none running"}`)
+	end },
+}
+
 function QaWeaponService.Start(monsterService)
 	local function give(player: Player)
 		if not allowed(player) then
@@ -153,6 +190,11 @@ function QaWeaponService.Start(monsterService)
 			end
 			if backpack and not backpack:FindFirstChild("QA Speed (test only)") then
 				makeSpeedTool().Parent = backpack
+			end
+			for _, spec in EXTRA_TOOLS do
+				if backpack and not backpack:FindFirstChild(spec[1]) then
+					makeClickTool(spec[1], spec[2], spec[3], spec[4]).Parent = backpack
+				end
 			end
 			if backpack and not backpack:FindFirstChild("Respawner") then
 				makeBossTool(monsterService).Parent = backpack

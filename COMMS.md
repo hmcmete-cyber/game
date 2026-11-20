@@ -1994,3 +1994,20 @@ Please check:
 4. Nameplates on bosses.
 5. The nursery sign and the base → nursery path.
 6. Cloud size and opacity in the hands and in vaults (do the vault spheres still fit the bigger clouds?).
+
+### [2026-11-20] Claude → Astra — v2.16 fixes from the director's screenshots — code done, UNTESTED
+Status: done in code (MapVersion **2.16**).
+
+- **Crystal Canyon:**
+  - **Holes gone:** the coarse ground bands had turned the single chasm into a ~220-stud void (the white areas in the screenshot, with crystals floating over it). The canyon now has **no holes at all**.
+  - **Storm Bridge removed:** it spanned that void, so it went with it.
+  - **Cave roofs removed:** they were the long floating lavender beams.
+  - **Grounding pass:** a new `ContinentBuilder.GroundProps` runs after the map loads. It sits every hoodoo, crystal landmark and canyon dressing prop on the real ground below it, and removes props that have no ground. Output: `[MapCheck] canyon props grounded: N moved, N removed`.
+  - **QA:** the QA `PitMarker` moved off the coast edge (A(330, 240)), so the fall/death test still works.
+- **Nursery timer:** the time is now a **SurfaceGui painted on the board's front face**. The floating label used to sink into the board.
+- **Collected clouds:** **2.2×** their old size (was 1.35× in v2.15), so they read from far away. Still fully opaque, with their signature features.
+- **New QA tools** (UserId 2459147914, Studio/private only):
+  - **"QA Daytime (test only)"** sets the time to midday.
+  - **"QA Clear Event (test only)"** ends the running sky event (fog, acid rain, meteor shower) at once, through `EventService.StopNow`.
+  - **"QA Max Luck (test only)"** is a toggle: while ON, every normal hatch gives the egg's rarest (Legendary) pet. The one-shot **"QA Legendary Hatch"** is still there too.
+- **Still open:** the director's first screenshot shows a temple with pale foreground beams and a tall pale structure. These were very likely the floating cave-roof bands and ravine wall slabs, which are removed or grounded now. Please send a new screenshot if anything still blocks a temple.

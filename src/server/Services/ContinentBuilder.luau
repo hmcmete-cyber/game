@@ -422,7 +422,9 @@ function ContinentBuilder.Build(ctx)
 
 	-- Canyon pits (angle range, radius range) — straight down to the death clouds
 	-- v2.10: ONE intentional chasm on the west ravine, crossed by the Storm Bridge
-	local PITS = { { 226, 234, 160, 172 } }
+	-- v2.16: no holes in the canyon (the coarse ground bands turned the chasm into a
+	-- ~220-stud void and crystals floated over it)
+	local PITS = {}
 	local function inPit(deg: number, r0: number, r1: number): boolean
 		for _, pit in PITS do
 			if deg >= pit[1] and deg < pit[2] and r0 < pit[4] and r1 > pit[3] then
@@ -568,7 +570,7 @@ function ContinentBuilder.Build(ctx)
 				table.insert(transitions, { r = (r0 + r1) / 2, deg = deg, top = top, a = h, b = other })
 			end
 			local roof = false -- cave roofs only over the canyon floor near its east wall
-			if h == "Canyon" and d2 >= 258 and d2 < 270 and r0 >= 110 and r1 <= 222 then
+			if false and h == "Canyon" and d2 >= 258 and d2 < 270 and r0 >= 110 and r1 <= 222 then -- v2.16: cave roofs removed (they floated)
 				roof = true
 				key ..= "+roof"
 			end
@@ -1171,7 +1173,7 @@ function ContinentBuilder.Build(ctx)
 				local _, ar = BiomeMap.Polar(at)
 				local ad = math.deg(math.atan2(at.Z, at.X)) % 360
 				local w2 = wobble(ad, ar)
-				local roofZone = w2 >= 256 and ar >= 108 and ar <= 224
+				local roofZone = false -- v2.16: no cave roofs any more
 				local nearRiver = ar >= 189 and ar <= 213
 				if habitatAt(ad, ar) == "Canyon" and not roofZone and not nearRiver and not inPit(ad, ar - 4, ar + 4)
 					and ravineDist(at) > RAVINE_HALF - 1 and isFree(at, 6) then
@@ -1347,13 +1349,7 @@ function ContinentBuilder.Build(ctx)
 			end
 		end
 	end
-	local bridgeMid = A(166, 230, UP - 12.5)
-	local bridge = newPart(route, "StormBridge", Vector3.new(6, 1, 80), CFrame.lookAt(bridgeMid, bridgeMid + polar(1, 230, 0)), Color3.fromRGB(80, 75, 95), {
-		Material = Enum.Material.DiamondPlate,
-	})
-	tag(bridge, Z.Canyon)
-	local storm = newPart(hazards, "StormBridge1", Vector3.new(6, 0.2, 80), bridge.CFrame * CFrame.new(0, 0.6, 0), Color3.new(0, 0, 0), { Transparency = 1 })
-	hazardFlag(storm, "Storm")
+	-- v2.16: the Storm Bridge spanned the removed chasm; gone with it
 	for _, pos in {
 		A(125, 220, UP - 9), A(125, 260, UP - 9), A(180, 215, UP - 9), A(160, 262, UP - 9),
 		A(215, 240, UP - 9), A(230, 262, UP - 5), A(100, 240, UP - 5), A(190, 265, UP - 9),
@@ -2319,7 +2315,7 @@ function ContinentBuilder.Build(ctx)
 	end
 
 	-- QA marker: centre of the canyon pit used by the QA "Death test"
-	local pitMarker = newPart(decor, "PitMarker", Vector3.one, CFrame.new(A(166, 227.5, UP + 5)), Color3.new(1, 0, 0), MARKER)
+	local pitMarker = newPart(decor, "PitMarker", Vector3.one, CFrame.new(A(330, 240, UP + 5)), Color3.new(1, 0, 0), MARKER)
 	pitMarker:SetAttribute("QaPit", true)
 
 	------------------------------------------------------------------
@@ -2394,6 +2390,54 @@ end
 -- ground below it (habitat borders wander, so authored heights can be off),
 -- take the Biome from that ground, and remove spawns over holes or closer
 -- than MIN_GAP to another spawn (no overlapping clouds). Prints a summary.
+-- v2.16: after the map is in workspace, sit every canyon prop on the real
+-- ground under it (habitat borders wander, so a prop's planned floor height
+-- can be off): nothing floats, nothing is buried. Props with no ground at
+-- all under them are removed.
+function ContinentBuilder.GroundProps(map: Instance)
+	local continent = map:FindFirstChild("Continent")
+	local decor = map:FindFirstChild("Decor")
+	if not continent then
+		return
+	end
+	local list = {}
+	local walls = continent:FindFirstChild("CanyonWalls")
+	for _, m in walls and walls:GetChildren() or {} do
+		if m:IsA("Model") and string.sub(m.Name, 1, 6) == "Hoodoo" then
+			table.insert(list, m)
+		end
+	end
+	for _, m in decor and decor:GetChildren() or {} do
+		if m:IsA("Model") and string.sub(m.Name, 1, 15) == "CrystalLandmark" then
+			table.insert(list, m)
+		end
+	end
+	local dressing = decor and decor:FindFirstChild("Dressing")
+	local canyonDress = dressing and dressing:FindFirstChild("Canyon")
+	for _, m in canyonDress and canyonDress:GetChildren() or {} do
+		if m:IsA("Model") then
+			table.insert(list, m)
+		end
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { continent:FindFirstChild("Ground") or continent }
+	local moved, removed = 0, 0
+	for _, m in list do
+		local cf, size = m:GetBoundingBox()
+		local bottom = cf.Position.Y - size.Y / 2
+		local hit = workspace:Raycast(Vector3.new(cf.Position.X, bottom + 30, cf.Position.Z), Vector3.new(0, -70, 0), params)
+		if not hit then
+			m:Destroy()
+			removed += 1
+		elseif math.abs(hit.Position.Y - bottom) > 0.3 then
+			m:PivotTo(m:GetPivot() + Vector3.new(0, hit.Position.Y - bottom, 0))
+			moved += 1
+		end
+	end
+	print(string.format("[MapCheck] canyon props grounded: %d moved, %d removed", moved, removed))
+end
+
 function ContinentBuilder.FixSpawns(map: Instance, upY: number)
 	local MIN_GAP = 9
 	local folder = map:FindFirstChild("HuntZone") and map.HuntZone:FindFirstChild("WeatherSpawns")

@@ -112,8 +112,8 @@ local function meteorShower()
 	announce(`Meteor shower! Rare clouds in the {BIOME_NAMES[biome]}!`, 7)
 	local spots = spawnsIn(biome)
 	for i = 1, Config.MeteorClouds do
-		if #spots == 0 then
-			break
+		if #spots == 0 or workspace:GetServerTimeNow() >= (workspace:GetAttribute("EventEnds") or 0) then
+			break -- also stops at once when QA ends the event
 		end
 		local target = table.remove(spots, math.random(1, #spots))
 		task.spawn(meteor, target)
@@ -249,6 +249,15 @@ function EventService.Run(name: string)
 end
 
 -- Current steal hold time (WeatherService uses it for new prompts)
+-- QA: end the running event right now (its loop sees the new end time)
+function EventService.StopNow(): boolean
+	if not running then
+		return false
+	end
+	workspace:SetAttribute("EventEnds", workspace:GetServerTimeNow())
+	return true
+end
+
 function EventService.StealHold(): number
 	return workspace:GetAttribute("Event") == "Fog" and Config.FogStealHold or Config.StealHold
 end

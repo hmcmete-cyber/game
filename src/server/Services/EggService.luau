@@ -397,6 +397,7 @@ local function hatch(player: Player, forceTop: boolean?)
 			pet:Destroy()
 		end
 		PetService.Grant(player, petId)
+		DataService.SaveSoon(player)
 		local msg = `You hatched a {def.Rarity} {def.Name}! {PetDefs.BuffText(def)}`
 		hint(player, msg, 6)
 		if def.Rarity == PetDefs.AnnounceRarity then

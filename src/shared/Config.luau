@@ -25,9 +25,9 @@ local Config = {
 
 
 	-- Leash: carried clouds float behind you on a rope held in your LEFT hand
-	LeashLength = 9,
-	LeashHeight = 5, -- how high above your root the cloud floats
-	LeashBack = 5, -- how far behind you
+	LeashLength = 16, -- v2.17: longer, the collected clouds are much bigger now
+	LeashHeight = 9, -- how high above your root the cloud floats
+	LeashBack = 11, -- how far behind you
 	LeashResponsiveness = 12,
 
 	-- Day / night cycle (DayNightService)
@@ -89,7 +89,7 @@ local Config = {
 
 	-- Base Lock (shield)
 	LockDuration = 60,
-	LockCooldown = 90, -- recharge after the shield drops
+	LockCooldown = 0, -- v2.17: lock again right away once the shield drops
 	ShieldRadius = 16, -- rivals are pushed out of this radius around the Nest
 	LockPadRadius = 3.5, -- how close the owner must be to press the pad
 

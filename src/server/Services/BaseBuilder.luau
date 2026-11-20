@@ -18,7 +18,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 
 local BaseBuilder = {}
 
-BaseBuilder.Radius = 16 -- hexagon circumradius (studs); v2.13: was 12
+BaseBuilder.Radius = 22 -- hexagon circumradius (studs); v2.17: 22 (was 16, 12) for the bigger clouds
 
 local METAL = Color3.fromRGB(205, 212, 225)
 local ROCK = Color3.fromRGB(120, 98, 82)
@@ -202,7 +202,7 @@ function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent:
 	local pedestals = folder(base, "Pedestals")
 	for n = 1, Config.VaultCount do
 		local a = math.rad(45) + (n - 1) * (math.pi * 2 / Config.VaultCount)
-		BaseBuilder.Vault(vaults, pedestals, "Vault" .. n, topCF:PointToWorldSpace(Vector3.new(math.cos(a) * 6.8, 3.3, math.sin(a) * 6.8)))
+		BaseBuilder.Vault(vaults, pedestals, "Vault" .. n, topCF:PointToWorldSpace(Vector3.new(math.cos(a) * 10.5, 5, math.sin(a) * 10.5)), 7.5)
 	end
 
 	-- Energy rings
@@ -272,7 +272,7 @@ function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent:
 		})
 	end
 	-- glowing ring around the vaults marks the "vault zone"
-	part(decor, "VaultRing", Vector3.new(0.1, 17, 17), topCF * CFrame.new(0, 0.13, 0) * CFrame.Angles(0, 0, math.pi / 2), accent, {
+	part(decor, "VaultRing", Vector3.new(0.1, 29, 29), topCF * CFrame.new(0, 0.13, 0) * CFrame.Angles(0, 0, math.pi / 2), accent, {
 		Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, Transparency = 0.75, CanCollide = false, CanQuery = false, CastShadow = false,
 	})
 

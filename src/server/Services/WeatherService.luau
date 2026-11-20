@@ -443,7 +443,7 @@ local function renderVault(vault: BasePart, entry, owner: Player?)
 
 	if entry and Weather.Types[entry.Type] then
 		local def = Weather.Types[entry.Type]
-		local core = makeCore(entry.Type, entry.Shiny == true, vault.Size.X / def.Size * 1.1)
+		local core = makeCore(entry.Type, entry.Shiny == true, vault.Size.X / def.Size * 1.1 / 2.2) -- v2.17: clouds are 2.2x now; fill the sphere
 		core.Name = "Stored"
 		core.Anchored = false -- welded, so it follows the vault when clients float it
 		moveAssembly(core, vault.CFrame)

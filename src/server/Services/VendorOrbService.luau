@@ -181,6 +181,7 @@ local function offer(player: Player, vendor: string, orb: BasePart)
 	end
 	u[want.Id] = true
 	syncAttr(player)
+	DataService.SaveSoon(player)
 	local entry = Catalog.Boons[want.Id] or Catalog.Gadgets[want.Id]
 	hint(player, `Unlocked {entry.DisplayName} at {vendor}!`, 5)
 	-- absorb flash

@@ -145,8 +145,8 @@ local function acidRain()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.RespectCanCollide = false
 	local warned = {}
-	local ends = workspace:GetAttribute("EventEnds") or 0
-	while workspace:GetServerTimeNow() < ends do
+	-- re-read the end each second: QA "Clear Event" can end it early
+	while workspace:GetServerTimeNow() < (workspace:GetAttribute("EventEnds") or 0) do
 		task.wait(1)
 		local map = workspace:FindFirstChild("Map")
 		local ignore = {}
@@ -205,8 +205,8 @@ local function fog()
 		TweenService:Create(atmosphere, TweenInfo.new(6), { Density = 0.72, Haze = 3, Offset = 0.1 }):Play()
 	end
 	setStealHold(Config.FogStealHold)
-	local ends = workspace:GetAttribute("EventEnds") or 0
-	while workspace:GetServerTimeNow() < ends do
+	-- re-read the end each second: QA "Clear Event" can end it early
+	while workspace:GetServerTimeNow() < (workspace:GetAttribute("EventEnds") or 0) do
 		task.wait(1)
 	end
 	setStealHold(Config.StealHold)

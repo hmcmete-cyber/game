@@ -59,6 +59,19 @@ function DataService.Load(player: Player)
 	end
 	profiles[player] = data
 	canSave[player] = ok
+	if not ok then
+		-- v2.17: make it obvious why progress is not kept (usually Studio API access is off)
+		player:SetAttribute("SaveDisabled", true)
+		task.delay(8, function()
+			local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+			local hintEvent = remotes and remotes:FindFirstChild("Hint")
+			if hintEvent and player.Parent then
+				hintEvent:FireClient(player, game:GetService("RunService"):IsStudio()
+					and "Progress is NOT saving: Game Settings > Security > enable Studio Access to API Services (game must be published)."
+					or "Progress could not load - it will not be saved this session.", 10)
+			end
+		end)
+	end
 	return data
 end
 
@@ -77,6 +90,22 @@ function DataService.Save(player: Player)
 	if not success then
 		warn(`[Data] Could not save {player.Name}: {err}`)
 	end
+end
+
+-- v2.17: save shortly after important progress (hatches, unlocks, level ups),
+-- at most once every 10 s per player, on top of the autosave and leave save
+local pending = {}
+function DataService.SaveSoon(player: Player)
+	if pending[player] then
+		return
+	end
+	pending[player] = true
+	task.delay(10, function()
+		pending[player] = nil
+		if profiles[player] then
+			DataService.Save(player)
+		end
+	end)
 end
 
 function DataService.Release(player: Player)

@@ -133,7 +133,30 @@ function Sfx.PitchFor(name: string): number
 	return 0.8 + (h % 46) / 100
 end
 
-local function playLayers(parent: Instance, cue, pitchScale: number?)
+-- v2.19: our own generated sounds (tools/make_sfx.py) win when uploaded
+local Uploaded = {}
+pcall(function()
+	Uploaded = require(script.Parent:WaitForChild("SfxIds", 5))
+end)
+-- the director wants different SOUNDS, not effects on one sound: the effect
+-- chains are off; only the plain fallback layers play until ids are uploaded
+local USE_FX = false
+
+local function playLayers(parent: Instance, cue, pitchScale: number?, cueName: string?)
+	local own = cueName and Uploaded[cueName]
+	if own and own ~= "" then
+		local s = Instance.new("Sound")
+		s.SoundId = own
+		s.Volume = 0.8
+		s.PlaybackSpeed = (pitchScale or 1) * (1 + (math.random() * 2 - 1) * 0.04)
+		s.RollOffMode = Enum.RollOffMode.InverseTapered
+		s.RollOffMinDistance = 12
+		s.RollOffMaxDistance = 220
+		s.Parent = parent
+		s:Play()
+		Debris:AddItem(s, 8)
+		return
+	end
 	for _, layer in cue do
 		local s = Instance.new("Sound")
 		s.SoundId = layer.Id
@@ -142,7 +165,7 @@ local function playLayers(parent: Instance, cue, pitchScale: number?)
 		s.RollOffMode = Enum.RollOffMode.InverseTapered
 		s.RollOffMinDistance = 12
 		s.RollOffMaxDistance = 220
-		for _, name in layer.Fx or {} do
+		for _, name in USE_FX and layer.Fx or {} do
 			local make = FX[name]
 			if make then
 				make().Parent = s
@@ -174,7 +197,7 @@ function Sfx.At(cueName: string, pos: Vector3, pitchScale: number?)
 	a.Size = Vector3.one * 0.2
 	a.CFrame = CFrame.new(pos)
 	a.Parent = holder
-	playLayers(a, cue, pitchScale)
+	playLayers(a, cue, pitchScale, cueName)
 	Debris:AddItem(a, 6)
 end
 
@@ -187,7 +210,7 @@ function Sfx.Global(cueName: string, pitchScale: number?)
 			holder.Name = "SfxEmitters"
 			holder.Parent = workspace
 		end
-		playLayers(holder, cue, pitchScale) -- sounds not inside a part play 2D for everyone
+		playLayers(holder, cue, pitchScale, cueName) -- sounds not inside a part play 2D for everyone
 	end
 end
 

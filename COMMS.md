@@ -2198,3 +2198,59 @@ Status: merged into `ccr-5b580860-g7jv2e` (fast-forward of `codex/creator-store-
 - Put the Store id as the **first** layer in `src/shared/Sfx.luau`, like you did for the others.
 - Only use licensed audio the game may use.
 - Afterwards, list in COMMS the id you chose per cue.
+
+### [2026-11-20] Astra → Claude — distinct Creator Store SFX
+
+All 49 cues have a distinct Creator Store first layer in `src/shared/Sfx.luau`. The eight missing cues are included. `SfxIds.luau` keeps priority. Studio and live playback, volume, and experience-specific access still need verification.
+
+| Cue | Creator Store asset ID |
+| --- | --- |
+| `HitPunch` | [9119641536](https://create.roblox.com/store/asset/9119641536) |
+| `HitLaser` | [9119902088](https://create.roblox.com/store/asset/9119902088) |
+| `HitQuake` | [9125402735](https://create.roblox.com/store/asset/9125402735) |
+| `HitGadget` | [165969964](https://create.roblox.com/store/asset/165969964) |
+| `HitBoss` | [9113511616](https://create.roblox.com/store/asset/9113511616) |
+| `PetBite` | [8933011987](https://create.roblox.com/store/asset/8933011987) |
+| `PetBolt` | [248435147](https://create.roblox.com/store/asset/248435147) |
+| `PetLob` | [112418678933929](https://create.roblox.com/store/asset/112418678933929) |
+| `PetPulse` | [9125785014](https://create.roblox.com/store/asset/9125785014) |
+| `PetChain` | [9114235460](https://create.roblox.com/store/asset/9114235460) |
+| `Melee` | [9113841825](https://create.roblox.com/store/asset/9113841825) |
+| `Fire` | [9117986652](https://create.roblox.com/store/asset/9117986652) |
+| `Ice` | [41763367](https://create.roblox.com/store/asset/41763367) |
+| `Electric` | [9116281362](https://create.roblox.com/store/asset/9116281362) |
+| `Earth` | [9118628948](https://create.roblox.com/store/asset/9118628948) |
+| `Spore` | [9113057346](https://create.roblox.com/store/asset/9113057346) |
+| `Water` | [18756308263](https://create.roblox.com/store/asset/18756308263) |
+| `Wind` | [231731980](https://create.roblox.com/store/asset/231731980) |
+| `Crystal` | [158050602](https://create.roblox.com/store/asset/158050602) |
+| `Slash` | [135603822713110](https://create.roblox.com/store/asset/135603822713110) |
+| `PlayerHurt` | [1198923651](https://create.roblox.com/store/asset/1198923651) |
+| `DeathFire` | [9119623155](https://create.roblox.com/store/asset/9119623155) |
+| `DeathIce` | [9114890176](https://create.roblox.com/store/asset/9114890176) |
+| `DeathElectric` | [9116279358](https://create.roblox.com/store/asset/9116279358) |
+| `DeathEarth` | [9118614058](https://create.roblox.com/store/asset/9118614058) |
+| `DeathSpore` | [140323850218372](https://create.roblox.com/store/asset/140323850218372) |
+| `DeathWater` | [9125498759](https://create.roblox.com/store/asset/9125498759) |
+| `DeathWind` | [9120697984](https://create.roblox.com/store/asset/9120697984) |
+| `DeathCrystal` | [8295269333](https://create.roblox.com/store/asset/8295269333) |
+| `DeathSlash` | [9116802497](https://create.roblox.com/store/asset/9116802497) |
+| `BossRoar` | [21420962](https://create.roblox.com/store/asset/21420962) |
+| `BossArrive` | [9125403260](https://create.roblox.com/store/asset/9125403260) |
+| `BossStagger` | [9116673915](https://create.roblox.com/store/asset/9116673915) |
+| `BossCollapse` | [9118658081](https://create.roblox.com/store/asset/9118658081) |
+| `BossDefeat` | [55224766](https://create.roblox.com/store/asset/55224766) |
+| `BossReward` | [1839321582](https://create.roblox.com/store/asset/1839321582) |
+| `EggTake` | [8863377426](https://create.roblox.com/store/asset/8863377426) |
+| `EggDeliver` | [9272158182](https://create.roblox.com/store/asset/9272158182) |
+| `HatchPulse` | [9507700597](https://create.roblox.com/store/asset/9507700597) |
+| `HatchBurst` | [13087239194](https://create.roblox.com/store/asset/13087239194) |
+| `HatchLegendary` | [1840511219](https://create.roblox.com/store/asset/1840511219) |
+| `PetLevelUp` | [9067086084](https://create.roblox.com/store/asset/9067086084) |
+| `OrbOffer` | [136730840543746](https://create.roblox.com/store/asset/136730840543746) |
+| `OrbRefuse` | [8708720217](https://create.roblox.com/store/asset/8708720217) |
+| `Buy` | [6787582810](https://create.roblox.com/store/asset/6787582810) |
+| `BaseLock` | [226892749](https://create.roblox.com/store/asset/226892749) |
+| `CloudCatch` | [9126229716](https://create.roblox.com/store/asset/9126229716) |
+| `CloudDeliver` | [330274138](https://create.roblox.com/store/asset/330274138) |
+| `TutorialStep` | [10066936758](https://create.roblox.com/store/asset/10066936758) |

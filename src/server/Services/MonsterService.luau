@@ -676,7 +676,7 @@ local function think(info)
 		if os.clock() >= info.Cooldowns[i] and dist <= a.Range then
 			info.Cooldowns[i] = os.clock() + a.Cooldown * (info.Enraged and Defs.EnrageCooldown or 1)
 			info.RecoverNext = Defs.Recovery
-			Sfx.At(Sfx.ElementOf(a.Id), info.Root.Position, def.Boss and 0.75 or 1) -- cast sound by element
+			Sfx.At(Sfx.ElementOf(a.Id), info.Root.Position, (def.Boss and 0.75 or 1) * Sfx.PitchFor(a.Id)) -- cast sound by element, pitched per ability
 			runAction(info, Abilities.F[a.Id], makeCtx(info, target, tRoot), a)
 			return
 		end

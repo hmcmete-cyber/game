@@ -794,7 +794,7 @@ function MonsterDeaths.Play(info, onDone: () -> ())
 				fireReward()
 				task.wait(2.5)
 			else
-				Sfx.At("Death" .. Sfx.ElementOf(typeName), pos)
+				Sfx.At("Death" .. Sfx.ElementOf(typeName), pos, Sfx.PitchFor(typeName))
 				local f = D[typeName]
 				local tail
 				if f then

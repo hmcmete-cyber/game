@@ -22,67 +22,83 @@ local THUD, CLICK, CLICKFAST, SNAP = S .. "collide.wav", S .. "button.wav", S ..
 local PING, SPLASH, THUNDER, GHOST = S .. "electronicpingshort.wav", S .. "impact_water.mp3", S .. "HalloweenThunder.wav", S .. "HalloweenGhost.wav"
 local GLASS, SPLAT, VICTORY, LAND = S .. "glassbreak.wav", S .. "splat.wav", S .. "victory.wav", S .. "action_jump_land.mp3"
 
-local function L(id, vol, pitch, jitter)
-	return { Id = id, Volume = vol, Pitch = pitch, Jitter = jitter or 0.08 }
+-- layer: id, volume, pitch, fx list, start time (TimePosition), jitter
+-- fx (v2.18 variety): Reverb, Echo, Distort, Flange, Chorus, Tremolo,
+-- Low (muffled/boomy), High (thin/bright) — so cues sharing a source sound
+-- still sound clearly different
+local function L(id, vol, pitch, fx, start, jitter)
+	return { Id = id, Volume = vol, Pitch = pitch, Fx = fx, Start = start, Jitter = jitter or 0.08 }
 end
 
 Sfx.Cues = {
 	-- player / pet hits on monsters
-	HitPunch = { L(THUD, 0.7, 1.1), L(SNAP, 0.5, 1.3) },
-	HitLaser = { L(SHOT, 0.5, 1.8), L(PING, 0.3, 1.6) },
-	HitQuake = { L(THUD, 0.9, 0.55), L(LAND, 0.7, 0.7) },
-	HitGadget = { L(SHOT, 0.7, 0.9), L(THUD, 0.6, 0.7) },
-	HitBoss = { L(THUD, 0.9, 0.75), L(SLASH, 0.5, 0.8) },
+	HitPunch = { L(THUD, 0.8, 1.2, { "High" }), L(SNAP, 0.5, 1.4) },
+	HitLaser = { L(SHOT, 0.5, 2.3, { "Flange", "High" }), L(PING, 0.35, 2.6, { "Echo" }) },
+	HitQuake = { L(THUD, 1, 0.45, { "Low", "Distort" }), L(LAND, 0.8, 0.6, { "Low" }) },
+	HitGadget = { L(SHOT, 0.8, 0.8, { "Distort" }), L(THUD, 0.6, 0.6, { "Low" }) },
+	HitBoss = { L(THUD, 1, 0.6, { "Low", "Reverb" }), L(SLASH, 0.6, 0.65, { "Distort" }) },
 	-- pet attacks (by attack kind)
-	PetBite = { L(SNAP, 0.6, 1.5), L(THUD, 0.4, 1.4) },
-	PetBolt = { L(SHOT, 0.45, 2.1), L(PING, 0.3, 2) },
-	PetLob = { L(WHOOSH, 0.5, 1.7), L(SPLAT, 0.45, 1.2) },
-	PetPulse = { L(THUD, 0.6, 0.9), L(PING, 0.4, 0.8) },
-	PetChain = { L(THUNDER, 0.35, 2.2), L(PING, 0.35, 2.4) },
+	PetBite = { L(SNAP, 0.7, 1.8, { "High" }), L(SNAP, 0.4, 1.3, nil, 0.02) },
+	PetBolt = { L(SHOT, 0.45, 2.6, { "High", "Echo" }), L(PING, 0.3, 2.4) },
+	PetLob = { L(WHOOSH, 0.5, 2, { "Chorus" }), L(SPLAT, 0.5, 1.5, { "High" }) },
+	PetPulse = { L(PING, 0.6, 0.6, { "Reverb", "Chorus" }), L(THUD, 0.4, 1.1) },
+	PetChain = { L(THUNDER, 0.4, 2.6, { "Flange", "High" }), L(PING, 0.35, 3, { "Tremolo" }) },
 	-- monster abilities by element (cast sound) + melee
-	Melee = { L(SLASH, 0.6, 0.9) },
-	Fire = { L(WHOOSH, 0.7, 0.8), L(LAUNCH, 0.4, 1.3) },
-	Ice = { L(GLASS, 0.6, 1.5), L(WHOOSH, 0.4, 1.8) },
-	Electric = { L(THUNDER, 0.6, 1.8), L(PING, 0.4, 2.2) },
-	Earth = { L(THUD, 0.9, 0.5), L(LAND, 0.8, 0.6) },
-	Spore = { L(SPLAT, 0.6, 0.9), L(WHOOSH, 0.3, 2) },
-	Water = { L(SPLASH, 0.8, 1.1), L(SPLAT, 0.4, 0.8) },
-	Wind = { L(WHOOSH, 0.8, 1.4), L(WHOOSH, 0.5, 0.9) },
-	Crystal = { L(GLASS, 0.7, 1.1), L(PING, 0.5, 1.4) },
-	Slash = { L(SLASH, 0.7, 1), L(UNSHEATH, 0.4, 1.2) },
+	Melee = { L(SLASH, 0.7, 0.85, { "Low" }), L(UNSHEATH, 0.3, 0.7) },
+	Fire = { L(WHOOSH, 0.8, 0.7, { "Distort", "Low" }), L(LAUNCH, 0.5, 1.4, { "Chorus" }) },
+	Ice = { L(GLASS, 0.7, 1.7, { "Reverb", "High" }), L(PING, 0.4, 2.8, { "Echo" }) },
+	Electric = { L(THUNDER, 0.7, 2, { "Tremolo", "Flange" }), L(PING, 0.4, 3.2, { "Distort" }) },
+	Earth = { L(THUD, 1, 0.4, { "Low", "Distort" }), L(LAND, 0.9, 0.45, { "Reverb" }) },
+	Spore = { L(SPLAT, 0.7, 0.75, { "Chorus", "Echo" }), L(WHOOSH, 0.35, 2.4, { "High" }) },
+	Water = { L(SPLASH, 0.9, 1.2, { "Chorus" }), L(SPLAT, 0.5, 0.7, { "Low" }) },
+	Wind = { L(WHOOSH, 0.9, 1.5, { "Flange" }), L(GHOST, 0.3, 2.2, { "Echo" }) },
+	Crystal = { L(GLASS, 0.7, 1.2, { "Echo", "High" }), L(PING, 0.6, 1.9, { "Reverb", "Chorus" }) },
+	Slash = { L(SLASH, 0.8, 1.05), L(UNSHEATH, 0.5, 1.4, { "High" }) },
 	-- player hurt
-	PlayerHurt = { L(THUD, 0.6, 1.3) },
+	PlayerHurt = { L(THUD, 0.6, 1.5, { "High" }), L(SNAP, 0.3, 0.8) },
 	-- deaths by element (normal monsters)
-	DeathFire = { L(LAUNCH, 0.6, 0.9), L(THUD, 0.6, 0.7) },
-	DeathIce = { L(GLASS, 0.9, 1), L(GLASS, 0.5, 1.6) },
-	DeathElectric = { L(THUNDER, 0.7, 1.5), L(PING, 0.5, 0.7) },
-	DeathEarth = { L(THUD, 1, 0.45), L(LAND, 0.9, 0.5) },
-	DeathSpore = { L(SPLAT, 0.8, 0.7), L(WHOOSH, 0.5, 1.4) },
-	DeathWater = { L(SPLASH, 1, 0.9), L(SPLAT, 0.6, 0.6) },
-	DeathWind = { L(WHOOSH, 0.9, 0.7), L(GHOST, 0.3, 1.6) },
-	DeathCrystal = { L(GLASS, 1, 0.9), L(PING, 0.6, 1.8) },
-	DeathSlash = { L(THUD, 0.8, 0.8), L(SLASH, 0.5, 0.6) },
+	DeathFire = { L(LAUNCH, 0.7, 0.7, { "Distort", "Reverb" }), L(WHOOSH, 0.6, 0.5, { "Low" }) },
+	DeathIce = { L(GLASS, 1, 0.9, { "Reverb" }), L(GLASS, 0.6, 1.8, { "Echo", "High" }, 0.05) },
+	DeathElectric = { L(THUNDER, 0.8, 1.4, { "Tremolo" }), L(PING, 0.6, 0.5, { "Flange", "Distort" }) },
+	DeathEarth = { L(THUD, 1, 0.35, { "Low", "Reverb" }), L(LAND, 1, 0.4, { "Distort" }) },
+	DeathSpore = { L(SPLAT, 0.9, 0.55, { "Echo" }), L(WHOOSH, 0.6, 1.8, { "Chorus", "High" }) },
+	DeathWater = { L(SPLASH, 1, 0.75, { "Reverb" }), L(SPLAT, 0.6, 0.5, { "Chorus" }) },
+	DeathWind = { L(WHOOSH, 1, 0.6, { "Flange", "Reverb" }), L(GHOST, 0.4, 1.4, { "Echo" }) },
+	DeathCrystal = { L(GLASS, 1, 0.8, { "Echo" }), L(PING, 0.7, 1.4, { "Reverb", "Chorus" }), L(PING, 0.5, 2.1, { "Echo" }, 0.05) },
+	DeathSlash = { L(THUD, 0.8, 0.7, { "Low" }), L(SLASH, 0.6, 0.5, { "Reverb" }) },
 	-- bosses
-	BossRoar = { L(GHOST, 0.9, 0.55), L(THUNDER, 0.8, 0.6), L(THUD, 0.8, 0.4) },
-	BossArrive = { L(THUNDER, 1, 0.7), L(LAUNCH, 0.7, 0.6) },
-	BossStagger = { L(THUD, 1, 0.5), L(THUNDER, 0.6, 0.9) },
-	BossCollapse = { L(LAND, 1, 0.35), L(THUD, 1, 0.3), L(GHOST, 0.6, 0.45) },
-	BossDefeat = { L(THUNDER, 1, 0.5), L(SHOT, 0.9, 0.5), L(GLASS, 0.6, 0.7) },
-	BossReward = { L(VICTORY, 1, 1), L(PING, 0.7, 1.2) },
+	BossRoar = { L(GHOST, 1, 0.45, { "Distort", "Reverb" }), L(THUNDER, 0.8, 0.5, { "Low" }), L(THUD, 0.8, 0.35, { "Low" }) },
+	BossArrive = { L(THUNDER, 1, 0.6, { "Reverb", "Low" }), L(LAUNCH, 0.8, 0.45, { "Distort" }) },
+	BossStagger = { L(THUD, 1, 0.45, { "Distort" }), L(THUNDER, 0.7, 1.1, { "Tremolo" }) },
+	BossCollapse = { L(LAND, 1, 0.3, { "Low", "Reverb" }), L(THUD, 1, 0.25, { "Distort" }), L(GHOST, 0.7, 0.4, { "Echo" }) },
+	BossDefeat = { L(THUNDER, 1, 0.45, { "Reverb", "Distort" }), L(SHOT, 1, 0.4, { "Low" }), L(GLASS, 0.7, 0.6, { "Echo" }) },
+	BossReward = { L(VICTORY, 1, 1, { "Reverb" }), L(PING, 0.7, 1.2, { "Chorus" }), L(PING, 0.6, 1.6, { "Echo" }, 0.04) },
 	-- eggs, hatching, pets
-	EggTake = { L(CLICK, 0.7, 1), L(PING, 0.6, 1.3) },
-	EggDeliver = { L(PING, 0.8, 1), L(PING, 0.6, 1.5) },
-	HatchPulse = { L(PING, 0.7, 1) }, -- pitch rises per pulse (see Sfx.At pitch scale)
-	HatchBurst = { L(SHOT, 0.8, 1.2), L(GLASS, 0.6, 1.4), L(VICTORY, 0.9, 1) },
-	HatchLegendary = { L(THUNDER, 1, 0.8), L(VICTORY, 1, 0.9), L(PING, 0.9, 2) },
-	PetLevelUp = { L(VICTORY, 0.9, 1.3), L(PING, 0.8, 1.8) },
+	EggTake = { L(CLICK, 0.8, 1.1), L(PING, 0.7, 1.5, { "Chorus" }) },
+	EggDeliver = { L(PING, 0.8, 1.2, { "Echo" }), L(PING, 0.7, 1.8, { "Reverb" }, 0.05) },
+	HatchPulse = { L(PING, 0.8, 1, { "Reverb", "Chorus" }) }, -- pitch rises per pulse
+	HatchBurst = { L(GLASS, 0.8, 1.3, { "Echo" }), L(SHOT, 0.7, 1.4, { "High" }), L(VICTORY, 0.9, 1.05, { "Reverb" }) },
+	HatchLegendary = { L(THUNDER, 1, 0.7, { "Reverb" }), L(VICTORY, 1, 0.85, { "Chorus", "Reverb" }), L(PING, 0.9, 2.2, { "Echo" }) },
+	PetLevelUp = { L(VICTORY, 0.9, 1.35, { "Chorus" }), L(PING, 0.8, 2, { "Echo" }), L(PING, 0.6, 2.6, nil, 0.06) },
 	-- vendors / orbs / base
-	OrbOffer = { L(PING, 0.9, 0.7), L(WHOOSH, 0.6, 0.6), L(VICTORY, 0.8, 1.1) },
-	OrbRefuse = { L(CLICKFAST, 0.7, 0.6), L(THUD, 0.5, 1.2) },
-	Buy = { L(CLICK, 0.8, 1.2), L(PING, 0.6, 1.6) },
-	BaseLock = { L(CLICK, 0.9, 0.8), L(PING, 0.7, 0.9) },
-	CloudCatch = { L(PING, 0.7, 1.4), L(WHOOSH, 0.4, 2) },
-	CloudDeliver = { L(VICTORY, 0.7, 1.2) },
+	OrbOffer = { L(PING, 0.9, 0.6, { "Reverb", "Flange" }), L(WHOOSH, 0.7, 0.5, { "Echo" }), L(VICTORY, 0.8, 1.15, { "Chorus" }) },
+	OrbRefuse = { L(CLICKFAST, 0.8, 0.5, { "Distort" }), L(THUD, 0.6, 1.3) },
+	Buy = { L(CLICK, 0.8, 1.3, { "High" }), L(PING, 0.7, 2, { "Chorus" }) },
+	BaseLock = { L(CLICK, 1, 0.7, { "Low" }), L(PING, 0.7, 0.8, { "Reverb", "Tremolo" }) },
+	CloudCatch = { L(PING, 0.7, 1.6, { "Chorus" }), L(WHOOSH, 0.5, 2.2, { "High" }) },
+	CloudDeliver = { L(VICTORY, 0.7, 1.25), L(CLICK, 0.6, 1.8, { "High" }) },
+	TutorialStep = { L(CLICK, 0.6, 1.4), L(PING, 0.5, 1.7, { "Chorus" }) },
+}
+
+local FX = {
+	Reverb = function() local e = Instance.new("ReverbSoundEffect"); e.DecayTime = 1.6; e.WetLevel = -4; return e end,
+	Echo = function() local e = Instance.new("EchoSoundEffect"); e.Delay = 0.12; e.Feedback = 0.35; e.WetLevel = -4; return e end,
+	Distort = function() local e = Instance.new("DistortionSoundEffect"); e.Level = 0.55; return e end,
+	Flange = function() local e = Instance.new("FlangeSoundEffect"); e.Depth = 0.6; e.Rate = 6; e.Mix = 0.7; return e end,
+	Chorus = function() local e = Instance.new("ChorusSoundEffect"); e.Depth = 0.45; e.Rate = 3; e.Mix = 0.6; return e end,
+	Tremolo = function() local e = Instance.new("TremoloSoundEffect"); e.Frequency = 14; e.Depth = 0.85; e.Duty = 0.5; return e end,
+	Low = function() local e = Instance.new("EqualizerSoundEffect"); e.LowGain = 8; e.MidGain = -6; e.HighGain = -30; return e end,
+	High = function() local e = Instance.new("EqualizerSoundEffect"); e.LowGain = -30; e.MidGain = 0; e.HighGain = 6; return e end,
 }
 
 -- element of a monster ability / species by name keywords
@@ -107,6 +123,16 @@ function Sfx.ElementOf(name: string): string
 	return "Slash"
 end
 
+-- a stable pitch per name (0.8-1.25): two monsters of the same element
+-- still sound different
+function Sfx.PitchFor(name: string): number
+	local h = 0
+	for k = 1, #name do
+		h = (h * 31 + string.byte(name, k)) % 997
+	end
+	return 0.8 + (h % 46) / 100
+end
+
 local function playLayers(parent: Instance, cue, pitchScale: number?)
 	for _, layer in cue do
 		local s = Instance.new("Sound")
@@ -116,6 +142,15 @@ local function playLayers(parent: Instance, cue, pitchScale: number?)
 		s.RollOffMode = Enum.RollOffMode.InverseTapered
 		s.RollOffMinDistance = 12
 		s.RollOffMaxDistance = 220
+		for _, name in layer.Fx or {} do
+			local make = FX[name]
+			if make then
+				make().Parent = s
+			end
+		end
+		if layer.Start then
+			s.TimePosition = layer.Start
+		end
 		s.Parent = parent
 		s:Play()
 		Debris:AddItem(s, 6)

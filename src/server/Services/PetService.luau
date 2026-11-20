@@ -136,6 +136,13 @@ local function placeHutPets(player: Player)
 		if not equipped[p.Uid] and PetDefs.Types[p.Id] and n < #spots then
 			n += 1
 			local m = PetModels.Build(p.Id, p.Level)
+			-- v2.20: big forms rest at baby size inside the hut (they kept the
+			-- form pieces, but poked through the walls at full size)
+			local lvlScale = m:GetScale()
+			if lvlScale > 1 then
+				m:ScaleTo(1)
+				m:SetAttribute("Float", (m:GetAttribute("Float") or 0) / lvlScale)
+			end
 			m:PivotTo(spots[n].CFrame + Vector3.new(0, 0.2 + (m:GetAttribute("Float") or 0) * 0.4, 0))
 			m.Parent = residents
 			table.insert(hutPets[player], m)

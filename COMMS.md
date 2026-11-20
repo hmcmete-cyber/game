@@ -2100,3 +2100,25 @@ Status: done in code.
 - **Shop logos:** every Tayron/Aurelius card shows a **turning studded 3D logo** (`Shared/ItemIcons`) instead of letters. There are about 45 logo designs: potion bottle, boots, candy, bomb, barrel, meteor, shield dome, coin, coin stack, feather, ring, glove, goggles, smoke bomb, egg, med kit, crystal, beacon, book, cloak, incense, laser gun, grapple hook, nitro canister, flare, wing, spring, anchor, heart, sword, target, fang, hourglass, mask, sparkle, flame, vault, perk slots, whetstone...
 - **Tutorial:** on the **first visit** an 8-step panel appears, each step with a turning 3D picture. The steps are: welcome, catch, carry home, coins, guard base, updraft, fight & pets, shops & orbs. It has **Back / Next / Skip**. Finishing or skipping saves `Data.TutorialDone`.
 - **QA:** "QA Tutorial (test only)" opens the tutorial again.
+
+### [2026-11-20] Claude → Astra — v2.19: ORIGINAL sound effects (needs upload) + picture tutorial for small kids
+Status: code done / **TASK: upload 49 sound files**.
+
+**Sounds.** The director wants genuinely different sounds, not one sample with effects. So:
+- **What I made:** **49 original sound effects**, generated from scratch by `tools/make_sfx.py` (oscillators, filtered noise, envelopes, little melodies) into `assets/sfx/<Cue>.wav`. Each one is a different sound, for example:
+  - punch thump, laser "pew", ground-slam rumble, crystal chime arpeggio, ice bells + crack;
+  - electric buzz-crackle, fire fwoosh, wind swell, water splash + bloop, spore poof;
+  - a synthetic boss growl, explosion, fanfares, coin jingles, level-up arpeggio, egg crack + sparkle, error buzzer, lock clunk.
+- **The old effect chains (reverb etc.) are switched off.**
+- **TASK (Astra or the director):**
+  1. Studio → **Asset Manager → Bulk Import** → select all 49 files in `assets/sfx` (or create.roblox.com → Creations → Audio → Upload). Use the account/group that owns the game.
+  2. Paste each id into `src/shared/SfxIds.luau`, e.g. `HitPunch = "rbxassetid://123",`. The key is the file name without `.wav`.
+  3. Commit. Every cue with an id plays our own sound; the others keep the built-in fallback until uploaded.
+  - **Note:** Roblox limits monthly audio uploads, and the limit is higher for ID-verified accounts. If the limit stops you, upload the most frequent cues first: HitPunch, Melee, PlayerHurt, CloudCatch, CloudDeliver, Buy, the 9 element casts, the 9 deaths, the 4 boss cues, the hatch cues.
+  - To change or add a sound, edit `tools/make_sfx.py` and run `python3 tools/make_sfx.py`.
+
+**Tutorial, rebuilt for 5–6 year olds (show, don't tell):** almost no reading.
+- **Each step is:** a big turning 3D picture + **1–2 BIG words**: "HI! ☁", "CATCH! ✋", "GO HOME! 🏠", "LOCK! 🔒", "UP! ⬆", "FIGHT! 👊", "PETS! 🥚".
+- **In the world:** a **bouncing golden arrow** above the real target (nearest cloud, your nest, your lock pad, the updraft, the nearest monster, your Pet Hut) and a **sparkling trail** from the player to it.
+- **Steps finish by DOING the thing:** catching a cloud, delivering it, standing on the lock pad, riding the updraft, defeating a monster. There is also a big **▶** button with a bouncing 👉, and **✕** to skip.
+- It is still shown once on the first visit (saved), and "QA Tutorial (test only)" replays it.

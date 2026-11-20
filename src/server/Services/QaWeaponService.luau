@@ -179,13 +179,78 @@ local EXTRA_TOOLS = {
 	{ "QA Tutorial (test only)", "Test tool: show the tutorial again", Color3.fromRGB(255, 255, 255), function(player)
 		require(script.Parent:WaitForChild("TutorialService")).Show(player)
 	end },
+	{ "QA Item Spawner (test only)", "Test tool: give yourself any item, upgrade, pet or egg", Color3.fromRGB(255, 120, 60), function(player)
+		if openRemote then
+			openRemote:FireClient(player)
+		end
+	end },
 	{ "QA Clear Event (test only)", "Test tool: end the running sky event (fog, acid rain, meteors)", Color3.fromRGB(150, 220, 255), function(player)
 		local ok = require(script.Parent:WaitForChild("EventService")).StopNow()
 		print(`[QA] {player.Name} clear event: {ok and "stopped" or "none running"}`)
 	end },
 }
 
+-- TEST ONLY: "QA Item Spawner" opens a panel to give yourself ANY item,
+-- upgrade/boon, pet, egg, coins, or unlock everything. Checked on the server.
+local spawnRemote, openRemote
+local function onSpawn(player: Player, category: unknown, id: unknown)
+	if not allowed(player) or type(category) ~= "string" then
+		return
+	end
+	local RS = game:GetService("ReplicatedStorage")
+	local DataService = require(script.Parent:WaitForChild("DataService"))
+	local d = DataService.Get(player)
+	if not d then
+		return
+	end
+	if category == "Item" and type(id) == "string" then
+		require(script.Parent:WaitForChild("InventoryService")).GiveItem(player, id)
+	elseif category == "Upgrade" and type(id) == "string" then
+		local def = require(RS.Shared.Upgrades).Types[id]
+		if def then
+			d.Upgrades = d.Upgrades or {}
+			d.Upgrades[id] = def.MaxLevel
+			d.Unlocks = d.Unlocks or {}
+			d.Unlocks[id] = true
+			require(script.Parent:WaitForChild("UpgradeService")).Sync(player)
+		end
+	elseif category == "Pet" and type(id) == "string" then
+		require(script.Parent:WaitForChild("PetService")).Grant(player, id)
+	elseif category == "Egg" and type(id) == "string" then
+		if require(RS.Shared.PetDefs).Eggs[id] then
+			d.Eggs = d.Eggs or {}
+			table.insert(d.Eggs, id)
+		end
+	elseif category == "Coins" then
+		d.Coins = (d.Coins or 0) + 10000
+		DataService.Sync(player)
+	elseif category == "UnlockAll" then
+		local Catalog = require(RS.Shared.VendorCatalog)
+		d.Unlocks = d.Unlocks or {}
+		for cid in Catalog.Boons do
+			d.Unlocks[cid] = true
+		end
+		for cid in Catalog.Gadgets do
+			d.Unlocks[cid] = true
+		end
+		local list = {}
+		for cid in d.Unlocks do
+			table.insert(list, cid)
+		end
+		player:SetAttribute("Unlocks", "," .. table.concat(list, ",") .. ",")
+	end
+	print(`[QA] {player.Name} spawned {category} {tostring(id)}`)
+end
+
 function QaWeaponService.Start(monsterService)
+	local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
+	spawnRemote = Instance.new("RemoteEvent")
+	spawnRemote.Name = "QaSpawn"
+	spawnRemote.Parent = remotes
+	openRemote = Instance.new("RemoteEvent")
+	openRemote.Name = "QaOpenSpawner"
+	openRemote.Parent = remotes
+	spawnRemote.OnServerEvent:Connect(onSpawn)
 	local function give(player: Player)
 		if not allowed(player) then
 			return

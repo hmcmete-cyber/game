@@ -554,6 +554,17 @@ end
 -- Death + regen
 ------------------------------------------------------------------------
 
+-- QA spawner: give one item (any id, no coins, no lock)
+function InventoryService.GiveItem(player: Player, id: string): boolean
+	local d = data(player)
+	if not d or not ShopItems.Types[id] then
+		return false
+	end
+	local ok = addItem(d, id)
+	sync(player)
+	return ok
+end
+
 function InventoryService.Wipe(player: Player): (number, number)
 	local d = data(player)
 	if not d then

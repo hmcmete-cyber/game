@@ -209,7 +209,7 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 	local def = Weather.Types[typeName]
 	local visual = def.Visual or "Cumulus"
 	local style = STYLE[visual] or STYLE.Cumulus
-	local d = def.Size * 0.9 * scale -- cloud width
+	local d = def.Size * 0.9 * scale * 1.35 -- cloud width (v2.15: 35 % bigger)
 	-- CloudDB can recolour any style (Tint); smoke follows the tint
 	local tint = shiny and Weather.ShinyColor or (def.Tint or style.Tint)
 	local smoke = def.Tint and def.Tint:Lerp(Color3.new(1, 1, 1), 0.15) or style.Smoke
@@ -258,7 +258,7 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 		p.Size = size
 		p.Color = shade(tint, puff[3])
 		p.Material = style.Material -- shiny = gold tint only (neon washed the shape out)
-		p.Transparency = style.Alpha
+		p.Transparency = 0 -- v2.15: collected clouds are fully opaque
 		p.Anchored = i == 1
 		p.CanCollide = false
 		p.CanQuery = false
@@ -313,7 +313,7 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 			b.CFrame = CFrame.new(pos)
 			b.Color = shade(lobe.Color, 1.05)
 			b.Material = style.Material
-			b.Transparency = style.Alpha
+			b.Transparency = 0
 			b.Anchored = false
 			b.CanCollide = false
 			b.CanQuery = false
@@ -337,7 +337,7 @@ function CloudVisuals.Make(typeName: string, shiny: boolean, scale: number): Bas
 			b.CFrame = CFrame.new(lobe.Position - Vector3.new(0, half.Y * 0.62, 0))
 			b.Color = shade(lobe.Color, 0.86)
 			b.Material = style.Material
-			b.Transparency = style.Alpha
+			b.Transparency = 0
 			b.CanCollide = false
 			b.CanQuery = false
 			b.CanTouch = false
@@ -789,7 +789,12 @@ function CloudVisuals.Signature(center: BasePart, typeName: string, def, d: numb
 	F.Flowers = function() for k = 1, 4 do add("Flower", Vector3.one * 0.07, CF(-0.22 + k * 0.11, 0.37, (k % 2) * 0.05), RGB(180, 140, 230), "Ball") end end
 	F.SandStream = function() add("Stream", Vector3.new(0.03, 0.4, 0.03), CF(0, -0.35, 0), RGB(240, 210, 140), "Neon") end
 	F.Anvil = function() add("Anvil", Vector3.new(1.1, 0.12, 0.6), CF(0.08, 0.5, 0), tint:Lerp(RGB(255, 255, 255), 0.15)) end
-	F.LightningCore = function() add("CoreGlass", Vector3.one * 0.26, CF(0, 0, 0), RGB(200, 230, 255), "Glass", 0.4); add("BoltA", Vector3.new(0.03, 0.14, 0.03), CF(-0.02, 0.04, 0) * A(0, 0, 0.5), RGB(255, 245, 160), "Neon"); add("BoltB", Vector3.new(0.03, 0.14, 0.03), CF(0.02, -0.06, 0) * A(0, 0, -0.5), RGB(255, 245, 160), "Neon") end
+	F.LightningCore = function() -- v2.15: on the front of the (now opaque) cloud so it stays visible
+		local z = front - 0.08
+		add("CoreGlass", Vector3.one * 0.26, CF(0.12, -0.02, z), RGB(200, 230, 255), "Glass", 0.3)
+		add("BoltA", Vector3.new(0.035, 0.16, 0.035), CF(0.1, 0.03, z - 0.02) * A(0, 0, 0.5), RGB(255, 245, 160), "Neon")
+		add("BoltB", Vector3.new(0.035, 0.16, 0.035), CF(0.14, -0.08, z - 0.02) * A(0, 0, -0.5), RGB(255, 245, 160), "Neon")
+	end
 	F.Crest = function() for k = 1, 4 do add("Crest", Vector3.new(0.04, 0.16, 0.12), CF(0, 0.42, -0.15 + k * 0.08), RGB(255, 170, 60), "Neon") end end
 	F.Stars = function() for k = 1, 5 do local a = k * 1.25; add("Star", Vector3.one * 0.05, CF(math.cos(a) * 0.55, 0.25 + (k % 2) * 0.12, math.sin(a) * 0.4) * A(0, 0, math.pi / 4), RGB(255, 250, 200), "Neon") end end
 	F.PlanetRing = function() add("Ring", Vector3.new(0.02, 1.2, 1.2), CF(0, 0, 0) * A(0.4, 0, math.rad(90)), RGB(230, 200, 255), "Cyl", 0.35) end

@@ -1965,3 +1965,32 @@ Status: Astra's task (director asked). Nothing in code needs to change; only `sr
 - **Caldera Titan** was rebuilt (v2.12, gait Plod). Export and upload its 6 clips AFTER pulling the latest code. Any id you uploaded for it before is wrong now.
 - **When a rig changes again:** if I change a monster's rig again, I will flag it here, and only that monster's 6 clips need re-uploading.
 - **Report:** post in COMMS which monsters are done, any `FAILED` / red Output lines, and whether the live-server test animates.
+
+### [2026-11-20] Claude → Astra — RE: pet animations, Respawner, test item, base fixes, clouds — code done, UNTESTED
+Status: done in code (MapVersion **2.15**) / please test in Studio.
+
+- **Pets beside you + animations:**
+  - Equipped pets now walk **right beside** you: two at your sides, the third just behind. They follow a bit tighter.
+  - Every pet piece has a role (Head, Leg, Wing, Tail, Arm, Tentacle, Orbit, Body) and a `Weld "PetJoint"`. The new client module `PetAnimator` animates them locally (smooth, no server cost):
+    - **Idle:** breathing bob, head nods, tail wag, slow wing beat, arm/tentacle sway, orbiters circling.
+    - **Walk:** legs swing in trot pairs, fast wings, bouncy head.
+    - **Attack** (Bite/Bolt pets): wind-up, lunge with head/arms snapping, recoil.
+    - **Special attack** (Lob/Pulse/Chain pets): crouch, hop with a full spin and wings/arms thrown wide, then landing.
+  - The server only sets `AnimKind` / `AnimAt` on the pet model when it attacks.
+  - Pets idling at the Pet Hut use the idle animation too.
+- **Respawner:** the tool is renamed **"Respawner"** (still QA-only: UserId 2459147914, Studio/private). It brings back **every defeated monster and boss** at once, filling each species up to its count (`MonsterService.RespawnAll`). Species can never go above their count any more, even when the death timers fire later.
+- **Rarest-pet test item:** **"QA Legendary Hatch (test only)"** (same QA guard) incubates an egg (granting one if you have none), hatches it now and **always gives that egg's Legendary pet**, with the full reveal and the server announcement.
+- **Nameplates:** they now use a world-space offset above the model's real top: +3 studs for monsters, +6 for bosses. They no longer clip into heads at any camera angle.
+- **Nursery timer:** the board now stands on two posts in front of the entrance (`IncubatorHut<i>/TimerBoard`, posts `SignPost±3.4`), clear of the glass dome.
+- **Base → Nursery passage:** the glass railing on the base's back edge is removed, and the flag and planters moved to the sides, so the walk from the base to the Nursery is clear.
+- **Collected clouds:**
+  - **35 % bigger**, and **fully opaque**: every lobe, curl and belly piece.
+  - Each of the 106 types keeps its own silhouette and signature feature. The lightning core moved to the front so it stays visible on the opaque cloud.
+
+Please check:
+1. Pets beside you while walking and fighting: do the idle / walk / attack / special animations look right per body type?
+2. The Respawner.
+3. The Legendary hatch.
+4. Nameplates on bosses.
+5. The nursery sign and the base → nursery path.
+6. Cloud size and opacity in the hands and in vaults (do the vault spheres still fit the bigger clouds?).

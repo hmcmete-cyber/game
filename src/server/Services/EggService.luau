@@ -312,7 +312,7 @@ local hatching = {}
 local RARITY_INDEX = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 }
 
 -- 3) the hatch reveal at the nursery
-local function hatch(player: Player)
+local function hatch(player: Player, forceTop: boolean?)
 	local d = data(player)
 	local inc = d and d.Incubator
 	if not inc or hatching[player] then
@@ -321,6 +321,14 @@ local function hatch(player: Player)
 	hatching[player] = true
 	local eggKey = inc.Egg
 	local petId = PetDefs.Roll(eggKey)
+	if forceTop then
+		-- QA: the rarest pet of this egg
+		for _, id in PetDefs.ByEgg[eggKey] do
+			if PetDefs.Types[id].Rarity == "Legendary" then
+				petId = id
+			end
+		end
+	end
 	local def = PetDefs.Types[petId]
 	d.Incubator = nil -- consume first (no double hatch)
 	local hut = nurseryOf(baseIndex(player))
@@ -355,7 +363,7 @@ local function hatch(player: Player)
 			-- burst: shell layers fly apart
 			local pos = egg:GetPivot().Position
 			for _, w in egg:GetDescendants() do
-				if w:IsA("WeldConstraint") then
+				if w:IsA("WeldConstraint") or w:IsA("Weld") then
 					w:Destroy()
 				end
 			end
@@ -373,6 +381,7 @@ local function hatch(player: Player)
 			Debris:AddItem(egg, 1)
 			-- the pet pops out, spins and lands
 			local pet = PetModels.Build(petId)
+			pet:SetAttribute("NoAnim", true) -- scaled during the reveal: PetAnimator leaves it alone
 			pet:PivotTo(spot.CFrame + Vector3.new(0, 1, 0))
 			pet:ScaleTo(0.3)
 			pet.Parent = hut
@@ -435,15 +444,15 @@ end
 ------------------------------------------------------------------------
 -- QA instant hatch tool
 ------------------------------------------------------------------------
-local function qaTool(): Tool
+local function qaTool(top: boolean?): Tool
 	local tool = Instance.new("Tool")
-	tool.Name = "QA Instant Hatch (test only)"
-	tool.ToolTip = "Test tool: incubate + hatch an egg instantly"
+	tool.Name = top and "QA Legendary Hatch (test only)" or "QA Instant Hatch (test only)"
+	tool.ToolTip = top and "Test tool: hatch an egg now and get its rarest (Legendary) pet" or "Test tool: incubate + hatch an egg instantly"
 	tool.CanBeDropped = false
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
 	handle.Size = Vector3.new(1.2, 1.6, 1.2)
-	handle.Color = Color3.fromRGB(255, 220, 90)
+	handle.Color = top and Color3.fromRGB(255, 120, 230) or Color3.fromRGB(255, 220, 90)
 	handle.Material = Enum.Material.Neon
 	handle.CanCollide = false
 	handle.Parent = tool
@@ -467,7 +476,7 @@ local function qaTool(): Tool
 			startIncubating(player)
 		end
 		d.Incubator.ReadyAt = os.time()
-		hatch(player)
+		hatch(player, top)
 	end)
 	return tool
 end
@@ -522,6 +531,9 @@ function EggService.Start(dataService, petService, remotes, monsterDeaths)
 				local bp = player:WaitForChild("Backpack", 10)
 				if bp and not bp:FindFirstChild("QA Instant Hatch (test only)") then
 					qaTool().Parent = bp
+				end
+				if bp and not bp:FindFirstChild("QA Legendary Hatch (test only)") then
+					qaTool(true).Parent = bp
 				end
 			end
 			player.CharacterAdded:Connect(function()

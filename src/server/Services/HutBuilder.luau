@@ -166,7 +166,11 @@ function HutBuilder.IncubatorHut(parent: Instance, i: number, base: CFrame, acce
 	part(m, "Step", V(5, 1, 2), base * CF(0, 1.1, -8), trim)
 	part(m, "Step2", V(5, 1, 1.2), base * CF(0, 1.9, -7), trim)
 	-- timer sign facing the base
-	local board = part(m, "TimerBoard", V(6, 3, 0.4), base * CF(0, 16.5, -2), RGB(60, 50, 70))
+	-- v2.15: the sign stands on two posts in front of the entrance, clear of the dome
+	for _, x in { -3.4, 3.4 } do
+		part(m, "SignPost" .. x, V(0.5, 11, 0.5), base * CF(x, 5.5, -10.2), trim)
+	end
+	local board = part(m, "TimerBoard", V(7.4, 3, 0.5), base * CF(0, 12.2, -10.2), RGB(60, 50, 70))
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Timer"
 	gui.Size = UDim2.fromOffset(240, 70)

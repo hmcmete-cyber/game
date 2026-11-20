@@ -215,7 +215,8 @@ function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent:
 	-- corner (180 deg). Railings only on the back/right edges so both
 	-- entrances stay open.
 	local decor = folder(base, "Decor")
-	for _, edgeDeg in { 30, 90, 330 } do
+	-- v2.15: no railing on the back edge (90): open path to the Egg Nursery
+	for _, edgeDeg in { 30, 330 } do
 		local theta = math.rad(edgeDeg)
 		local cf = topCF * CFrame.new(math.cos(theta) * (apothem - 0.4), 1.6, math.sin(theta) * (apothem - 0.4)) * CFrame.Angles(0, -theta, 0)
 		part(decor, "RailGlass" .. edgeDeg, Vector3.new(0.2, 3, R - 1), cf, Color3.fromRGB(190, 225, 255), {
@@ -255,7 +256,7 @@ function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent:
 		Material = Enum.Material.Neon, CanCollide = false, CanQuery = false, CastShadow = false,
 	})
 	-- flag in the base colour on the back edge (spot your base from far away)
-	local back = topCF * CFrame.new(0, 0, apothem - 1)
+	local back = topCF * CFrame.new(-6.5, 0, apothem - 1.2) -- v2.15: off-centre, the middle is the nursery path
 	part(decor, "FlagPole", Vector3.new(0.35, 16, 0.35), back * CFrame.new(0, 8, 0), Color3.fromRGB(220, 225, 235), {
 		Material = Enum.Material.Metal, CanCollide = false, CastShadow = false,
 	})
@@ -263,7 +264,7 @@ function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent:
 		Material = Enum.Material.Fabric, CanCollide = false, CanQuery = false, CastShadow = false,
 	})
 	-- two planters with bushes beside the flag
-	for _, x in { -3.2, 3.2 } do
+	for _, x in { -4.2, 6.2 } do
 		local cf = topCF * CFrame.new(x, 0.5, apothem - 1.6)
 		part(decor, "Planter", Vector3.new(2.4, 1, 1.4), cf, Color3.fromRGB(120, 90, 70), { Material = Enum.Material.WoodPlanks, CastShadow = false })
 		part(decor, "Bush", Vector3.new(2.2, 1.6, 1.4), cf * CFrame.new(0, 1.1, 0), Color3.fromRGB(110, 185, 110), {

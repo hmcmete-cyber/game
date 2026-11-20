@@ -81,7 +81,8 @@ end
 ------------------------------------------------------------------------
 -- live (following) pets
 ------------------------------------------------------------------------
-local SLOTS = { Vector3.new(-3.2, 0, 2.6), Vector3.new(3.2, 0, 2.6), Vector3.new(0, 0, 4.6) }
+-- v2.15: two pets walk right beside you, the third just behind
+local SLOTS = { Vector3.new(-3.6, 0, 0.4), Vector3.new(3.6, 0, 0.4), Vector3.new(0, 0, 3.8) }
 
 local function clearLive(player: Player)
 	for _, lp in live[player] or {} do
@@ -319,6 +320,10 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 	local tPos = target.PrimaryPart.Position
 	local dmg = rar.Damage
 	local kind = def.Attack.Kind
+	-- tell the clients which attack animation to play (PetAnimator)
+	local special = kind == "Pulse" or kind == "Chain" or kind == "Lob"
+	lp.Model:SetAttribute("AnimKind", special and "Special" or "Attack")
+	lp.Model:SetAttribute("AnimAt", now())
 	task.spawn(function()
 		if kind == "Bite" then
 			-- dash in, bite, hop back
@@ -590,7 +595,7 @@ function PetService.Start(dataService, monsterService)
 						local goalPos = (CFrame.lookAt(root.Position, root.Position + flat) * CFrame.new(slot)).Position
 						goalPos = Vector3.new(goalPos.X, root.Position.Y - 3 + float + bob, goalPos.Z)
 						local cur = lp.Model:GetPivot()
-						local nextPos = cur.Position:Lerp(goalPos, math.min(1, dt * 8))
+						local nextPos = cur.Position:Lerp(goalPos, math.min(1, dt * 10))
 						local face = (goalPos - cur.Position)
 						face = Vector3.new(face.X, 0, face.Z)
 						local rot = face.Magnitude > 0.3 and CFrame.lookAt(nextPos, nextPos + face.Unit) or CFrame.lookAt(nextPos, nextPos + flat)

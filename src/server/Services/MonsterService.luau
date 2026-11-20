@@ -67,7 +67,9 @@ local function healthBar(info)
 	-- above the model's real top (no more labels inside tall bodies)
 	local bcf, bsize = info.Model:GetBoundingBox()
 	local top = bcf.Position.Y + bsize.Y / 2 - info.Root.Position.Y
-	gui.StudsOffset = Vector3.new(0, top + (def.Boss and 3 or 1.6), 0)
+	-- v2.15: world-space offset (never drifts into the head with the camera angle)
+	gui.StudsOffset = Vector3.zero
+	gui.StudsOffsetWorldSpace = Vector3.new(0, top + (def.Boss and 6 or 3), 0)
 	gui.MaxDistance = 90
 	gui.LightInfluence = 0
 	local name = Instance.new("TextLabel")
@@ -287,6 +289,29 @@ bossArrival = function(model: Model, pos: Vector3)
 	end
 end
 
+-- QA Respawner: bring back every defeated monster and boss right now
+-- (fills each species up to its Count; living ones are left alone)
+function MonsterService.RespawnAll(): number
+	local n = 0
+	for _, typeName in Defs.Order do
+		local def = Defs.Types[typeName]
+		if not def.Summon then
+			local alive = 0
+			for _, info in monsters do
+				if info.Type == typeName and info.Alive then
+					alive += 1
+				end
+			end
+			for _ = alive + 1, def.Count do
+				if spawnMonster(typeName) then
+					n += 1
+				end
+			end
+		end
+	end
+	return n
+end
+
 -- QA: remove the living boss of this type (no reward) and bring it back now
 function MonsterService.RespawnBoss(typeName: string)
 	for m, info in monsters do
@@ -304,6 +329,18 @@ end
 
 spawnMonster = function(typeName: string, at: Vector3?, life: number?, target: Player?)
 	local def = Defs.Types[typeName]
+	-- never above a species' Count (QA respawns + death timers can overlap)
+	if not at and not def.Summon then
+		local alive = 0
+		for _, other in monsters do
+			if other.Type == typeName and other.Alive then
+				alive += 1
+			end
+		end
+		if alive >= def.Count then
+			return nil
+		end
+	end
 	if def.Boss then
 		-- one of each boss at a time (QA respawns + the death timer can overlap)
 		for _, other in monsters do

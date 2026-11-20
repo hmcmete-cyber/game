@@ -112,13 +112,12 @@ local function makeSpeedTool(): Tool
 	return tool
 end
 
--- TEST ONLY: respawn the boss of the nearest temple right now (with its
--- arrival effect). Same guard: QA account + Studio/private server only.
+-- TEST ONLY: "Respawner" brings back every defeated monster and boss now.
+-- Same guard: QA account + Studio/private server only.
 local function makeBossTool(monsterService): Tool
-	local Defs = require(game:GetService("ReplicatedStorage").Shared.MonsterDefs)
 	local tool = Instance.new("Tool")
-	tool.Name = "QA Boss Respawner (test only)"
-	tool.ToolTip = "Test tool: respawn the boss of the nearest temple"
+	tool.Name = "Respawner"
+	tool.ToolTip = "Test tool: respawn every defeated monster and boss"
 	tool.CanBeDropped = false
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
@@ -130,26 +129,13 @@ local function makeBossTool(monsterService): Tool
 	local busy = false
 	tool.Activated:Connect(function()
 		local player = Players:GetPlayerFromCharacter(tool.Parent)
-		local root = player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if busy or not player or not root or not allowed(player) then
+		if busy or not player or not allowed(player) then
 			return
 		end
 		busy = true
-		local temples = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Temples")
-		local best, bestD = nil, math.huge
-		for _, t in temples and temples:GetChildren() or {} do
-			local sp = t:FindFirstChild("BossSpawn")
-			if sp and (sp.Position - root.Position).Magnitude < bestD then
-				best, bestD = t.Name, (sp.Position - root.Position).Magnitude
-			end
-		end
-		for typeName, def in Defs.Types do
-			if def.Boss and def.Arena == best then
-				monsterService.RespawnBoss(typeName)
-				print(`[QA] {player.Name} respawned {typeName}`)
-			end
-		end
-		task.wait(1)
+		local n = monsterService.RespawnAll()
+		print(`[QA] {player.Name} Respawner: {n} monster(s) back`)
+		task.wait(2)
 		busy = false
 	end)
 	return tool
@@ -168,7 +154,7 @@ function QaWeaponService.Start(monsterService)
 			if backpack and not backpack:FindFirstChild("QA Speed (test only)") then
 				makeSpeedTool().Parent = backpack
 			end
-			if backpack and not backpack:FindFirstChild("QA Boss Respawner (test only)") then
+			if backpack and not backpack:FindFirstChild("Respawner") then
 				makeBossTool(monsterService).Parent = backpack
 			end
 		end

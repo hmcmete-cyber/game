@@ -17,6 +17,27 @@ local rad = math.rad
 local RGB = Color3.fromRGB
 local WHITE, BLACK = RGB(255, 255, 255), RGB(25, 25, 30)
 
+-- animation role of a pet piece (by its name): Head pieces nod together,
+-- legs swing, wings flap, tails wag, arms swipe, tentacles sway, orbiters spin
+local ROLE_PREFIX = {
+	{ "Head", "Head" }, { "Eye", "Head" }, { "Pupil", "Head" }, { "Muzzle", "Head" }, { "Nose", "Head" }, { "Snout", "Head" },
+	{ "Nostril", "Head" }, { "Brow", "Head" }, { "Beak", "Head" }, { "Mouth", "Head" }, { "Smile", "Head" }, { "Whisker", "Head" },
+	{ "Horn", "Head" }, { "Visor", "Head" }, { "Helm", "Head" }, { "Beard", "Head" }, { "Crown", "Head" }, { "Gem", "Head" },
+	{ "Halo", "Head" }, { "CapHelm", "Head" }, { "CapSpot", "Head" }, { "Antenna", "Head" }, { "Ear", "Head" }, { "Tuft", "Head" },
+	{ "Leg", "Leg" }, { "Hoof", "Leg" }, { "Foot", "Leg" }, { "HopLeg", "Leg" }, { "HopShin", "Leg" }, { "Thigh", "Leg" },
+	{ "Wing", "Wing" }, { "Tail", "Tail" }, { "Tentacle", "Tentacle" }, { "Arms", "Body" },
+	{ "Arm", "Arm" }, { "Fist", "Arm" }, { "Pincer", "Arm" }, { "Shield", "Arm" }, { "Blade", "Arm" }, { "Guard", "Arm" },
+	{ "Shaft", "Arm" }, { "Prong", "Arm" }, { "Orbiter", "Orbit" }, { "MiniStem", "Orbit" }, { "MiniCap", "Orbit" },
+}
+local function roleOf(name: string): string
+	for _, pr in ROLE_PREFIX do
+		if string.sub(name, 1, #pr[1]) == pr[1] then
+			return pr[2]
+		end
+	end
+	return "Body"
+end
+
 -- part helper: size, cframe relative to root, colour, kind ("Ball", "Cyl", "Wedge", "Corner", "Neon", "Glass")
 local function mk(ctx, name: string, size: Vector3, cf: CFrame, color: Color3, kind: string?)
 	local p
@@ -48,10 +69,16 @@ local function mk(ctx, name: string, size: Vector3, cf: CFrame, color: Color3, k
 	p.CanTouch = false
 	p.Massless = true
 	p.CastShadow = false
-	local w = Instance.new("WeldConstraint")
+	-- v2.15: a Weld (not WeldConstraint) so the client PetAnimator can move
+	-- each piece by its role (C0 = offset from the root)
+	local w = Instance.new("Weld")
+	w.Name = "PetJoint"
 	w.Part0 = ctx.Root
 	w.Part1 = p
+	w.C0 = ctx.Root.CFrame:ToObjectSpace(p.CFrame)
+	w.C1 = CFrame.new()
 	w.Parent = p
+	p:SetAttribute("PetRole", roleOf(name))
 	p.Parent = ctx.Model
 	return p
 end

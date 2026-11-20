@@ -91,6 +91,7 @@ local PetService = require(Services.PetService)
 PetService.Start(DataService, MonsterService)
 InventoryService.Hooks.MonsterBlast = PetService.Blast -- v2.13 Tayron gadgets
 require(Services.VendorOrbService).Start(DataService, WeatherService, remoteTable) -- v2.13 vendor orbs
+require(Services.TutorialService).Start(DataService) -- v2.18 first-visit tutorial
 require(Services.EggService).Start(DataService, PetService, remoteTable, require(Services.MonsterDeaths))
 StyleSample.Start(require(Services.MonsterRigs)) -- Studio only: v2.1 style review island
 

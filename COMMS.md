@@ -2080,3 +2080,23 @@ Status: done in code (MapVersion **2.17**) / one TASK for you at the end (animat
 5. Clear Event clears the banner.
 6. Clouds in vaults and on the leash.
 7. Saving with Studio API access ON.
+
+### [2026-11-20] Claude → Astra — v2.18: Shardstorm, Mossgrave move, Clear Event banner, varied SFX, debris collision, shop logos, tutorial — code done, UNTESTED
+Status: done in code.
+
+- **Mossgrave** now lives on the **Plateau** (was Canyon).
+- **Cyclonox → "Shardstorm"** (Crystal Whirlwind), now in the **Crystal Canyon**:
+  - **Rig:** a faceted glass prism head with a crystal-spike crown and a glowing face; a funnel of 6 spinning crystal rings, each with shards; prism fists with neon tips; 5 orbiting crystals.
+  - **Abilities:** **Prism Vortex** (glittering pull with small damage and slow) and **Shard Cyclone** (wind-up, then a 12-shard crystal ring).
+  - **Death:** spins up, turns glassy, bursts into sparkling shards.
+  - **⚠ Animation export:** the type id changed (`Shardstorm_*`). Export and upload its 6 clips (`ExportAll("Shardstorm")`); any `Cyclonox_*` ids are obsolete.
+- **QA Clear Event:** the banner clears **immediately**. `StopNow` clears the Event attributes, and the event thread re-checks the end time instead of sleeping out the old duration. That was the "METEOR SHOWER 0:00" bug.
+- **QA Legendary Hatch** tool removed. **QA Max Luck** stays.
+- **Sounds:** much more varied.
+  - Every layer has its own effect chain (reverb, echo, distortion, flange, chorus, tremolo, low/high EQ) and start offset.
+  - Each species and each ability gets its own stable pitch, so two "Crystal" monsters still sound different.
+  - Creator Store sounds would still be the biggest upgrade (cue list in the v2.17 entry).
+- **Death debris:** the flying pieces are in collision group **DeathDebris**. They land on the ground but never bump players (group **Players**) or each other.
+- **Shop logos:** every Tayron/Aurelius card shows a **turning studded 3D logo** (`Shared/ItemIcons`) instead of letters. There are about 45 logo designs: potion bottle, boots, candy, bomb, barrel, meteor, shield dome, coin, coin stack, feather, ring, glove, goggles, smoke bomb, egg, med kit, crystal, beacon, book, cloak, incense, laser gun, grapple hook, nitro canister, flare, wing, spring, anchor, heart, sword, target, fang, hourglass, mask, sparkle, flame, vault, perk slots, whetstone...
+- **Tutorial:** on the **first visit** an 8-step panel appears, each step with a turning 3D picture. The steps are: welcome, catch, carry home, coins, guard base, updraft, fight & pets, shops & orbs. It has **Back / Next / Skip**. Finishing or skipping saves `Data.TutorialDone`.
+- **QA:** "QA Tutorial (test only)" opens the tutorial again.

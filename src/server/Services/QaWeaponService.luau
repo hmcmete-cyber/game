@@ -176,6 +176,9 @@ local EXTRA_TOOLS = {
 		require(script.Parent:WaitForChild("PetService")).AddXP(player, 500 / 0.6)
 		print(`[QA] {player.Name} gave pets 500 XP`)
 	end },
+	{ "QA Tutorial (test only)", "Test tool: show the tutorial again", Color3.fromRGB(255, 255, 255), function(player)
+		require(script.Parent:WaitForChild("TutorialService")).Show(player)
+	end },
 	{ "QA Clear Event (test only)", "Test tool: end the running sky event (fog, acid rain, meteors)", Color3.fromRGB(150, 220, 255), function(player)
 		local ok = require(script.Parent:WaitForChild("EventService")).StopNow()
 		print(`[QA] {player.Name} clear event: {ok and "stopped" or "none running"}`)

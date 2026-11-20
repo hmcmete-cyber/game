@@ -32,6 +32,7 @@ local function defaults()
 		Eggs = {}, -- egg keys waiting to be incubated
 		Incubator = nil, -- { Egg = key, ReadyAt = os.time() }
 		Unlocks = {}, -- v2.13 vendor orb unlocks: [catalog id] = true
+		TutorialDone = false, -- v2.18 first-visit tutorial seen/skipped
 	}
 end
 

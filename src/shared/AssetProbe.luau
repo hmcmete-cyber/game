@@ -31,13 +31,17 @@ function AssetProbe.Watch(id: string, seconds: number?)
 		return
 	end
 	local where = RunService:IsServer() and "SERVER" or "CLIENT"
-	task.spawn(function()
+	task.defer(function()
+		task.wait(5) -- let the game start first; never block startup
 		-- scan service by service: some (CoreGui etc.) are locked and would error
 		local conns = {}
 		for _, svc in game:GetChildren() do
 			pcall(function()
-				for _, d in svc:GetDescendants() do
+				for i, d in svc:GetDescendants() do
 					pcall(check, d, id, where)
+					if i % 300 == 0 then
+						task.wait() -- spread the scan over frames
+					end
 				end
 				table.insert(conns, svc.DescendantAdded:Connect(function(d)
 					pcall(check, d, id, where)

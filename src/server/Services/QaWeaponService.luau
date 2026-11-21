@@ -141,6 +141,8 @@ local function makeBossTool(monsterService): Tool
 	return tool
 end
 
+local spawnRemote, openRemote -- set in Start (declared early: EXTRA_TOOLS uses openRemote)
+
 -- TEST ONLY: simple one-click QA tools (same guard as the others)
 local function makeClickTool(name: string, tip: string, color: Color3, onUse: (Player) -> ()): Tool
 	local tool = Instance.new("Tool")
@@ -192,7 +194,6 @@ local EXTRA_TOOLS = {
 
 -- TEST ONLY: "QA Item Spawner" opens a panel to give yourself ANY item,
 -- upgrade/boon, pet, egg, coins, or unlock everything. Checked on the server.
-local spawnRemote, openRemote
 local function onSpawn(player: Player, category: unknown, id: unknown)
 	if not allowed(player) or type(category) ~= "string" then
 		return

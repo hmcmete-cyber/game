@@ -32,14 +32,22 @@ function AssetProbe.Watch(id: string, seconds: number?)
 	end
 	local where = RunService:IsServer() and "SERVER" or "CLIENT"
 	task.spawn(function()
-		for _, d in game:GetDescendants() do
-			pcall(check, d, id, where)
+		-- scan service by service: some (CoreGui etc.) are locked and would error
+		local conns = {}
+		for _, svc in game:GetChildren() do
+			pcall(function()
+				for _, d in svc:GetDescendants() do
+					pcall(check, d, id, where)
+				end
+				table.insert(conns, svc.DescendantAdded:Connect(function(d)
+					pcall(check, d, id, where)
+				end))
+			end)
 		end
-		local conn = game.DescendantAdded:Connect(function(d)
-			pcall(check, d, id, where)
-		end)
 		task.wait(seconds or 60)
-		conn:Disconnect()
+		for _, c in conns do
+			c:Disconnect()
+		end
 		print(`[AssetProbe] {where}: finished watching {id}`)
 	end)
 end

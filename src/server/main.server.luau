@@ -4,7 +4,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-require(ReplicatedStorage.Shared.AssetProbe).Watch("203785492") -- Studio only: who loads the bad asset?
 
 local Services = script.Parent:WaitForChild("Services")
 local DataService = require(Services.DataService)
@@ -56,6 +55,7 @@ local knockEvent = Instance.new("RemoteEvent") -- server -> client: lightning kn
 knockEvent.Name = "Knock"
 knockEvent.Parent = remotes
 remotes.Parent = ReplicatedStorage
+require(ReplicatedStorage.Shared.AssetProbe).Watch("203785492") -- Studio only: who loads the bad asset?
 
 LightingService.Apply()
 -- v2.9: classic stud tile on every part (map, monsters, clouds, NPCs, bases)

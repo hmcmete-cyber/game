@@ -167,12 +167,20 @@ C["BossReward"] = mix(seq(*[note(f, d, "square", decay=d * 2, vol=0.5) + note(f 
 # --- eggs, hatching, pets -----------------------------------------------------
 C["EggTake"] = mix(osc(300, 900, 0.08) * env(int(SR * 0.08)), at(bell(1319, 0.4), 0.06))
 C["EggDeliver"] = seq(bell(988, 0.25), bell(1319, 0.45))
-C["HatchPulse"] = mix(bell(880, 0.6), bell(1760, 0.6) * 0.4, note(440, 0.6, "sine", 0.05) * 0.3)
-crack = mix(*[at(highpass(noise(0.02), 1500) * env(int(SR * 0.02)), d) for d in (0, 0.03, 0.05, 0.09)])
-C["HatchBurst"] = mix(crack * 1.5, at(seq(*[bell(f, 0.18) for f in (1047, 1319, 1568, 2093)]), 0.08))
-leg = [(523, 0.15), (523, 0.15), (659, 0.15), (784, 0.3), (659, 0.15), (784, 0.7)]
-C["HatchLegendary"] = mix(seq(*[note(f, d, "square", decay=d * 3, vol=0.45) + note(f / 2, d, "tri", vol=0.4) for f, d in leg]),
-                          at(seq(*[bell(f, 0.2) * 0.5 for f in (2093, 2637, 3136, 4186)]), 1.2))
+# v2.21: hatching = serious crackling shell sounds (no bells / no fanfare)
+def crackle(d, n, lo=700, hi=4000, seed=0):
+    rng = np.random.default_rng(seed)
+    parts = []
+    for k in range(n):
+        dd = float(rng.uniform(0.008, 0.03))
+        parts.append(at(bandpass(noise(dd), lo, hi) * env(int(SR * dd)) * float(rng.uniform(0.5, 1.2)), float(rng.uniform(0, d))))
+    return mix(*parts)
+C["HatchPulse"] = mix(crackle(0.35, 14, seed=1) * 1.6, osc(90, 55, 0.25) * env(int(SR * 0.25)) * 0.6)
+C["HatchCrack"] = crackle(0.2, 9, 1200, 6000, seed=2) * 1.5
+crack = crackle(0.25, 30, seed=3)
+C["HatchBurst"] = mix(crack * 1.8, lowpass(noise(0.6), 900) * env(int(SR * 0.6), 0.002) * 1.4, osc(70, 35, 0.5) * env(int(SR * 0.5)))
+C["HatchLegendary"] = mix(crackle(0.6, 50, 400, 5000, seed=4) * 1.6, lowpass(noise(1.8), np.geomspace(1500, 60, int(SR * 1.8))) * env(int(SR * 1.8), 0.01, 1.8, 2) * 2,
+                          osc(55, 25, 1.6) * env(int(SR * 1.6), 0.02) * 1.2)
 C["PetLevelUp"] = seq(*[note(f, 0.09, "square", decay=0.15, vol=0.5) for f in (523, 659, 784, 1047)], note(1319, 0.4, "square", decay=0.5, vol=0.5))
 # --- vendors / base / clouds --------------------------------------------------
 C["OrbOffer"] = mix(bandpass(noise(0.7), np.geomspace(300, 3000, int(SR * 0.7)), 5000) * np.linspace(0, 1, int(SR * 0.7)) * 0.7, at(bell(784, 0.8) + bell(1175, 0.8) * 0.6, 0.6))

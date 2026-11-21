@@ -335,6 +335,11 @@ local function hatch(player: Player, forceTop: boolean?)
 	if not inc or hatching[player] then
 		return
 	end
+	if #(d.Pets or {}) >= PetDefs.StorageLimit then
+		-- v2.21: storage full - the egg waits until a pet is sold
+		hint(player, `Pet storage full ({PetDefs.StorageLimit})! Sell a pet at Aurelius or Tayron to hatch this egg.`, 6)
+		return
+	end
 	hatching[player] = true
 	local eggKey = inc.Egg
 	local petId = PetDefs.Roll(eggKey)
@@ -389,8 +394,9 @@ local function hatch(player: Player, forceTop: boolean?)
 							while mote.Parent do
 								local t = os.clock() - t0
 								local a = k / 8 * math.pi * 2 + t * (1.5 + ringN * 0.8) * (ringN % 2 == 0 and -1 or 1)
-								local r = 4 + ringN * 1.6
-								mote.CFrame = CFrame.new(egg:GetPivot().Position + Vector3.new(math.cos(a) * r, ringN * 1.5 + math.sin(t * 2 + k) * 0.4, math.sin(a) * r))
+								local es = math.max(1, egg:GetScale() / 0.8) -- rings widen as the egg grows
+								local r = (4 + ringN * 1.6) * es
+								mote.CFrame = CFrame.new(egg:GetPivot().Position + Vector3.new(math.cos(a) * r, (ringN * 1.5 + math.sin(t * 2 + k) * 0.4) * es, math.sin(a) * r))
 								task.wait()
 							end
 						end)
@@ -398,27 +404,44 @@ local function hatch(player: Player, forceTop: boolean?)
 				end
 				Sfx.Global("BossArrive")
 			end
-			for step = 1, 1 + rar do
-				local grow = 0.8 + step * 0.08
+			-- v2.21 director: the rarer the pet, the BIGGER the egg grows before it
+			-- cracks (Legendary ~20 studs = 3-4 players tall). Big eggs rise up
+			-- out of the glass dome so they never clip the hut.
+			local TARGET_H = { 5.5, 7.5, 10, 15, 21 } -- egg height (studs) per rarity
+			local EGG_H = 5.6 -- egg model height at scale 1
+			local startScale = egg:GetScale()
+			local endScale = math.max(startScale, (TARGET_H[rar] or 6) / EGG_H)
+			local lift = rar >= 3 and 11 or 0 -- clear the dome top
+			local base0 = base
+			local steps = 1 + rar
+			for step = 1, steps do
+				local f = step / steps
+				local grow = startScale + (endScale - startScale) * f
 				egg:ScaleTo(grow)
+				base = base0 + Vector3.new(0, lift * math.min(1, f * 1.5), 0)
 				if show then
-					base += Vector3.new(0, 0.7, 0) -- levitate
+					base += Vector3.new(0, 0.7 * step, 0) -- levitate
 					local ring = fx(Vector3.new(0.3, 2, 2), CFrame.new(spot.Position + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.pi / 2), rcolor, Enum.PartType.Cylinder)
 					TweenService:Create(ring, TweenInfo.new(0.6), { Size = Vector3.new(0.2, 26 + step * 4, 26 + step * 4), Transparency = 1 }):Play()
 					game:GetService("Debris"):AddItem(ring, 0.7)
 				end
+				local deep = 1 / math.sqrt(grow / startScale) -- bigger egg = deeper crack
 				for k = 1, 8 do
 					egg:PivotTo(base * CFrame.Angles(0, 0, math.sin(k * 1.6) * 0.18 * (step / 2)))
+					if k == 3 or k == 6 then
+						Sfx.At("HatchCrack", egg:GetPivot().Position, deep * (0.9 + math.random() * 0.25))
+					end
 					task.wait(0.04)
 				end
 				light.Brightness = step * 1.2
-				Sfx.At("HatchPulse", egg:GetPivot().Position, 1 + step * 0.18)
-				light.Range = 10 + step * 6
+				Sfx.At("HatchPulse", egg:GetPivot().Position, deep * (0.9 + step * 0.05))
+				light.Range = 10 + step * 6 + grow * 4
 				emit(egg.PrimaryPart, step >= 3 and rcolor or Color3.fromRGB(255, 255, 255), 8 + step * 10, 6 + step * 3, 0.4 + step * 0.1, "rbxasset://textures/particles/sparkles_main.dds")
 				task.wait(0.35)
 			end
 			-- burst: shell layers fly apart
-			local pos = egg:GetPivot().Position
+			local eggScale = egg:GetScale()
+			local pos = egg:GetPivot().Position + Vector3.new(0, 2.8 * eggScale, 0) -- egg centre
 			for _, w in egg:GetDescendants() do
 				if w:IsA("WeldConstraint") or w:IsA("Weld") then
 					w:Destroy()
@@ -430,12 +453,12 @@ local function hatch(player: Player, forceTop: boolean?)
 					local out = (p.Position - pos)
 					out = out.Magnitude > 0.1 and out.Unit or Vector3.yAxis
 					TweenService:Create(p, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-						CFrame = p.CFrame + out * 6 + Vector3.new(0, 2, 0), Transparency = 1,
+						CFrame = p.CFrame + out * (4 + eggScale * 3) + Vector3.new(0, 2, 0), Transparency = 1,
 					}):Play()
 				end
 			end
 			emit(egg.PrimaryPart, rcolor, 30 + rar * 25, 18 + rar * 4, 1)
-			Sfx.At("HatchBurst", pos)
+			Sfx.At("HatchBurst", pos, 1 / math.sqrt(eggScale / startScale))
 			if show then
 				-- spinning light rays + flash + confetti
 				local flash = Instance.new("PointLight")

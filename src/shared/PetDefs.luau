@@ -13,6 +13,9 @@ local PetDefs = {}
 
 PetDefs.EquipLimit = 3
 PetDefs.HatchMinutes = 100
+-- v2.21 pet storage: 3 following you + 6 resting in the Pet Hut. When it is
+-- full, eggs wait in the nursery until you sell a pet (Aurelius or Tayron).
+PetDefs.StorageLimit = 9
 
 PetDefs.Rarities = { "Common", "Uncommon", "Rare", "Epic", "Legendary" }
 PetDefs.RARITY = {
@@ -167,6 +170,13 @@ end
 -- extra body pieces, a new name, more damage and a stronger buff.
 PetDefs.MaxLevel = 3
 PetDefs.LevelXP = { 0, 300, 1000 } -- total pet XP needed for level 1 / 2 / 3
+-- v2.21 selling: coins by rarity (power), times the form level, plus a bit for XP
+PetDefs.SellBase = { Common = 25, Uncommon = 50, Rare = 110, Epic = 260, Legendary = 650 }
+PetDefs.LevelSell = { 1, 2.2, 4 }
+function PetDefs.SellPrice(def, level: number?, xp: number?): number
+	local lv = math.clamp(level or 1, 1, #PetDefs.LevelSell)
+	return math.floor((PetDefs.SellBase[def.Rarity] or 25) * PetDefs.LevelSell[lv] + (xp or 0) * 0.05)
+end
 PetDefs.LevelScale = { 1, 1.55, 2.25 } -- model size
 PetDefs.LevelDamage = { 1, 1.6, 2.4 } -- attack damage
 PetDefs.LevelBuff = { 1, 1.35, 1.75 } -- buff value (team caps still apply)

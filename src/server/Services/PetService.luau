@@ -73,11 +73,11 @@ local function sendData(player: Player)
 				Uid = p.Uid, Id = p.Id, Name = PetDefs.FormName(def, p.Level), Rarity = def.Rarity, Egg = def.Egg,
 				Level = p.Level or 1, XP = p.XP or 0, NextXP = PetDefs.LevelXP[math.min((p.Level or 1) + 1, PetDefs.MaxLevel)],
 				Buff = PetDefs.BuffText(def, p.Level), Attack = def.Attack.Kind .. " (" .. def.Attack.Effect .. ")", Hook = def.Hook,
-				Equipped = equipped[p.Uid] == true,
+				Equipped = equipped[p.Uid] == true, Price = PetDefs.SellPrice(def, p.Level, p.XP),
 			})
 		end
 	end
-	Remotes.PetData:FireClient(player, list, PetDefs.EquipLimit)
+	Remotes.PetData:FireClient(player, list, PetDefs.EquipLimit, PetDefs.StorageLimit)
 end
 
 ------------------------------------------------------------------------
@@ -193,6 +193,44 @@ local function onAction(player: Player, action: unknown, uid: unknown)
 		return
 	end
 	local idx = table.find(d.Equipped, uid)
+	if action == "Sell" then
+		-- v2.21: sell a pet to Aurelius or Tayron (must stand near one)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local near = false
+		for _, npc in game:GetService("CollectionService"):GetTagged("Npc") do
+			local r = npc:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if root and r and (r.Position - root.Position).Magnitude < 22 then
+				near = true
+				break
+			end
+		end
+		if not near then
+			return
+		end
+		for i, p in d.Pets do
+			if p.Uid == uid then
+				local def = PetDefs.Types[p.Id]
+				local price = def and PetDefs.SellPrice(def, p.Level, p.XP) or 0
+				table.remove(d.Pets, i)
+				if idx then
+					table.remove(d.Equipped, idx)
+				end
+				d.Coins = (d.Coins or 0) + price
+				DataService.Sync(player)
+				DataService.SaveSoon(player)
+				if root then
+					Sfx.At("Buy", root.Position)
+				end
+				if Remotes.Hint and def then
+					Remotes.Hint:FireClient(player, `Sold {PetDefs.FormName(def, p.Level)} for {price} coins`, 3)
+				end
+				break
+			end
+		end
+		spawnLive(player)
+		sendData(player)
+		return
+	end
 	if action == "Equip" and not idx then
 		if #d.Equipped >= PetDefs.EquipLimit then
 			table.remove(d.Equipped, 1) -- swap out the oldest

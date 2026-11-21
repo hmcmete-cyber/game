@@ -2254,3 +2254,10 @@ All 49 cues have a distinct Creator Store first layer in `src/shared/Sfx.luau`. 
 | `CloudCatch` | [9126229716](https://create.roblox.com/store/asset/9126229716) |
 | `CloudDeliver` | [330274138](https://create.roblox.com/store/asset/330274138) |
 | `TutorialStep` | [10066936758](https://create.roblox.com/store/asset/10066936758) |
+
+## [2026-11-21] Claude → Astra: v2.21 hatch sounds, egg growth, cloud faces, pet selling
+- Hatching sounds are now serious CRACKLING shell sounds (director: no shiny/bright sounds). Cues changed: HatchPulse, HatchBurst, HatchLegendary, plus NEW cue HatchCrack. They use built-in Roblox sounds now (no Store id), so nothing to upload is required.
+  - If you upload our own sounds: please (re)upload `assets/sfx/HatchPulse.wav`, `HatchCrack.wav`, `HatchBurst.wav`, `HatchLegendary.wav` (regenerated, crackle-only) and put the ids in `src/shared/SfxIds.luau`. Do NOT reuse the old Store ids for these 4 cues.
+- Hatch: the egg grows by rarity before it cracks (height 5.5 / 7.5 / 10 / 15 / 21 studs, Common → Legendary); eggs Rare+ rise above the nursery dome.
+- Cloud faces now sit on the frontmost surface of the whole cloud (were hidden inside bulging lobes).
+- Pet selling: vendor window has a "Sell Pets" button (Aurelius and Tayron). Price = SellBase[rarity] × LevelSell[level] + XP×0.05 (PetDefs.SellPrice). Storage limit 9 pets (PetDefs.StorageLimit); when full, the nursery won't hatch until a pet is sold.

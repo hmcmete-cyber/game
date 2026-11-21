@@ -19,6 +19,7 @@ local ShopItems = require(ReplicatedStorage.Shared.ShopItems)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local VendorCatalog = require(ReplicatedStorage.Shared.VendorCatalog)
 local ItemIcons = require(ReplicatedStorage.Shared.ItemIcons)
+local PetDefs = require(ReplicatedStorage.Shared.PetDefs)
 local logos = {} -- turning 3D logo models (cleared with the cards)
 -- v2.13: locked catalogue entries (unlocked by offering a cloud at the vendor's Orb)
 local function isUnlocked(id: string): boolean
@@ -35,6 +36,10 @@ local player = Players.LocalPlayer
 local remotes
 local window, scale, grid, titleLabel, subtitleLabel, coinsLabel, avatarText
 local currentShop = "Items"
+-- v2.21: "Sell Pets" page (same window, both vendors buy pets)
+local vendorShop = "Items" -- the vendor's own page, to go back to
+local petList, petLimit = {}, PetDefs.StorageLimit
+local sellToggle: TextButton?, sellToggleText: TextLabel?
 local cards = {} -- refreshed on open / attribute change
 
 local function glass(class: string, parent: Instance, name: string, radius: number, transparency: number?): GuiObject
@@ -174,6 +179,16 @@ local function card(i: number, id: string, iconText: string, iconColor: Color3, 
 	ratio.Parent = icon
 	-- v2.18: a turning 3D logo instead of the letters
 	local def = ShopItems.Types[id] or Upgrades.Types[id]
+	if not def then
+		-- pet card: keep the coloured chip with its short text
+		capText(label(c, { Name = "ItemName", Text = name, Position = UDim2.fromScale(0.3, 0), Size = UDim2.fromScale(0.7, levelText and 0.17 or 0.3), TextXAlignment = Enum.TextXAlignment.Left }), 20)
+		if levelText then
+			capText(label(c, { Name = "Level", Text = levelText, Font = Enum.Font.GothamMedium, Position = UDim2.fromScale(0.3, 0.18), Size = UDim2.fromScale(0.7, 0.12), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 225, 140) }), 14)
+		end
+		capText(label(c, { Name = "Desc", Text = desc, Font = Enum.Font.GothamMedium, TextWrapped = true, Position = UDim2.fromScale(0, 0.34), Size = UDim2.fromScale(1, 0.38), TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextColor3 = Color3.fromRGB(235, 235, 250) }), 15)
+		table.insert(cards, c)
+		return c
+	end
 	local vp = Instance.new("ViewportFrame")
 	vp.Name = "Logo"
 	vp.Size = UDim2.fromScale(1, 1)
@@ -236,7 +251,31 @@ end
 local function render()
 	clearGrid()
 	coinsLabel.Text = `{coins()} coins`
-	if currentShop == "Items" then
+	if sellToggleText then
+		sellToggleText.Text = currentShop == "SellPets" and "Back" or "Sell Pets"
+	end
+	if currentShop == "SellPets" then
+		local who = vendorShop == "Items" and "Tayron" or "Aurelius"
+		titleLabel.Text = `Sell Pets to {who}`
+		subtitleLabel.Text = `Pet storage {#petList} / {petLimit}. Higher level + rarer = more coins.`
+		avatarText.Text = "$"
+		local order = table.clone(petList)
+		table.sort(order, function(a, b)
+			return (a.Price or 0) > (b.Price or 0)
+		end)
+		for i, p in order do
+			local rc = PetDefs.RARITY[p.Rarity] and PetDefs.RARITY[p.Rarity].Color or Color3.fromRGB(200, 200, 210)
+			local c = card(i, "Pet" .. p.Uid, "Lv" .. (p.Level or 1), rc, p.Name,
+				`{p.Rarity}\n{p.Buff or ""}{p.Equipped and "\n(following you)" or ""}`, `Level {p.Level or 1} / {PetDefs.MaxLevel}`)
+			buyButton(c, `Sell - {p.Price or 0} coins`, true, Color3.fromRGB(255, 150, 90), function()
+				remotes.PetAction:FireServer("Sell", p.Uid)
+			end)
+		end
+		if #order == 0 then
+			local c = card(1, "PetNone", "-", Color3.fromRGB(150, 150, 170), "No pets", "Hatch boss eggs in your Egg Nursery to get pets.")
+			c.Name = "CardEmpty"
+		end
+	elseif currentShop == "Items" then
 		titleLabel.Text = "Tayron's Cloud Shop"
 		subtitleLabel.Text = "Temporary items go to your Inventory - lost if you die."
 		avatarText.Text = "T"
@@ -281,6 +320,7 @@ end
 
 local function open(shop: string?)
 	currentShop = shop == "Upgrades" and "Upgrades" or "Items"
+	vendorShop = currentShop
 	render()
 	window.Visible = true
 	scale.Scale = 0.85
@@ -331,7 +371,7 @@ local function build()
 		Name = "Title",
 		Font = Enum.Font.FredokaOne,
 		Position = UDim2.fromScale(0.15, 0),
-		Size = UDim2.fromScale(0.55, 0.58),
+		Size = UDim2.fromScale(0.4, 0.58),
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}), 32)
 	subtitleLabel = capText(label(header, {
@@ -339,7 +379,7 @@ local function build()
 		Font = Enum.Font.GothamMedium,
 		TextWrapped = true,
 		Position = UDim2.fromScale(0.15, 0.6),
-		Size = UDim2.fromScale(0.55, 0.4),
+		Size = UDim2.fromScale(0.4, 0.4),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(235, 230, 255),
 	}), 15)
@@ -354,6 +394,19 @@ local function build()
 		Size = UDim2.fromScale(0.88, 0.7),
 		TextColor3 = Color3.fromRGB(255, 220, 90),
 	}), 20)
+
+	-- v2.21: Sell Pets <-> vendor page toggle
+	local st = glass("TextButton", header, "SellPets", 12, 0.25) :: TextButton
+	st.BackgroundColor3 = Color3.fromRGB(255, 150, 90)
+	st.AnchorPoint = Vector2.new(1, 0.5)
+	st.Position = UDim2.fromScale(0.685, 0.5)
+	st.Size = UDim2.fromScale(0.14, 0.62)
+	sellToggle = st
+	sellToggleText = capText(label(st, { Text = "Sell Pets", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.9, 0.6) }), 18)
+	st.Activated:Connect(function()
+		currentShop = currentShop == "SellPets" and vendorShop or "SellPets"
+		render()
+	end)
 
 	local x = glass("TextButton", header, "Close", 12, 0.55) :: TextButton
 	x.AnchorPoint = Vector2.new(1, 0.5)
@@ -413,6 +466,16 @@ function ShopUi.Start()
 	remotes = ReplicatedStorage:WaitForChild("Remotes")
 	build()
 	remotes:WaitForChild("OpenShop").OnClientEvent:Connect(open)
+	-- pet list for the Sell Pets page (same data as the pet panel)
+	task.spawn(function()
+		remotes:WaitForChild("PetData").OnClientEvent:Connect(function(list, _, storage)
+			petList = list or {}
+			petLimit = storage or petLimit
+			if window.Visible and currentShop == "SellPets" then
+				render()
+			end
+		end)
+	end)
 
 	-- refresh while open (coins, upgrade levels)
 	task.spawn(function()

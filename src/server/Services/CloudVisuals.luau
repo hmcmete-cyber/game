@@ -731,7 +731,37 @@ function CloudVisuals.Signature(center: BasePart, typeName: string, def, d: numb
 		return p
 	end
 	local A, CF = CFrame.Angles, CFrame.new
-	local front = -(center.Size.Z / 2) / d - 0.01 -- the face sits on the front of the core lobe
+	-- v2.21: the face sits on the FRONTMOST surface of the whole cloud (not
+	-- just the core lobe): other lobes/bumps bulging forward used to swallow it.
+	-- Cast rays along -Z over the face patch through every puff ellipsoid.
+	local function frontAt(x: number, y: number): number
+		local best = -(center.Size.Z / 2)
+		local origin = cf0 * Vector3.new(x * d, y * d, 0)
+		local dirW = cf0:VectorToWorldSpace(Vector3.new(0, 0, -1))
+		for _, part in center:GetChildren() do
+			if part:IsA("BasePart") and string.sub(part.Name, 1, 3) ~= "Sig" then
+				local r = part.Size / 2
+				local o = part.CFrame:PointToObjectSpace(origin) / r
+				local v = part.CFrame:VectorToObjectSpace(dirW) / r
+				local a, b, c = v:Dot(v), 2 * o:Dot(v), o:Dot(o) - 1
+				local disc = b * b - 4 * a * c
+				if disc >= 0 then
+					local t = (-b + math.sqrt(disc)) / (2 * a) -- far hit = front surface
+					if t > -best then
+						best = -t
+					end
+				end
+			end
+		end
+		return best / d
+	end
+	local front = 0
+	for _, x in { -0.17, -0.1, 0, 0.1, 0.17 } do
+		for _, y in { -0.08, 0, 0.06 } do
+			front = math.min(front, frontAt(x, y))
+		end
+	end
+	front -= 0.015
 	local INK = RGB(35, 35, 45)
 	local function eyes(y: number, w: number, h: number, shut: boolean?)
 		for _, x in { -0.1, 0.1 } do

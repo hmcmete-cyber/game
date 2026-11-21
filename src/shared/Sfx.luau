@@ -74,9 +74,12 @@ Sfx.Cues = {
 	-- eggs, hatching, pets
 	EggTake = { L("rbxassetid://8863377426", 0.65, 1.15), L(PING, 0.7, 1.5, { "Chorus" }) },
 	EggDeliver = { L("rbxassetid://9272158182", 0.68, 1.05), L(PING, 0.7, 1.8, { "Reverb" }, 0.05) },
-	HatchPulse = { L("rbxassetid://9507700597", 0.48, 1), L(PING, 0.35, 1, { "Reverb", "Chorus" }) }, -- pitch rises per pulse
-	HatchBurst = { L("rbxassetid://13087239194", 0.58, 1.34), L(SHOT, 0.7, 1.4, { "High" }), L(VICTORY, 0.9, 1.05, { "Reverb" }) },
-	HatchLegendary = { L("rbxassetid://1840511219", 0.73, 0.97), L(VICTORY, 1, 0.85, { "Chorus", "Reverb" }), L(PING, 0.9, 2.2, { "Echo" }) },
+	-- v2.21 director: hatching = serious CRACKLING shell sounds, nothing shiny
+	-- (built-in layers only, so every layer plays together)
+	HatchPulse = { L(SNAP, 0.85, 0.55, nil, nil, 0.15), L(GLASS, 0.22, 0.42, nil, nil, 0.1), L(THUD, 0.6, 0.45) }, -- pitch drops for big eggs
+	HatchCrack = { L(SNAP, 0.7, 0.7, nil, nil, 0.3), L(CLICKFAST, 0.45, 0.5, nil, nil, 0.2) },
+	HatchBurst = { L(GLASS, 0.95, 0.55), L(SNAP, 0.9, 0.4), L(LAND, 1, 0.45) },
+	HatchLegendary = { L(THUNDER, 0.85, 0.75), L(GLASS, 0.7, 0.35), L(LAND, 1, 0.3) },
 	PetLevelUp = { L("rbxassetid://9067086084", 0.58, 1.18), L(PING, 0.8, 2, { "Echo" }), L(PING, 0.6, 2.6, nil, 0.06) },
 	-- vendors / orbs / base
 	OrbOffer = { L("rbxassetid://136730840543746", 0.52, 0.88), L(WHOOSH, 0.7, 0.5, { "Echo" }), L(VICTORY, 0.8, 1.15, { "Chorus" }) },

@@ -57,20 +57,29 @@ knockEvent.Parent = remotes
 remotes.Parent = ReplicatedStorage
 require(ReplicatedStorage.Shared.AssetProbe).Watch("203785492") -- Studio only: who loads the bad asset?
 
-LightingService.Apply()
+-- One broken service must not stop the rest (bases, coins, weather...).
+-- The error is still printed in red with its stack.
+local function safe(name: string, fn: (...any) -> ...any, ...)
+	local ok, err = xpcall(fn, debug.traceback, ...)
+	if not ok then
+		warn(`[Server] {name} FAILED: {err}`)
+	end
+end
+
+safe("LightingService.Apply", LightingService.Apply)
 -- v2.9: classic stud tile on every part (map, monsters, clouds, NPCs, bases)
 local StudStyle = require(ReplicatedStorage.Shared.StudStyle)
-StudStyle.SetupMaterial()
-StudStyle.Watch()
-LightingService.StartCycle()
-DataService.Start()
-MapService.Start()
+safe("StudStyle.SetupMaterial", StudStyle.SetupMaterial)
+safe("StudStyle.Watch", StudStyle.Watch)
+safe("LightingService.StartCycle", LightingService.StartCycle)
+safe("DataService.Start", DataService.Start)
+safe("MapService.Start", MapService.Start)
 local remoteTable = { Hint = hintEvent, Delivered = deliveredEvent, Alarm = alarmEvent, Stolen = stolenEvent, UseItem = useItemEvent, Knock = knockEvent,
 	BuyItem = buyItemEvent, PerkAction = perkActionEvent, OpenShop = openShopEvent,
 	BuyUpgrade = buyUpgradeEvent, PerkAbility = perkAbilityEvent, Dazzle = dazzleEvent, Grapple = grappleEvent, Attack = attackEvent }
-WeatherService.Start(MapService, DataService, remoteTable)
-BaseLockService.Start(MapService, remoteTable)
-InventoryService.Start(DataService, remoteTable)
+safe("WeatherService.Start", WeatherService.Start, MapService, DataService, remoteTable)
+safe("BaseLockService.Start", BaseLockService.Start, MapService, remoteTable)
+safe("InventoryService.Start", InventoryService.Start, DataService, remoteTable)
 InventoryService.Hooks.ForceLock = BaseLockService.ForceLock
 InventoryService.Hooks.OnOwnBase = function(player: Player): boolean
 	local roof = MapService.GetRooftop(player)
@@ -78,37 +87,41 @@ InventoryService.Hooks.OnOwnBase = function(player: Player): boolean
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	return nest ~= nil and root ~= nil and (root.Position - nest.Position).Magnitude <= Config.ShieldRadius
 end
-HazardService.Start(MapService, remoteTable)
-UpgradeService.Start(DataService, remoteTable)
-NpcService.Start(remoteTable)
-EventService.Start(MapService, WeatherService, remoteTable)
-DummyService.Start(WeatherService) -- Studio only
-MonsterService.Start(MapService, DataService, remoteTable)
-CombatService.Start(remoteTable, InventoryService, MonsterService, DummyService)
-require(Services.QaWeaponService).Start(MonsterService) -- TEST ONLY: director QA weapon (Studio/private servers)
+safe("HazardService.Start", HazardService.Start, MapService, remoteTable)
+safe("UpgradeService.Start", UpgradeService.Start, DataService, remoteTable)
+safe("NpcService.Start", NpcService.Start, remoteTable)
+safe("EventService.Start", EventService.Start, MapService, WeatherService, remoteTable)
+safe("DummyService.Start", DummyService.Start, WeatherService) -- Studio only
+safe("MonsterService.Start", MonsterService.Start, MapService, DataService, remoteTable)
+safe("CombatService.Start", CombatService.Start, remoteTable, InventoryService, MonsterService, DummyService)
+safe("require(Services.QaWeaponService).Start", require(Services.QaWeaponService).Start, MonsterService) -- TEST ONLY: director QA weapon (Studio/private servers)
 -- v2.12 pets + boss eggs + incubator
 local PetService = require(Services.PetService)
-PetService.Start(DataService, MonsterService)
+safe("PetService.Start", PetService.Start, DataService, MonsterService)
 InventoryService.Hooks.MonsterBlast = PetService.Blast -- v2.13 Tayron gadgets
-require(Services.VendorOrbService).Start(DataService, WeatherService, remoteTable) -- v2.13 vendor orbs
-require(Services.TutorialService).Start(DataService) -- v2.18 first-visit tutorial
-require(Services.EggService).Start(DataService, PetService, remoteTable, require(Services.MonsterDeaths))
-StyleSample.Start(require(Services.MonsterRigs)) -- Studio only: v2.1 style review island
+safe("require(Services.VendorOrbService).Start", require(Services.VendorOrbService).Start, DataService, WeatherService, remoteTable) -- v2.13 vendor orbs
+safe("require(Services.TutorialService).Start", require(Services.TutorialService).Start, DataService) -- v2.18 first-visit tutorial
+safe("require(Services.EggService).Start", require(Services.EggService).Start, DataService, PetService, remoteTable, require(Services.MonsterDeaths))
+safe("StyleSample.Start", StyleSample.Start, require(Services.MonsterRigs)) -- Studio only: v2.1 style review island
 
 local function onPlayerAdded(player: Player)
-	DataService.Load(player)
-	DataService.SetupLeaderstats(player)
+	safe("DataService.Load", DataService.Load, player)
+	safe("DataService.SetupLeaderstats", DataService.SetupLeaderstats, player)
 
-	local roof = MapService.AssignRooftop(player)
+	local okRoof, roof = pcall(MapService.AssignRooftop, player)
+	if not okRoof then
+		warn(`[Server] AssignRooftop FAILED: {roof}`)
+		roof = nil
+	end
 	if roof then
 		player:SetAttribute("Rooftop", roof.Name)
 	else
 		warn(`[Server] No free rooftop for {player.Name}`)
 	end
 
-	WeatherService.OnPlayerAdded(player)
-	InventoryService.OnPlayerAdded(player)
-	UpgradeService.OnPlayerAdded(player)
+	safe("WeatherService.OnPlayerAdded", WeatherService.OnPlayerAdded, player)
+	safe("InventoryService.OnPlayerAdded", InventoryService.OnPlayerAdded, player)
+	safe("UpgradeService.OnPlayerAdded", UpgradeService.OnPlayerAdded, player)
 end
 
 local function onPlayerRemoving(player: Player)

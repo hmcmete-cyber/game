@@ -354,6 +354,28 @@ local function refreshTool(player: Player, id: string)
 	end
 end
 
+-- how each logo kind is held (model space of ItemIcons, before scaling)
+local R = math.rad
+local HOLD = {
+	gun = { Rot = CFrame.Angles(0, R(90), 0), Grip = Vector3.new(-0.7, -0.6, 0), Size = 2.2 }, -- barrel forward
+	hook = { Rot = CFrame.Angles(R(90), 0, 0), Grip = Vector3.new(0, 1.6, 0), Size = 2.2 }, -- claws forward
+	sword = { Grip = Vector3.new(0, -1.5, 0), Size = 3 }, -- by the hilt, blade up
+	medkit = { Grip = Vector3.new(0, 1.3, 0) }, -- hangs from its handle
+	flare = { Grip = Vector3.new(-0.2, -1.2, 0), Size = 2.2 }, -- stick in hand, light on top
+	beacon = { Grip = Vector3.new(0, -0.8, 0) },
+	incense = { Grip = Vector3.new(0, -1.3, 0) },
+	anchor = { Grip = Vector3.new(0, 1.7, 0) }, -- by the ring
+	canister = { Rot = CFrame.Angles(0, 0, R(90)) }, -- upright can
+	barrel = { Rot = CFrame.Angles(0, 0, R(90)) }, -- upright barrel
+	book = { Rot = CFrame.Angles(0, R(90), 0) }, -- cover facing out
+	target = { Rot = CFrame.Angles(0, R(90), 0) },
+	cloak = { Rot = CFrame.Angles(0, R(90), 0) },
+	fang = { Rot = CFrame.Angles(R(180), 0, 0) },
+	wing = { Rot = CFrame.Angles(0, R(-90), 0) },
+	glove = { Size = 1.6 },
+	boots = { Size = 1.8 },
+}
+
 local function makeTool(id: string): Tool
 	local item = ShopItems.Types[id]
 	local tool = Instance.new("Tool")
@@ -370,23 +392,42 @@ local function makeTool(id: string): Tool
 	handle.CanCollide, handle.CanQuery, handle.CanTouch, handle.Massless = false, false, false, true
 	handle.CFrame = CFrame.new()
 	handle.Parent = tool
-	-- the shop's 3D logo becomes the gear you hold
+	tool.Grip = CFrame.new(0, 0, 0) -- the model is already placed so its grip sits on the hand
+	-- the shop's 3D logo becomes the gear you hold. The logos are drawn side-on
+	-- for the shop, so each kind gets a HOLD pose: which way it points (Roblox
+	-- tools point along the Handle's -Z) and where the hand grips it.
+	local kind = ItemIcons.KindFor(id, item)
 	local ok, model = pcall(function()
-		return ItemIcons.Build(ItemIcons.KindFor(id, item), item.IconColor or Color3.new(1, 1, 1))
+		return ItemIcons.Build(kind, item.IconColor or Color3.new(1, 1, 1))
 	end)
 	if ok and model then
-		local ext = model:GetExtentsSize().Magnitude
-		if ext > 0 then
-			model:ScaleTo(model:GetScale() * 2 / ext)
-		end
-		model:PivotTo(CFrame.new(0, 0.7, -0.2))
+		local hold = HOLD[kind] or {}
+		local parts = {}
 		for _, part in model:GetDescendants() do
 			if part:IsA("BasePart") then
-				part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.Massless = false, false, false, false, true
-				local w = Instance.new("WeldConstraint")
-				w.Part0, w.Part1 = handle, part
-				w.Parent = part
+				table.insert(parts, part)
 			end
+		end
+		-- grip point: given per kind, else the bottom centre (held in the palm)
+		local bbCF, bbSize = model:GetBoundingBox()
+		local grip = hold.Grip or (bbCF.Position - Vector3.new(0, bbSize.Y / 2 - 0.3, 0))
+		local rot = hold.Rot or CFrame.new()
+		for _, part in parts do
+			part.CFrame = rot * CFrame.new(-grip) * part.CFrame
+		end
+		-- scale so the biggest side is about 2 studs (around the grip = origin)
+		local _, size = model:GetBoundingBox()
+		local k = (hold.Size or 2) / math.max(size.X, size.Y, size.Z, 0.1)
+		for _, part in parts do
+			local cf = part.CFrame
+			part.Size *= k
+			part.CFrame = CFrame.new(cf.Position * k) * cf.Rotation
+		end
+		for _, part in parts do
+			part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.Massless = false, false, false, false, true
+			local w = Instance.new("WeldConstraint")
+			w.Part0, w.Part1 = handle, part
+			w.Parent = part
 		end
 		model.Parent = tool
 	end

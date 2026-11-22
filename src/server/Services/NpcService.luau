@@ -87,7 +87,9 @@ local OUTFIT = {
 				block(model, hand, "Glove" .. handName, hand.Size * 1.15, CFrame.new(), Color3.fromRGB(240, 200, 70))
 			end
 		end
-		local rh = model:FindFirstChild("RightHand") :: BasePart?
+		-- v2.22: staff in the LEFT hand - the greeting wave uses the right arm
+		-- and used to swing the staff through his head
+		local rh = model:FindFirstChild("LeftHand") :: BasePart?
 		if rh then
 			block(model, rh, "Wrench", Vector3.new(0.25, 1.4, 0.25), CFrame.new(0, -0.5, -0.3) * CFrame.Angles(math.rad(70), 0, 0), Color3.fromRGB(170, 175, 185))
 			block(model, rh, "WrenchHead", Vector3.new(0.6, 0.3, 0.3), CFrame.new(0, -0.8, -0.95), Color3.fromRGB(170, 175, 185))
@@ -107,7 +109,9 @@ local OUTFIT = {
 		-- v2.5: robe front panel, beard block, and a staff topped with a cloud gem
 		block(model, torso, "RobePanel", Vector3.new(1, 1.8, 0.15), CFrame.new(0, -0.3, -0.56), purple:Lerp(Color3.new(1, 1, 1), 0.15))
 		block(model, head, "Beard", Vector3.new(0.9, 0.7, 0.3), CFrame.new(0, -0.55, -0.55), Color3.fromRGB(240, 240, 245))
-		local rh = model:FindFirstChild("RightHand") :: BasePart?
+		-- v2.22: staff in the LEFT hand - the greeting wave uses the right arm
+		-- and used to swing the staff through his head
+		local rh = model:FindFirstChild("LeftHand") :: BasePart?
 		if rh then
 			block(model, rh, "Staff", Vector3.new(0.3, 5, 0.3), CFrame.new(0, 1, -0.2), Color3.fromRGB(120, 80, 50))
 			local gem = Instance.new("Part")

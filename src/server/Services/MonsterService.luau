@@ -176,7 +176,7 @@ local function onDeath(info)
 	if info.LastHitBy and info.LastHitBy.Parent then
 		info.LastHitBy:SetAttribute("LastKillAt", now()) -- pets: "after a kill" buffs
 	end
-	-- v2.35 Poseidon materials: normal monsters drop one for their killer
+	-- v2.35 Hephaestus materials: normal monsters drop one for their killer
 	if MonsterService.OnKill and not info.Def.Boss then
 		task.spawn(MonsterService.OnKill, info.LastHitBy, info)
 	end

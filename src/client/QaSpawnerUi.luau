@@ -1,6 +1,6 @@
 -- TEST ONLY: the "QA Item Spawner" panel (opened by the QA tool; the server
 -- checks the QA account on every request). Tabs: Items, Upgrades, Pets,
--- Eggs, Extra (coins, unlock all). Click a name to get it.
+-- Eggs, Totems (totems + forge materials), Extra (coins, unlock all). Click a name to get it.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ShopItems = require(ReplicatedStorage.Shared.ShopItems)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local PetDefs = require(ReplicatedStorage.Shared.PetDefs)
+local ForgeDefs = require(ReplicatedStorage.Shared.ForgeDefs)
 
 local QaSpawnerUi = {}
 
@@ -73,6 +74,22 @@ local TABS = {
 			entry(e.Name, e.Color2, function()
 				remote:FireServer("Egg", key)
 			end)
+		end
+	end,
+	-- v2.39: every biome totem (+1) and every forge material (+5), one by one
+	Totems = function()
+		for _, biome in ForgeDefs.Biomes do
+			local t = ForgeDefs.Totems[biome]
+			entry(`{t.Name}  ·  {biome}`, t.Color, function()
+				remote:FireServer("Totem", biome)
+			end)
+		end
+		for _, biome in ForgeDefs.Biomes do
+			for _, m in ForgeDefs.ByBiome[biome] do
+				entry(`+5 {m[2]}  ·  {biome}`, m[3], function()
+					remote:FireServer("Material", m[1])
+				end)
+			end
 		end
 	end,
 	Extra = function()
@@ -152,9 +169,9 @@ local function build()
 	ll.Padding = UDim.new(0, 4)
 	ll.Parent = list
 	list.Parent = frame
-	for _, name in { "Items", "Upgrades", "Pets", "Eggs", "Extra" } do
+	for _, name in { "Items", "Upgrades", "Pets", "Eggs", "Totems", "Extra" } do
 		local b = Instance.new("TextButton")
-		b.Size = UDim2.new(0.2, -5, 1, 0)
+		b.Size = UDim2.new(1 / 6, -5, 1, 0)
 		b.BackgroundColor3 = Color3.fromRGB(60, 90, 160)
 		b.TextColor3 = Color3.new(1, 1, 1)
 		b.Font = Enum.Font.GothamBold

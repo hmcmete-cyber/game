@@ -1,6 +1,6 @@
 -- v2.35 POSEIDON THE BLACKSMITH (director): every biome has its own crafting
 -- materials. ONLY normal monsters drop them (never bosses). Bring them to
--- Poseidon on the hub to forge that biome's TOTEM. Offer a totem at the altar
+-- Hephaestus on the hub to forge that biome's TOTEM. Offer a totem at the altar
 -- behind the biome's boss (temple shrine) to be teleported into that biome's
 -- own realm (the realms are placeholders for now).
 --

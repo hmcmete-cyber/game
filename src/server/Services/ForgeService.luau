@@ -1,6 +1,6 @@
 -- v2.35 POSEIDON THE BLACKSMITH + BIOME TOTEMS + REALM ALTARS (director).
 --   * normal monsters (never bosses) drop their biome's materials to the killer
---   * Poseidon (hub, south forge pad) forges a biome totem from its recipe
+--   * Hephaestus (hub, south forge pad) forges a biome totem from its recipe
 --     (Shared/ForgeDefs); client UI: Client/ForgeUi via OpenShop("Forge")
 --   * the Altar on each temple shrine (behind the boss) takes that biome's
 --     totem and teleports you into the biome's realm (placeholder platforms
@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ForgeDefs = require(ReplicatedStorage.Shared.ForgeDefs)
 local Sfx = require(ReplicatedStorage.Shared.Sfx)
 local FxKit = require(ReplicatedStorage.Shared.FxKit)
+local TotemModels = require(ReplicatedStorage.Shared.TotemModels)
 
 local ForgeService = {}
 
@@ -28,6 +29,7 @@ local function data(player: Player)
 	if d then
 		d.Materials = d.Materials or {}
 		d.Totems = d.Totems or {}
+		d.TotemsSeen = d.TotemsSeen or {} -- v2.39 ever owned -> forge window shows its 3D model
 	end
 	return d
 end
@@ -38,7 +40,13 @@ local function sync(player: Player)
 		return
 	end
 	player:SetAttribute("Materials", HttpService:JSONEncode(d.Materials))
+	for biome, n in d.Totems do
+		if n > 0 then
+			d.TotemsSeen[biome] = true
+		end
+	end
 	player:SetAttribute("Totems", HttpService:JSONEncode(d.Totems))
+	player:SetAttribute("TotemsSeen", HttpService:JSONEncode(d.TotemsSeen))
 end
 ForgeService.Sync = sync
 
@@ -81,24 +89,24 @@ local function onKill(player: Player?, info)
 	d.Materials[id] = (d.Materials[id] or 0) + 1
 	sync(player)
 	local m = ForgeDefs.Materials[id]
-	hint(player, `+1 {m.Name}  (bring it to Poseidon)`, 3)
+	hint(player, `+1 {m.Name}  (bring it to Hephaestus)`, 3)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if root then
 		FxKit.Impact(root.Position + Vector3.new(0, 2, 0), m.Color, 0.6)
 	end
 end
 
--- forge a totem at Poseidon
+-- forge a totem at Hephaestus
 local function forge(player: Player, biome: unknown)
 	if type(biome) ~= "string" or not ForgeDefs.Totems[biome] then
 		return
 	end
-	-- must stand at Poseidon
+	-- must stand at Hephaestus
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local near = false
 	for _, npc in game:GetService("CollectionService"):GetTagged("Npc") do
 		local r = npc:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if npc.Name == "Poseidon" and root and r and (r.Position - root.Position).Magnitude < 24 then
+		if npc.Name == "Hephaestus" and root and r and (r.Position - root.Position).Magnitude < 24 then
 			near = true
 		end
 	end
@@ -122,7 +130,7 @@ local function forge(player: Player, biome: unknown)
 	sync(player)
 	DataService.SaveSoon(player)
 	local t = ForgeDefs.Totems[biome]
-	hint(player, `Poseidon forged a {t.Name}! Offer it at the altar behind the {biome} boss.`, 5)
+	hint(player, `Hephaestus forged a {t.Name}! Offer it at the altar behind the {biome} boss.`, 5)
 	if root then
 		FxKit.Explosion(root.Position + Vector3.new(0, 2, 0), t.Color, 0.8)
 		Sfx.At("HitGadget", root.Position)
@@ -253,7 +261,7 @@ local function hookAltars()
 					return
 				end
 				if (d.Totems[biome] or 0) <= 0 then
-					hint(player, `You need a {t.Name}. Poseidon forges it from {biome} materials.`, 4)
+					hint(player, `You need a {t.Name}. Hephaestus forges it from {biome} materials.`, 4)
 					return
 				end
 				if player:GetAttribute("Carrying") or player:GetAttribute("CarryingEgg") then
@@ -263,6 +271,15 @@ local function hookAltars()
 				d.Totems[biome] -= 1
 				sync(player)
 				DataService.SaveSoon(player)
+				-- v2.39 the offered totem appears on the altar, then fades into the pillar
+				local shown = TotemModels.Make(biome)
+				if shown then
+					shown:PivotTo(CFrame.new(altar.Position + Vector3.new(0, altar.Size.Y / 2 + 4, 0)))
+					shown.Parent = workspace
+					task.delay(2.5, function()
+						shown:Destroy()
+					end)
+				end
 				FxKit.Pillar(altar.Position, t.Color, 60, 1.2)
 				Sfx.At("OrbOffer", altar.Position)
 				task.wait(0.8)

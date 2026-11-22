@@ -290,6 +290,14 @@ end
 
 updateAir = function(root: BasePart, hum: Humanoid)
 	local column = workspace:GetPartBoundsInBox(root.CFrame, Vector3.new(2, 2, 2), airParams)[1]
+	-- v2.39: bounds are a BOX; a standing cylinder only counts inside its real
+	-- radius (the wide Sky Heart updraft must not grab people on the plaza)
+	if column and column:IsA("Part") and column.Shape == Enum.PartType.Cylinder then
+		local off = root.Position - column.Position
+		if Vector2.new(off.X, off.Z).Magnitude > column.Size.Y / 2 + 1 then
+			column = nil
+		end
+	end
 	local lv = getAirLift(root)
 	if not column or slipping then
 		lv.Enabled = false

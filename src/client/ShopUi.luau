@@ -324,7 +324,7 @@ end
 
 local function open(shop: string?)
 	if shop == "Forge" then
-		return -- Poseidon's forge has its own window (ForgeUi)
+		return -- Hephaestus's forge has its own window (ForgeUi)
 	end
 	currentShop = shop == "Upgrades" and "Upgrades" or "Items"
 	vendorShop = currentShop

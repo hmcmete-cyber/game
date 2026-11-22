@@ -267,7 +267,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.21" -- v2.35 one shared nursery on the hub; pet huts behind bases
+local MAP_VERSION = "2.22" -- v2.39 Hephaestus + nursery on the hub hexagon; wider updraft
 local BASE_RING = 240 -- v2.13: distance of the 12 bases from the hub centre
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
@@ -387,6 +387,9 @@ local function buildPlaceholder(): Instance
 	end
 	for i = 1, 6 do
 		local a = math.rad(i * 60 + 30)
+		if i == 1 or i == 4 then
+			continue -- v2.39: 90 / 270 deg hold the nursery and Hephaestus' forge
+		end
 		local sp = Instance.new("SpawnLocation")
 		sp.Name = "SpawnLocation" .. i
 		sp.Size = Vector3.new(6, 0.3, 6) -- v2.33 thin pad, not a glowing block
@@ -477,40 +480,27 @@ local function buildPlaceholder(): Instance
 		HutBuilder.PetHut(expansion, i, CFrame.lookAt(hutTop, Vector3.new(center.X, hutTop.Y, center.Z)), accent)
 	end
 
-	-- v2.35 Poseidon's forge on its own pad on the hub's south edge
+	-- v2.39 (director): Hephaestus' forge stands ON the hub hexagon like
+	-- Tayron and Aurelius (south edge), the shared Egg Nursery opposite it
+	-- (north edge). No more side pads / bridges for them.
 	do
-		local fDir = Vector3.new(0, 0, -1)
-		local fPos = fDir * 82 + Vector3.new(0, Y - 0.5, 0)
-		newPart(expansion, "ForgePad", Vector3.new(22, 1, 22), CFrame.lookAt(fPos, fPos + fDir), Color3.fromRGB(150, 140, 135), {
-			Material = Enum.Material.Slate,
-		})
-		local linkPos = fDir * 61 + Vector3.new(0, Y - 0.5, 0)
-		newPart(route, "ForgeLink", Vector3.new(10, 1, 20), CFrame.lookAt(linkPos, linkPos + fDir), hubColor, { Material = Enum.Material.Marble })
-		local floor = fPos + Vector3.new(0, 0.5, 0)
-		shopStall(decor, "Forge", floor, Vector3.new(0, Y, 0), "Poseidon", "FORGE", Color3.fromRGB(80, 200, 230))
+		local floor = Vector3.new(0, Y, -44)
+		shopStall(decor, "Forge", floor, Vector3.new(0, Y, 0), "Hephaestus", "FORGE", Color3.fromRGB(255, 130, 40))
 		-- anvil + glowing forge fire beside the stall
 		local cf = CFrame.lookAt(floor, Vector3.new(0, floor.Y, 0))
 		newPart(decor, "AnvilBase", Vector3.new(2, 1.6, 1.4), cf * CFrame.new(6.5, 0.8, -4), Color3.fromRGB(60, 60, 70), {})
 		newPart(decor, "AnvilTop", Vector3.new(3.4, 0.8, 1.6), cf * CFrame.new(6.5, 2, -4), Color3.fromRGB(80, 80, 92), {})
-		local fire = newPart(decor, "ForgeFire", Vector3.new(3, 1, 3), cf * CFrame.new(-7, 0.6, -3), Color3.fromRGB(255, 120, 40), { Material = Enum.Material.Neon })
+		local fire = newPart(decor, "ForgeFire", Vector3.new(3, 1, 3), cf * CFrame.new(-6.5, 0.6, -4), Color3.fromRGB(255, 120, 40), { Material = Enum.Material.Neon })
 		local f = Instance.new("Fire")
 		f.Size = 6
 		f.Heat = 8
 		f.Parent = fire
 	end
 
-	-- v2.35 THE shared Egg Nursery (one per server) on its own pad at the hub's
-	-- edge: everybody uses it, but each player only SEES their own egg, timer
-	-- and hatch (drawn by the client, Client/NurseryClient)
+	-- THE shared Egg Nursery (one per server): everybody uses it, but each
+	-- player only SEES their own egg, timer and hatch (Client/NurseryClient)
 	do
-		local nDir = Vector3.new(0, 0, 1)
-		local nPos = nDir * 84 + Vector3.new(0, Y - 0.5, 0)
-		newPart(expansion, "NurseryPad", Vector3.new(24, 1, 24), CFrame.lookAt(nPos, nPos + nDir), Color3.fromRGB(235, 228, 245), {
-			Material = Enum.Material.Marble,
-		})
-		local linkPos = nDir * 62 + Vector3.new(0, Y - 0.5, 0)
-		newPart(route, "NurseryLink", Vector3.new(10, 1, 22), CFrame.lookAt(linkPos, linkPos + nDir), hubColor, { Material = Enum.Material.Marble })
-		local top = nPos + Vector3.new(0, 0.5, 0)
+		local top = Vector3.new(0, Y, 42)
 		local hut = HutBuilder.IncubatorHut(expansion, 0, CFrame.lookAt(top, Vector3.new(0, top.Y, 0)), Color3.fromRGB(255, 190, 230))
 		hut.Name = "SharedNursery"
 		hut:SetAttribute("Shared", true)
@@ -525,7 +515,9 @@ local function buildPlaceholder(): Instance
 	updraftModel.Name = "UpdraftModel"
 	updraftModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 	updraftModel.Parent = air
-	local updraft = airColumn(updraftModel, "Updraft", Vector3.new(14, UP + 18 - Y, 14), Vector3.new(0, (Y + UP + 18) / 2, 0), 140,
+	-- v2.39 (director): 34 wide so it fills the whole Sky Heart hole (r 16):
+	-- nobody slips past the column edge any more
+	local updraft = airColumn(updraftModel, "Updraft", Vector3.new(34, UP + 18 - Y, 34), Vector3.new(0, (Y + UP + 18) / 2, 0), 140,
 		Color3.fromRGB(190, 235, 255))
 	updraft:SetAttribute("ExitHeight", UP + 6)
 	-- one smooth arc into the Sky Heart plaza at the continent's center
@@ -535,7 +527,7 @@ local function buildPlaceholder(): Instance
 	updraft:SetAttribute("BottomY", Y)
 	updraft:SetAttribute("DownSpeed", 70)
 	zoneSign(signs, "UpdraftDownSign", Vector3.new(0, UP + 14, 0), "DOWN", Color3.fromRGB(255, 200, 120))
-	newPart(decor, "UpdraftPad", Vector3.new(0.6, 16, 16), CFrame.new(0, Y + 0.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(150, 220, 255), {
+	newPart(decor, "UpdraftPad", Vector3.new(0.6, 34, 34), CFrame.new(0, Y + 0.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(150, 220, 255), {
 		Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, CanCollide = false,
 	})
 	zoneSign(signs, "UpdraftSign", Vector3.new(0, Y + 12, 0), "UP!", Color3.fromRGB(190, 235, 255))

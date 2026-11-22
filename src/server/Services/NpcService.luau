@@ -35,14 +35,14 @@ local LOOKS = {
 		Hat = Color3.fromRGB(255, 210, 90),
 		TitleColor = Color3.fromRGB(255, 215, 120),
 	},
-	-- v2.35 Poseidon the Blacksmith: forges biome totems from monster materials
-	Poseidon = {
+	-- v2.39 Hephaestus the Blacksmith (was Poseidon): forges biome totems
+	Hephaestus = {
 		Title = "Blacksmith",
 		Shop = "Forge",
-		Torso = Color3.fromRGB(40, 120, 170),
-		Legs = Color3.fromRGB(35, 60, 90),
-		Hat = Color3.fromRGB(80, 200, 220),
-		TitleColor = Color3.fromRGB(120, 220, 255),
+		Torso = Color3.fromRGB(150, 70, 40),
+		Legs = Color3.fromRGB(55, 45, 40),
+		Hat = Color3.fromRGB(255, 130, 40),
+		TitleColor = Color3.fromRGB(255, 170, 80),
 	},
 }
 
@@ -106,27 +106,41 @@ local OUTFIT = {
 			block(model, rh, "WrenchHead", Vector3.new(0.6, 0.3, 0.3), CFrame.new(0, -0.8, -0.95), Color3.fromRGB(170, 175, 185))
 		end
 	end,
-	-- Poseidon: sea-god blacksmith - seaweed-green beard, leather apron, a
-	-- trident in one hand and a forge hammer on his belt
-	Poseidon = function(model: Model, head: BasePart, torso: BasePart)
-		local sea, gold, leather = Color3.fromRGB(60, 190, 200), Color3.fromRGB(255, 205, 80), Color3.fromRGB(120, 80, 50)
-		block(model, head, "Beard", Vector3.new(1.1, 1, 0.35), CFrame.new(0, -0.6, -0.55), Color3.fromRGB(70, 170, 150))
-		block(model, head, "Hair", Vector3.new(1.35, 0.45, 1.35), CFrame.new(0, 0.75, 0.05), Color3.fromRGB(70, 170, 150))
-		block(model, head, "CrownBand", Vector3.new(1.4, 0.25, 1.4), CFrame.new(0, 0.62, 0), gold, Enum.Material.SmoothPlastic)
-		for i, x in { -0.45, 0, 0.45 } do
-			block(model, head, "Spike" .. i, Vector3.new(0.2, i == 2 and 0.6 or 0.4, 0.2), CFrame.new(x, i == 2 and 1.05 or 0.95, -0.6), gold)
+	-- Hephaestus: god of the forge - fiery beard and hair with ember tips,
+	-- bronze headband, soot-dark leather apron, tongs on the belt and a huge
+	-- smithing hammer in the LEFT hand (the greeting wave uses the right arm)
+	Hephaestus = function(model: Model, head: BasePart, torso: BasePart)
+		local fire, ember, bronze = Color3.fromRGB(230, 90, 30), Color3.fromRGB(255, 190, 60), Color3.fromRGB(205, 130, 60)
+		local leather, iron = Color3.fromRGB(85, 55, 35), Color3.fromRGB(70, 70, 80)
+		block(model, head, "Beard", Vector3.new(1.2, 1.1, 0.4), CFrame.new(0, -0.65, -0.55), fire)
+		block(model, head, "BeardTip", Vector3.new(0.6, 0.4, 0.3), CFrame.new(0, -1.3, -0.55), ember, Enum.Material.Neon)
+		block(model, head, "Hair", Vector3.new(1.35, 0.5, 1.35), CFrame.new(0, 0.75, 0.05), fire)
+		for i, x in { -0.4, 0, 0.4 } do
+			block(model, head, "Flame" .. i, Vector3.new(0.3, i == 2 and 0.7 or 0.5, 0.3), CFrame.new(x, i == 2 and 1.25 or 1.1, 0.1), ember, Enum.Material.Neon)
 		end
-		block(model, torso, "Apron", Vector3.new(1.8, 2, 0.15), CFrame.new(0, -0.5, -0.56), leather)
-		block(model, torso, "Belt", Vector3.new(2.05, 0.3, 1.1), CFrame.new(0, -0.8, 0), Color3.fromRGB(60, 45, 35))
-		block(model, torso, "Hammer", Vector3.new(0.5, 0.5, 0.9), CFrame.new(0.95, -0.9, 0), Color3.fromRGB(120, 120, 130))
+		block(model, head, "Headband", Vector3.new(1.42, 0.22, 1.42), CFrame.new(0, 0.5, 0), bronze, Enum.Material.Metal)
+		block(model, head, "Brows", Vector3.new(0.9, 0.15, 0.2), CFrame.new(0, 0.2, -0.6), fire)
+		block(model, torso, "Apron", Vector3.new(1.9, 2.3, 0.15), CFrame.new(0, -0.6, -0.56), leather)
+		block(model, torso, "ApronSoot", Vector3.new(0.9, 0.6, 0.16), CFrame.new(0.3, -1.2, -0.58), Color3.fromRGB(40, 35, 35))
+		block(model, torso, "Strap", Vector3.new(0.3, 2.1, 1.1), CFrame.new(0.55, 0.1, 0) * CFrame.Angles(0, 0, math.rad(-25)), leather)
+		block(model, torso, "Belt", Vector3.new(2.05, 0.3, 1.1), CFrame.new(0, -0.8, 0), Color3.fromRGB(50, 38, 30))
+		block(model, torso, "Buckle", Vector3.new(0.4, 0.35, 0.1), CFrame.new(0, -0.8, -0.58), bronze, Enum.Material.Metal)
+		-- tongs hanging on the belt
+		for k = -1, 1, 2 do
+			block(model, torso, "Tong" .. k, Vector3.new(0.12, 1.4, 0.12), CFrame.new(0.95 + k * 0.08, -1.4, 0.2) * CFrame.Angles(0, 0, math.rad(k * 6)), iron, Enum.Material.Metal)
+		end
 		local lh = model:FindFirstChild("LeftHand") :: BasePart?
 		if lh then
-			block(model, lh, "TridentPole", Vector3.new(0.25, 6, 0.25), CFrame.new(0, 1.2, -0.6), gold)
-			for i, x in { -0.45, 0, 0.45 } do
-				block(model, lh, "Prong" .. i, Vector3.new(0.18, 0.9, 0.18), CFrame.new(x, 4.6, -0.6), sea, Enum.Material.Neon)
-			end
-			block(model, lh, "Cross", Vector3.new(1.1, 0.2, 0.2), CFrame.new(0, 4.15, -0.6), gold)
+			block(model, lh, "HammerHandle", Vector3.new(0.3, 3.4, 0.3), CFrame.new(0, 0.9, -0.6), Color3.fromRGB(110, 75, 45))
+			block(model, lh, "HammerHead", Vector3.new(1.6, 0.9, 0.9), CFrame.new(0, 2.7, -0.6), iron, Enum.Material.Metal)
+			block(model, lh, "HammerGlow", Vector3.new(0.2, 0.7, 0.7), CFrame.new(-0.85, 2.7, -0.6), ember, Enum.Material.Neon)
+			block(model, lh, "HammerBand", Vector3.new(0.4, 1, 1), CFrame.new(0.3, 2.7, -0.6), bronze, Enum.Material.Metal)
 		end
+		local glow = Instance.new("PointLight")
+		glow.Color = ember
+		glow.Range = 10
+		glow.Brightness = 1.2
+		glow.Parent = head
 	end,
 	-- Aurelius: royal upgrade master — square crown with prongs, cape, gold belt
 	Aurelius = function(model: Model, head: BasePart, torso: BasePart)

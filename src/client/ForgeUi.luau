@@ -1,21 +1,48 @@
 -- v2.35 POSEIDON'S FORGE window (glass, like the shop). Opened by the server
--- (OpenShop "Forge") when you press E on Poseidon. One card per biome:
+-- (OpenShop "Forge") when you press E on Hephaestus. One card per biome:
 -- the totem, its 3 materials with have / need, how many totems you own and a
 -- FORGE button. Data: player attributes "Materials" / "Totems" (JSON).
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local ForgeDefs = require(ReplicatedStorage.Shared.ForgeDefs)
+local TotemModels = require(ReplicatedStorage.Shared.TotemModels)
 
 local ForgeUi = {}
 
 local player = Players.LocalPlayer
 local window, list, remotes
+local spinning = {} -- models turning in the card viewports
 
-local function json(attr: string): { [string]: number }
+-- v2.39 (director): the totem chip is a little 3D stage. Never owned that
+-- totem -> a spinning "?"; owned it at least once -> its 3D totem spins.
+local function stage(parent: GuiObject, biome: string, seen: boolean)
+	local model = seen and TotemModels.Make(biome) or TotemModels.Mystery()
+	if not model then
+		return
+	end
+	local vp = Instance.new("ViewportFrame")
+	vp.Size = UDim2.fromScale(1, 1)
+	vp.BackgroundTransparency = 1
+	vp.Ambient = Color3.fromRGB(170, 170, 180)
+	vp.LightColor = Color3.new(1, 1, 1)
+	vp.LightDirection = Vector3.new(-0.4, -1, 0.6)
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 40
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, 1.2, -15), Vector3.new(0, 0.6, 0))
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	model:PivotTo(CFrame.new())
+	model.Parent = vp
+	vp.Parent = parent
+	table.insert(spinning, model)
+end
+
+local function json(attr: string): { [string]: any }
 	local raw = player:GetAttribute(attr)
 	if type(raw) ~= "string" or raw == "" then
 		return {}
@@ -67,7 +94,8 @@ local function render()
 			c:Destroy()
 		end
 	end
-	local mats, totems = json("Materials"), json("Totems")
+	table.clear(spinning)
+	local mats, totems, seen = json("Materials"), json("Totems"), json("TotemsSeen")
 	for i, biome in ForgeDefs.Biomes do
 		local t = ForgeDefs.Totems[biome]
 		local card = Instance.new("Frame")
@@ -83,7 +111,8 @@ local function render()
 		chip.BackgroundColor3 = t.Color
 		corner(chip, 36)
 		chip.Parent = card
-		text(chip, { Size = UDim2.new(1, -12, 1, -12), Position = UDim2.fromOffset(6, 6), Font = Enum.Font.GothamBlack, Text = string.upper(string.sub(biome, 1, 2)) })
+		chip.BackgroundTransparency = 0.55
+		stage(chip, biome, seen[biome] == true)
 		text(card, { Position = UDim2.fromOffset(92, 6), Size = UDim2.new(0.42, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Left, Text = t.Name })
 		text(card, {
 			Position = UDim2.fromOffset(92, 32), Size = UDim2.new(0.42, 0, 0, 16), Font = Enum.Font.GothamMedium,
@@ -152,7 +181,7 @@ function ForgeUi.Start()
 	lim.MaxSize = Vector2.new(760, 600)
 	lim.Parent = window
 	window.Parent = gui
-	text(window, { Position = UDim2.fromOffset(20, 12), Size = UDim2.new(1, -110, 0, 36), Font = Enum.Font.FredokaOne, TextXAlignment = Enum.TextXAlignment.Left, Text = "Poseidon's Forge" })
+	text(window, { Position = UDim2.fromOffset(20, 12), Size = UDim2.new(1, -110, 0, 36), Font = Enum.Font.FredokaOne, TextXAlignment = Enum.TextXAlignment.Left, Text = "Hephaestus' Forge" })
 	text(window, {
 		Position = UDim2.fromOffset(20, 48), Size = UDim2.new(1, -40, 0, 18), Font = Enum.Font.GothamMedium,
 		TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(225, 240, 255),
@@ -191,7 +220,19 @@ function ForgeUi.Start()
 			open()
 		end
 	end)
-	for _, attr in { "Materials", "Totems" } do
+	local turn = 0
+	RunService.RenderStepped:Connect(function(dt)
+		if not window.Visible then
+			return
+		end
+		turn += dt * 1.6
+		for _, m in spinning do
+			if m.Parent then
+				m:PivotTo(CFrame.Angles(0, turn, 0))
+			end
+		end
+	end)
+	for _, attr in { "Materials", "Totems", "TotemsSeen" } do
 		player:GetAttributeChangedSignal(attr):Connect(function()
 			if window.Visible then
 				render()
@@ -203,7 +244,7 @@ function ForgeUi.Start()
 			window.Visible = false
 		end
 	end)
-	-- walking away from Poseidon closes it
+	-- walking away from Hephaestus closes it
 	task.spawn(function()
 		while true do
 			task.wait(0.5)
@@ -212,7 +253,7 @@ function ForgeUi.Start()
 				local near = false
 				for _, npc in game:GetService("CollectionService"):GetTagged("Npc") do
 					local r = npc:FindFirstChild("HumanoidRootPart") :: BasePart?
-					if npc.Name == "Poseidon" and root and r and (r.Position - root.Position).Magnitude < 20 then
+					if npc.Name == "Hephaestus" and root and r and (r.Position - root.Position).Magnitude < 20 then
 						near = true
 					end
 				end

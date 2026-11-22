@@ -26,6 +26,7 @@ local WorldFx = require(script.Parent:WaitForChild("WorldFx"))
 local Vfx = require(script.Parent:WaitForChild("Vfx"))
 local Ragdoll = require(script.Parent:WaitForChild("Ragdoll"))
 local CombatInput = require(script.Parent:WaitForChild("CombatInput"))
+local VfxTest = require(script.Parent:WaitForChild("VfxTest"))
 
 Hud.Start()
 Movement.Start()
@@ -45,4 +46,5 @@ WorldFx.Start()
 Vfx.Start()
 Ragdoll.Start()
 CombatInput.Start()
+VfxTest.Start() -- TEST ONLY: K = showcase red explosion on the test dummy
 QaPanel.Start() -- Studio only

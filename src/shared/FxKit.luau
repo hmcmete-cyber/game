@@ -526,6 +526,187 @@ function FxKit.Aura(part: BasePart, color: Color3, s: number?): () -> ()
 	end
 end
 
+------------------------------------------------------------------------
+-- v2.23 SHOWCASE: red spiky explosion (director reference image 3).
+-- 1) 0.15 s implosion, 2) white-hot core + double star flare,
+-- 3) 3D spikes (tapered Beams) shooting out then thinning away,
+-- 4) stretched sparks + dark debris with gravity, 5) ground ring, dust and a
+-- dark splatter scorch, 6) red light flash, embers + dark smoke plume.
+------------------------------------------------------------------------
+local RED, DEEP, BLOOD = Color3.fromRGB(255, 45, 35), Color3.fromRGB(150, 0, 10), Color3.fromRGB(45, 0, 5)
+
+local function groundBelow(pos: Vector3): Vector3
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local ignore = { holder() }
+	for _, n in { "Monsters", "Weather", "Pets", "SfxEmitters", "ClientVfx" } do
+		local f = workspace:FindFirstChild(n)
+		if f then
+			table.insert(ignore, f)
+		end
+	end
+	params.FilterDescendantsInstances = ignore
+	params.RespectCanCollide = true
+	local hit = workspace:Raycast(pos + Vector3.new(0, 2, 0), Vector3.new(0, -40, 0), params)
+	return hit and hit.Position or pos - Vector3.new(0, 3, 0)
+end
+
+-- one tapered spike: a camera-facing Beam from the centre to a moving tip
+local function spike(a: BasePart, dir: Vector3, len: number, width: number, cBase: Color3, cTip: Color3, glow: number, grow: number, hold: number, fade: number)
+	local a0 = Instance.new("Attachment")
+	local a1 = Instance.new("Attachment")
+	a0.Parent, a1.Parent = a, a
+	local b = Instance.new("Beam")
+	b.Attachment0, b.Attachment1 = a0, a1
+	b.FaceCamera = true
+	b.Segments = 2
+	b.Width0, b.Width1 = width, 0
+	b.LightEmission, b.LightInfluence = glow, 0
+	set(b, "Brightness", 1 + glow * 3)
+	b.Color = ColorSequence.new(cBase, cTip)
+	b.Transparency = ns({ { 0, 0 }, { 0.7, 0.05 }, { 1, 0.35 } })
+	b.ZOffset = glow > 0.8 and 1 or 0
+	b.Parent = a
+	local t0 = os.clock()
+	local conn
+	conn = RunService.Heartbeat:Connect(function()
+		local t = os.clock() - t0
+		if not b.Parent or t > grow + hold + fade then
+			conn:Disconnect()
+			b:Destroy()
+			return
+		end
+		local L
+		if t < grow then
+			local f = t / grow
+			L = len * (1 - (1 - f) ^ 3) -- shoots out, eases in
+		else
+			L = len * (1 + 0.12 * math.min(1, (t - grow) / (hold + fade)))
+		end
+		a1.Position = dir * L
+		if t > grow + hold then
+			local f = (t - grow - hold) / fade
+			b.Width0 = width * (1 - f) ^ 1.5
+			b.Transparency = ns({ { 0, f * 0.9 }, { 0.7, math.min(1, 0.05 + f) }, { 1, 1 } })
+		end
+	end)
+end
+
+function FxKit.RedExplosion(pos: Vector3, s: number?)
+	local sc = s or 1
+	local ground = groundBelow(pos)
+	local centre = ground + Vector3.new(0, 2.5 * sc, 0)
+	-- 1) implosion
+	local pre = anchor(CFrame.new(centre), 2, Vector3.one * 10 * sc)
+	emitNow(emitter(pre, {
+		Texture = tex("Streak"), Color = ColorSequence.new(Color3.new(1, 0.85, 0.8), RED), Brightness = 4,
+		Shape = Enum.ParticleEmitterShape.Sphere, ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward,
+		ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
+		Orientation = Enum.ParticleOrientation.VelocityParallel, Squash = ns({ { 0, 2.5 }, { 1, 2.5 } }),
+		Size = ns({ { 0, 0.5 * sc }, { 1, 0.1 } }), Lifetime = NumberRange.new(0.15), Speed = NumberRange.new(30 * sc, 40 * sc),
+	}), 30)
+	emitNow(emitter(pre, {
+		Texture = tex("Glow"), Color = ColorSequence.new(RED), Brightness = 3,
+		Size = ns({ { 0, 6 * sc }, { 1, 0.5 * sc } }), Transparency = ns({ { 0, 0.6 }, { 1, 0 } }),
+		Lifetime = NumberRange.new(0.15), Speed = NumberRange.new(0),
+	}), 1)
+	task.delay(0.15, function()
+		local a = anchor(CFrame.new(centre), 4)
+		a:SetAttribute("Shake", 1.6 * sc)
+		-- 2) white-hot core + double star flare
+		emitNow(emitter(a, {
+			Texture = tex("Glow"), Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(255, 120, 100)), Brightness = 8, ZOffset = 4,
+			Size = ns({ { 0, 4 * sc }, { 0.2, 9 * sc }, { 1, 2 * sc } }), Transparency = ns({ { 0, 0 }, { 0.5, 0.2 }, { 1, 1 } }),
+			Lifetime = NumberRange.new(0.3), Speed = NumberRange.new(0),
+		}), 2)
+		emitNow(emitter(a, {
+			Texture = tex("Flare"), Color = ColorSequence.new(Color3.new(1, 1, 1), RED), Brightness = 7, ZOffset = 5,
+			Size = ns({ { 0, 6 * sc }, { 0.12, 26 * sc }, { 1, 4 * sc } }), Transparency = ns({ { 0, 0 }, { 0.6, 0.3 }, { 1, 1 } }),
+			Lifetime = NumberRange.new(0.45), Speed = NumberRange.new(0), Rotation = NumberRange.new(-4, 4), RotSpeed = NumberRange.new(-25, 25),
+		}), 1)
+		emitNow(emitter(a, {
+			Texture = tex("Flare"), Color = ColorSequence.new(Color3.fromRGB(255, 200, 190), RED), Brightness = 5, ZOffset = 4,
+			Size = ns({ { 0, 3 * sc }, { 0.15, 13 * sc }, { 1, 0 } }), Transparency = ns({ { 0, 0.1 }, { 1, 1 } }),
+			Lifetime = NumberRange.new(0.35), Speed = NumberRange.new(0), Rotation = NumberRange.new(40, 50),
+		}), 1)
+		-- big dark splatter behind everything
+		emitNow(emitter(a, {
+			Texture = tex("Spikes"), Color = ColorSequence.new(DEEP, BLOOD), LightEmission = 0.25, Brightness = 1.5, ZOffset = -1,
+			Size = ns({ { 0, 6 * sc }, { 0.15, 20 * sc }, { 1, 24 * sc } }), Transparency = ns({ { 0, 0 }, { 0.4, 0.2 }, { 1, 1 } }),
+			Lifetime = NumberRange.new(0.55), Speed = NumberRange.new(0), RotSpeed = NumberRange.new(-10, 10),
+		}), 2)
+		-- 3) 3D spikes: dark-red long ones + bright thin ones
+		for _ = 1, 38 do
+			local d = Vector3.new(math.random() * 2 - 1, math.random() * 1.4 - 0.25, math.random() * 2 - 1)
+			if d.Magnitude < 0.1 then
+				d = Vector3.yAxis
+			end
+			spike(a, d.Unit, (6 + math.random() * 12) * sc, (0.5 + math.random() * 0.9) * sc, RED, BLOOD, 0.45, 0.07, 0.06 + math.random() * 0.08, 0.45)
+		end
+		for _ = 1, 18 do
+			local d = Vector3.new(math.random() * 2 - 1, math.random() * 1.4 - 0.2, math.random() * 2 - 1)
+			if d.Magnitude < 0.1 then
+				d = Vector3.yAxis
+			end
+			spike(a, d.Unit, (4 + math.random() * 7) * sc, (0.18 + math.random() * 0.2) * sc, Color3.new(1, 1, 1), RED, 1, 0.05, 0.03, 0.22)
+		end
+		-- 4) sparks + debris
+		emitNow(emitter(a, {
+			Texture = tex("Streak"), Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 150, 120)),
+				ColorSequenceKeypoint.new(1, RED),
+			}), Brightness = 5,
+			Orientation = Enum.ParticleOrientation.VelocityParallel, Squash = ns({ { 0, 3 }, { 1, 1.5 } }),
+			Size = ns({ { 0, 0.35 * sc }, { 0.3, 0.6 * sc }, { 1, 0 } }), Transparency = ns({ { 0, 0 }, { 0.8, 0.2 }, { 1, 1 } }),
+			Lifetime = NumberRange.new(0.35, 0.9), Speed = NumberRange.new(55 * sc, 115 * sc), Drag = 4,
+			Acceleration = Vector3.new(0, -70, 0), Rotation = NumberRange.new(0),
+		}), 70)
+		emitNow(emitter(a, {
+			Texture = tex("Shard"), Color = ColorSequence.new(DEEP, BLOOD), LightEmission = 0.2, Brightness = 1,
+			Size = ns({ { 0, 0.6 * sc }, { 1, 0.3 * sc } }), Lifetime = NumberRange.new(0.6, 1.2),
+			Speed = NumberRange.new(25 * sc, 55 * sc), Drag = 1.5, Acceleration = Vector3.new(0, -90, 0), RotSpeed = NumberRange.new(-400, 400),
+		}), 26)
+		-- 5) ground: ring, dust, scorch splatter lying flat
+		local g = anchor(CFrame.new(ground + Vector3.new(0, 0.2, 0)), 4)
+		emitNow(emitter(g, {
+			Texture = tex("Ring"), Color = ColorSequence.new(Color3.fromRGB(255, 120, 100), RED), Brightness = 4,
+			Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Top,
+			SpreadAngle = Vector2.new(0, 0), Speed = NumberRange.new(0.01),
+			Size = ns({ { 0, 3 * sc }, { 0.35, 22 * sc }, { 1, 30 * sc } }), Transparency = ns({ { 0, 0 }, { 0.5, 0.3 }, { 1, 1 } }),
+			Lifetime = NumberRange.new(0.5),
+		}), 1)
+		emitNow(emitter(g, {
+			Texture = tex("Spikes"), Color = ColorSequence.new(BLOOD), LightEmission = 0, LightInfluence = 0.3,
+			Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Top,
+			SpreadAngle = Vector2.new(0, 0), Speed = NumberRange.new(0.01),
+			Size = ns({ { 0, 8 * sc }, { 0.1, 16 * sc }, { 1, 17 * sc } }), Transparency = ns({ { 0, 0.15 }, { 0.7, 0.4 }, { 1, 1 } }),
+			Lifetime = NumberRange.new(2.5),
+		}), 1)
+		emitNow(emitter(g, {
+			Texture = tex("Smoke"), Color = ColorSequence.new(Color3.fromRGB(120, 40, 35), Color3.fromRGB(40, 20, 20)),
+			LightEmission = 0, LightInfluence = 0.5,
+			Size = ns({ { 0, 2 * sc }, { 1, 6 * sc } }), Transparency = ns({ { 0, 0.4 }, { 1, 1 } }),
+			Lifetime = NumberRange.new(0.6, 1), Speed = NumberRange.new(30 * sc, 45 * sc), Drag = 5,
+			Shape = Enum.ParticleEmitterShape.Disc, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
+			EmissionDirection = Enum.NormalId.Top, SpreadAngle = Vector2.new(85, 85),
+		}), 30)
+		-- 6) light + embers + dark plume
+		light(a, RED, 50, 14, 0.8)
+		emitNow(emitter(a, {
+			Texture = tex("Glow"), Color = ColorSequence.new(Color3.fromRGB(255, 200, 150), RED), Brightness = 4,
+			Size = ns({ { 0, 0.35 * sc }, { 1, 0 } }), Lifetime = NumberRange.new(1, 2.2),
+			Speed = NumberRange.new(8 * sc, 26 * sc), Drag = 1.2, Acceleration = Vector3.new(0, 9, 0),
+		}), 40)
+		emitNow(emitter(a, {
+			Texture = tex("Smoke"), Color = ColorSequence.new(Color3.fromRGB(110, 20, 20), Color3.fromRGB(25, 10, 12)),
+			LightEmission = 0, LightInfluence = 0.4, ZOffset = -2,
+			Size = ns({ { 0, 3 * sc }, { 1, 11 * sc } }), Transparency = ns({ { 0, 0.3 }, { 0.4, 0.35 }, { 1, 1 } }),
+			Lifetime = NumberRange.new(1.2, 2), Speed = NumberRange.new(4 * sc, 12 * sc), Drag = 1.5,
+			Acceleration = Vector3.new(0, 5, 0), RotSpeed = NumberRange.new(-30, 30),
+		}), 12)
+	end)
+end
+
 -- element colours (names from Sfx.ElementOf)
 FxKit.ElementColor = {
 	Crystal = Color3.fromRGB(150, 200, 255), Ice = Color3.fromRGB(170, 235, 255), Electric = Color3.fromRGB(140, 170, 255),

@@ -124,9 +124,16 @@ function VfxTest.Start()
 			local bossScale = HitFx.Styles[style] and HitFx.Styles[style].Boss and 1.1 or 1
 			HitFx.Build(style, pos, bossScale)
 		end
-		task.delay(0.15, function()
-			Sfx.At("HatchBurst", pos, 0.8)
-		end)
+		-- v2.29: play THAT attack's own sound (ability id, "<Type>Melee",
+		-- "Pet<Element><Kind>", "Player*"), not one shared test sound
+		local cue = style
+		if not Sfx.Has(cue) then
+			cue = style .. "Melee"
+		end
+		if not Sfx.Has(cue) then
+			cue = style == "Red" and "DeathFire" or Sfx.ElementOf(style)
+		end
+		Sfx.At(cue, pos)
 	end)
 end
 

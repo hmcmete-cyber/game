@@ -50,9 +50,14 @@ local function part(size: Vector3, cf: CFrame, color: Color3, props: { [string]:
 	return p
 end
 
--- One-shot particle burst at a position
+local FxKit = require(ReplicatedStorage.Shared.FxKit)
+
+-- One-shot particle burst at a position (v2.22: + layered pro burst)
 local function burst(pos: Vector3, color: Color3, count: number, opts: { [string]: any }?)
 	local o = opts or {}
+	if not o.Texture or o.Texture == SPARKLE then
+		FxKit.Burst(pos, color, math.clamp(count / 24, 0.4, 2))
+	end
 	local anchor = part(Vector3.one, CFrame.new(pos), color, { Transparency = 1 })
 	local e = Instance.new("ParticleEmitter")
 	e.Texture = o.Texture or SPARKLE
@@ -74,9 +79,10 @@ end
 
 -- Flat expanding ring (shockwave)
 local function ring(pos: Vector3, color: Color3, toSize: number, time: number)
+	FxKit.Shockwave(pos, toSize / 2, color, time)
 	local r = part(Vector3.new(0.3, 2, 2), CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), color, {
 		Shape = Enum.PartType.Cylinder,
-		Transparency = 0.2,
+		Transparency = 0.7,
 	})
 	TweenService:Create(r, TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		Size = Vector3.new(0.1, toSize, toSize),
@@ -89,6 +95,7 @@ end
 
 -- Vertical light pillar
 local function pillar(pos: Vector3, color: Color3, height: number, time: number)
+	FxKit.Pillar(pos, color, height, time)
 	local p = part(Vector3.new(height, 3, 3), CFrame.new(pos + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2), color, {
 		Shape = Enum.PartType.Cylinder,
 		Transparency = 0.3,

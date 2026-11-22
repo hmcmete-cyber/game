@@ -62,6 +62,7 @@ local function makeTool(monsterService): Tool
 					killed += 1
 				end
 			end
+			require(game:GetService("ReplicatedStorage").Shared.FxKit).Explosion(root.Position, Color3.fromRGB(255, 80, 220), 2.5)
 			-- shock ring so the hit is visible
 			local ring = Instance.new("Part")
 			ring.Shape = Enum.PartType.Cylinder

@@ -281,6 +281,13 @@ bossArrival = function(model: Model, pos: Vector3)
 	end)
 	game:GetService("Debris"):AddItem(beam, 3)
 	Sfx.At("BossArrive", pos)
+	-- v2.22 pro arrival: light pillar, energy vortex, explosion when it lands
+	local FxKit = require(game:GetService("ReplicatedStorage").Shared.FxKit)
+	FxKit.Pillar(pos, color, 140, 1.4)
+	FxKit.Tornado(pos, color, 2.2, 1.4)
+	task.delay(0.6, function()
+		FxKit.Explosion(pos + Vector3.new(0, 4, 0), color, 2.5)
+	end)
 	for k = 1, 3 do
 		task.delay(k * 0.25, function()
 			Abilities.BossRoar(model, color)

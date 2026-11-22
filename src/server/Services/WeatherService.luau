@@ -132,7 +132,10 @@ local function setHighlight(player: Player, color: Color3?)
 end
 
 -- Soft glowing burst + light flash, visible to everyone
+local FxKit = require(ReplicatedStorage.Shared.FxKit)
 local function burstAt(position: Vector3, color: Color3, count: number)
+	-- v2.22: layered pro burst on top of the classic sparkle puff
+	FxKit.Burst(position, color, math.clamp(count / 30, 0.5, 2.5))
 	local anchor = Instance.new("Part")
 	anchor.Anchored = true
 	anchor.CanCollide = false

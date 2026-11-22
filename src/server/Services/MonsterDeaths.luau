@@ -251,15 +251,25 @@ local function anchorPart(pos: Vector3, life: number): BasePart
 end
 
 -- one-shot particle burst
+local FxKit = require(game:GetService("ReplicatedStorage").Shared.FxKit)
+
+-- v2.22: richer particles - white-hot start for glowing colours, size pops
+-- up then shrinks, fades late, brighter glow; untextured ones get a soft glow
 local function emit(pos: Vector3, color: Color3 | ColorSequence, count: number, o)
 	o = o or {}
 	local a = anchorPart(pos, (o.Life or 2) + 1)
 	local e = Instance.new("ParticleEmitter")
-	e.Color = typeof(color) == "Color3" and ColorSequence.new(color) or color
-	e.Texture = o.Texture or e.Texture
-	e.LightEmission = o.Glow or 0.6
-	e.Size = NumberSequence.new(o.Size or 1, o.SizeEnd or 0)
-	e.Transparency = NumberSequence.new(o.Alpha or 0, 1)
+	local glow = o.Glow or 0.6
+	e.Color = typeof(color) == "Color3" and (glow >= 0.5 and FxKit.Hot(color) or ColorSequence.new(color)) or color
+	e.Texture = o.Texture or FxKit.Texture(glow >= 0.5 and "Glow" or "Smoke")
+	e.LightEmission = glow
+	e.LightInfluence = glow >= 0.5 and 0 or 0.7
+	pcall(function()
+		(e :: any).Brightness = glow >= 0.5 and 2.5 or 1
+	end)
+	local s0, s1 = o.Size or 1, o.SizeEnd or 0
+	e.Size = FxKit.NS({ { 0, s0 * 0.6 }, { 0.15, s0 }, { 1, s1 } })
+	e.Transparency = FxKit.NS({ { 0, o.Alpha or 0 }, { 0.65, math.min(1, (o.Alpha or 0) + 0.25) }, { 1, 1 } })
 	e.Lifetime = NumberRange.new((o.Life or 2) * 0.5, o.Life or 2)
 	e.Speed = NumberRange.new((o.Speed or 15) * 0.4, o.Speed or 15)
 	e.SpreadAngle = o.Spread or Vector2.new(180, 180)
@@ -305,12 +315,15 @@ local function ring(pos: Vector3, radius: number, color: Color3, t: number?)
 	r.Transparency = 0.2
 	r.Size = Vector3.new(0.3, 2, 2)
 	r.CFrame = CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2)
+	r.Transparency = 0.7 -- v2.22: faint underlay, the pro ring does the work
 	r.Parent = fxFolder
+	FxKit.Shockwave(pos, radius, color, t)
 	tween(r, t or 0.6, { Size = Vector3.new(0.1, radius * 2, radius * 2), Transparency = 1 })
 	Debris:AddItem(r, (t or 0.6) + 0.2)
 end
 
 local function flash(pos: Vector3, color: Color3, range: number, t: number)
+	FxKit.Flare(pos, color, math.clamp(range / 14, 0.6, 3)) -- v2.22 star flare + core
 	local a = anchorPart(pos, t + 0.5)
 	local l = Instance.new("PointLight")
 	l.Color = color
@@ -783,6 +796,9 @@ function MonsterDeaths.Play(info, onDone: () -> ())
 				Sfx.At("BossCollapse", pos)
 				collapse(model, pos, color)
 				Sfx.Global("BossDefeat")
+				-- v2.22 cinematic layer: huge explosion + light pillar
+				FxKit.Explosion(pos + Vector3.new(0, 8, 0), color, 3)
+				FxKit.Pillar(pos, color, 90, 1.6)
 				local f = B[typeName]
 				if f then
 					f(model, pos)
@@ -794,7 +810,11 @@ function MonsterDeaths.Play(info, onDone: () -> ())
 				fireReward()
 				task.wait(2.5)
 			else
-				Sfx.At("Death" .. Sfx.ElementOf(typeName), pos, Sfx.PitchFor(typeName))
+				local element = Sfx.ElementOf(typeName)
+				Sfx.At("Death" .. element, pos, Sfx.PitchFor(typeName))
+				-- v2.22: every death pops a layered element explosion
+				local size = model:GetExtentsSize().Magnitude
+				FxKit.Explosion(pos + Vector3.new(0, math.min(size * 0.3, 8), 0), FxKit.ElementColor[element] or Color3.fromRGB(255, 220, 140), math.clamp(size / 12, 0.6, 2))
 				local f = D[typeName]
 				local tail
 				if f then

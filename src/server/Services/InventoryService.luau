@@ -335,6 +335,8 @@ local function flare(player: Player)
 	light.Parent = pillar
 	pillar.Parent = workspace
 	Debris:AddItem(pillar, ShopItems.Types.Flare.Duration)
+	FxKit.Explosion(root.Position, pillar.Color, 1.2) -- v2.22
+	FxKit.Pillar(root.Position, pillar.Color, 120, 1.5)
 	Remotes.Hint:FireAllClients(`{player.DisplayName} sent a flare!`, 3)
 	if InventoryService.Hooks.AreaHit then
 		InventoryService.Hooks.AreaHit(player, root.Position, 16, "Flare") -- the flash burns monsters nearby
@@ -359,7 +361,11 @@ local function aimRay(player: Player, root: BasePart, aim: unknown, range: numbe
 	return workspace:Raycast(root.Position, dir.Unit * range, params), dir.Unit
 end
 
+local FxKit = require(game:GetService("ReplicatedStorage").Shared.FxKit)
 local function beam(from: Vector3, to: Vector3, color: Color3, width: number, life: number)
+	-- v2.22: muzzle flash + impact burst around the laser line
+	FxKit.Impact(from, color, 0.5)
+	FxKit.Burst(to, color, 0.7)
 	local p = Instance.new("Part")
 	p.Anchored = true
 	p.CanCollide = false

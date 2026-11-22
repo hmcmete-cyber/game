@@ -263,6 +263,8 @@ local function fxPart(size: Vector3, cf: CFrame, color: Color3, shape: Enum.Part
 	return p
 end
 
+local FxKit = require(ReplicatedStorage.Shared.FxKit)
+
 local EFFECT_COLOR = {
 	Slow = Color3.fromRGB(150, 220, 255), Burn = Color3.fromRGB(255, 130, 50), Shock = Color3.fromRGB(230, 245, 255),
 	Knock = Color3.fromRGB(255, 240, 200), Expose = Color3.fromRGB(255, 90, 160),
@@ -367,6 +369,7 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 	local tPos = target.PrimaryPart.Position
 	local dmg = rar.Damage * PetDefs.LevelDamage[lp.Level or 1]
 	local kind = def.Attack.Kind
+	local lvl = (lp.Level or 1) - 1 -- bigger forms = bigger effects
 	-- tell the clients which attack animation to play (PetAnimator)
 	local special = kind == "Pulse" or kind == "Chain" or kind == "Lob"
 	lp.Model:SetAttribute("AnimKind", special and "Special" or "Attack")
@@ -381,15 +384,19 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 				task.wait(0.03)
 			end
 			strike(player, lp, target, dmg)
-			fxPart(Vector3.one * 2, CFrame.new(tPos), color, Enum.PartType.Ball, 0.2)
+			FxKit.Slash(CFrame.lookAt(tPos:Lerp(from.Position, 0.3), tPos), color, 0.8 + lvl * 0.25)
+			FxKit.Impact(tPos, color, 0.7 + lvl * 0.3)
 			task.wait(0.15)
 		elseif kind == "Bolt" or kind == "Mend" then
 			local shot = fxPart(Vector3.new(0.6, 0.6, 1.6), CFrame.lookAt(from.Position, tPos), color, nil, 0.6)
+			FxKit.Trail(shot, color, 0.8)
 			TweenService:Create(shot, TweenInfo.new(0.25), { CFrame = CFrame.lookAt(tPos, tPos + (tPos - from.Position)) }):Play()
 			task.wait(0.25)
 			strike(player, lp, target, dmg)
+			FxKit.Burst(tPos, color, 0.5 + lvl * 0.25)
 		elseif kind == "Lob" then
 			local ball = fxPart(Vector3.one * 1.2, from, color, Enum.PartType.Ball, 1)
+			FxKit.Trail(ball, color, 1.2)
 			local t0 = os.clock()
 			while os.clock() - t0 < 0.5 do
 				local k = (os.clock() - t0) / 0.5
@@ -397,14 +404,14 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 				task.wait()
 			end
 			ball:Destroy()
-			local ring = fxPart(Vector3.new(0.3, 2, 2), CFrame.new(tPos) * CFrame.Angles(0, 0, math.pi / 2), color, Enum.PartType.Cylinder, 0.5)
-			TweenService:Create(ring, TweenInfo.new(0.4), { Size = Vector3.new(0.2, 16, 16), Transparency = 1 }):Play()
+			FxKit.Explosion(tPos, color, 0.6 + lvl * 0.3)
 			for _, m in monstersNear(tPos, 8) do
 				strike(player, lp, m, dmg * 0.8)
 			end
 		elseif kind == "Pulse" then
-			local ring = fxPart(Vector3.new(0.3, 2, 2), CFrame.new(tPos) * CFrame.Angles(0, 0, math.pi / 2), color, Enum.PartType.Cylinder, 0.6)
-			TweenService:Create(ring, TweenInfo.new(0.5), { Size = Vector3.new(0.2, 22, 22), Transparency = 1 }):Play()
+			FxKit.Charge(from.Position, color, 0.6, 0.25)
+			FxKit.Shockwave(tPos, 11, color)
+			FxKit.Burst(tPos, color, 0.8 + lvl * 0.3)
 			for _, m in monstersNear(tPos, 11) do
 				strike(player, lp, m, dmg * 0.75)
 			end
@@ -418,7 +425,7 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 			local prev = from.Position
 			for _, m in hitList do
 				local p = m.PrimaryPart.Position
-				fxPart(Vector3.new(0.25, 0.25, (p - prev).Magnitude), CFrame.lookAt((prev + p) / 2, p), color, nil, 0.2)
+				FxKit.Lightning(prev, p, color, 0.25 + lvl * 0.08)
 				strike(player, lp, m, dmg * 0.7)
 				prev = p
 				task.wait(0.06)

@@ -2261,3 +2261,10 @@ All 49 cues have a distinct Creator Store first layer in `src/shared/Sfx.luau`. 
 - Hatch: the egg grows by rarity before it cracks (height 5.5 / 7.5 / 10 / 15 / 21 studs, Common → Legendary); eggs Rare+ rise above the nursery dome.
 - Cloud faces now sit on the frontmost surface of the whole cloud (were hidden inside bulging lobes).
 - Pet selling: vendor window has a "Sell Pets" button (Aurelius and Tayron). Price = SellBase[rarity] × LevelSell[level] + XP×0.05 (PetDefs.SellPrice). Storage limit 9 pets (PetDefs.StorageLimit); when full, the nursery won't hatch until a pet is sold.
+
+## [2026-11-22] Claude → Astra: v2.22 VFX overhaul (FxKit) — 11 textures to upload
+Director: VFX looked flat/cheap; wants pro Roblox-VFX-pack quality (glowing cores, star flares, stretched sparks, dark spiky bursts, fire tornadoes).
+- New shared `src/shared/FxKit.luau` (layered ParticleEmitters with real size/colour/transparency curves, Squash streaks, Beams, Trails, lights). Presets: Burst, Explosion, Impact, Shockwave, Charge, Tornado, Lightning, Pillar, Slash, Trail, Aura.
+- Wired into: monster abilities (bursts, rings, projectiles, telegraph charge-up, melee slash, player hit pop), every monster death + boss death (explosion + light pillar), boss arrival (pillar + vortex + explosion), egg hatch (crack flashes, burst / Epic+ vortex), pet attacks (slash, trails, lightning chains, explosions), player Gust Punch / Air Slam / Puff Shot, laser, flare, cloud catch/delivery bursts, client VFX.
+- **UPLOAD PLEASE:** `assets/vfx/*.png` (11 images: Glow, Flare, Streak, Spikes, Ring, Swirl, Crackle, Flame, Smoke, Shard, BeamSoft — white on transparent, tinted in game). Upload as Images/Decals and paste the IMAGE ids into `src/shared/FxIds.luau` (`Glow = "rbxassetid://..."`). Until then FxKit falls back to Roblox built-in particle textures (works, but the star flare / streak / spikes look much better with ours).
+- Regenerate with `python3 tools/make_vfx.py`.

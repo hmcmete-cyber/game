@@ -80,12 +80,18 @@ local function fx(size: Vector3, cf: CFrame, color: Color3, shape: Enum.PartType
 	return p
 end
 
+local FxKit = require(game:GetService("ReplicatedStorage").Shared.FxKit)
+
 local function emit(parent: Instance, color: Color3, count: number, speed: number, size: number, texture: string?)
 	local e = Instance.new("ParticleEmitter")
-	e.Color = ColorSequence.new(color)
-	e.Texture = texture or e.Texture
+	e.Color = FxKit.Hot(color)
+	e.Texture = texture or FxKit.Texture("Glow")
 	e.LightEmission = 1
-	e.Size = NumberSequence.new(size, 0)
+	e.LightInfluence = 0
+	pcall(function()
+		(e :: any).Brightness = 2.5
+	end)
+	e.Size = FxKit.NS({ { 0, size * 0.5 }, { 0.15, size }, { 1, 0 } })
 	e.Lifetime = NumberRange.new(0.6, 1.4)
 	e.Speed = NumberRange.new(speed * 0.4, speed)
 	e.SpreadAngle = Vector2.new(180, 180)
@@ -435,6 +441,8 @@ local function hatch(player: Player, forceTop: boolean?)
 				end
 				light.Brightness = step * 1.2
 				Sfx.At("HatchPulse", egg:GetPivot().Position, deep * (0.9 + step * 0.05))
+				-- v2.22: a crack flash on the shell each pulse
+				FxKit.Impact(egg:GetPivot().Position + Vector3.new(math.random(-10, 10) / 10, 2.8 * grow, math.random(-10, 10) / 10), step >= 3 and rcolor or Color3.fromRGB(255, 245, 220), 0.6 + grow * 0.4)
 				light.Range = 10 + step * 6 + grow * 4
 				emit(egg.PrimaryPart, step >= 3 and rcolor or Color3.fromRGB(255, 255, 255), 8 + step * 10, 6 + step * 3, 0.4 + step * 0.1, "rbxasset://textures/particles/sparkles_main.dds")
 				task.wait(0.35)
@@ -458,6 +466,13 @@ local function hatch(player: Player, forceTop: boolean?)
 				end
 			end
 			emit(egg.PrimaryPart, rcolor, 30 + rar * 25, 18 + rar * 4, 1)
+			-- v2.22 layered burst, bigger for rarer eggs
+			if rar >= 4 then
+				FxKit.Explosion(pos, rcolor, 0.8 + eggScale * 0.5)
+				FxKit.Tornado(spot.Position, rcolor, 1.2 + rar * 0.2, 1.8)
+			else
+				FxKit.Burst(pos, rcolor, 0.7 + eggScale * 0.4)
+			end
 			Sfx.At("HatchBurst", pos, 1 / math.sqrt(eggScale / startScale))
 			if show then
 				-- spinning light rays + flash + confetti

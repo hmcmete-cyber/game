@@ -46,6 +46,7 @@ function Abilities.Hurt(p: Player, dmg: number)
 		if root and os.clock() - (p:GetAttribute("HurtSfxAt") or 0) > 0.25 then
 			p:SetAttribute("HurtSfxAt", os.clock())
 			Sfx.At("PlayerHurt", root.Position)
+			require(game:GetService("ReplicatedStorage").Shared.FxKit).Impact(root.Position, Color3.fromRGB(255, 70, 60), 0.7) -- v2.22 hit pop
 		end
 	end
 end
@@ -112,6 +113,7 @@ Abilities.Near = near
 ------------------------------------------------------------------------
 -- visual helpers
 ------------------------------------------------------------------------
+local FxKit = require(game:GetService("ReplicatedStorage").Shared.FxKit)
 local function fx(size: Vector3, cf: CFrame, color: Color3, props: { [string]: any }?, life: number?): BasePart
 	local p = Instance.new("Part")
 	p.Anchored = true
@@ -146,36 +148,37 @@ local function circle(pos: Vector3, radius: number, color: Color3, time: number)
 		Shape = Enum.PartType.Cylinder, Transparency = 0.75,
 	}, time + 0.3)
 	TweenService:Create(disc, TweenInfo.new(time), { Transparency = 0.25 }):Play()
+	-- v2.22: energy gathers in the warning circle + a ring closing in
+	FxKit.Charge(g + Vector3.new(0, 1, 0), color, math.clamp(radius / 6, 0.5, 2.5), time)
 	task.wait(time)
 	return g
 end
 
 local function ring(pos: Vector3, radius: number, color: Color3)
+	FxKit.Shockwave(pos + Vector3.new(0, 0.3, 0), radius, color) -- v2.22 pro ring
 	local r = fx(Vector3.new(0.3, 2, 2), CFrame.new(pos + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.pi / 2), color, {
-		Shape = Enum.PartType.Cylinder, Transparency = 0.2,
+		Shape = Enum.PartType.Cylinder, Transparency = 0.7, -- faint underlay
 	}, 0.6)
 	TweenService:Create(r, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		Size = Vector3.new(0.1, radius * 2, radius * 2), Transparency = 1,
 	}):Play()
 end
 
+-- v2.22: layered pro burst (core, star flare, stretched sparks, glitter, ring);
+-- big counts become a full explosion with dark spikes, embers and smoke
 local function burst(pos: Vector3, color: Color3, count: number)
-	local a = fx(Vector3.one, CFrame.new(pos), color, { Transparency = 1 }, 2)
-	local e = Instance.new("ParticleEmitter")
-	e.Color = ColorSequence.new(color)
-	e.LightEmission = 1
-	e.Size = NumberSequence.new(1, 0)
-	e.Lifetime = NumberRange.new(0.4, 0.8)
-	e.Speed = NumberRange.new(14, 26)
-	e.SpreadAngle = Vector2.new(180, 180)
-	e.Rate = 0
-	e.Parent = a
-	e:Emit(count)
+	local sc = math.clamp(count / 14, 0.5, 3)
+	if count >= 24 then
+		FxKit.Explosion(pos, color, sc * 0.8)
+	else
+		FxKit.Burst(pos, color, sc)
+	end
 end
 
 -- straight projectile; onHit(player) once; stops at first player or range
 local function projectile(from: Vector3, dir: Vector3, speed: number, range: number, radius: number, color: Color3, size: Vector3, onHit)
 	local p = fx(size, CFrame.lookAt(from, from + dir), color, nil, range / speed + 0.5)
+	FxKit.Trail(p, color) -- v2.22 glowing trail + halo
 	local travelled = 0
 	local conn
 	conn = RunService.Heartbeat:Connect(function(dt)
@@ -1376,6 +1379,8 @@ function Abilities.Melee(ctx, melee)
 	task.wait(0.2)
 	if ctx.Alive() and (ctx.TargetRoot.Position - ctx.Root.Position).Magnitude <= melee.Range + 1 then
 		hurt(ctx.Target, melee.Damage)
+		FxKit.Slash(CFrame.lookAt(ctx.Root.Position:Lerp(ctx.TargetRoot.Position, 0.6), ctx.TargetRoot.Position), FxKit.ElementColor[Sfx.ElementOf(ctx.Model and ctx.Model.Name or "")] or Color3.fromRGB(255, 90, 80), 1)
+		FxKit.Impact(ctx.TargetRoot.Position, Color3.fromRGB(255, 120, 90), 0.7)
 		if melee.Trip then
 			slipNow(ctx.Target)
 		end

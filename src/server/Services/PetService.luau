@@ -379,7 +379,8 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 	local special = kind == "Pulse" or kind == "Chain" or kind == "Lob"
 	lp.Model:SetAttribute("AnimKind", special and "Special" or "Attack")
 	lp.Model:SetAttribute("AnimAt", now())
-	Sfx.At("Pet" .. kind, from.Position, 1 + (lp.Level or 1) * -0.08)
+	-- v2.28: own sound per egg element x attack kind (bigger forms a bit deeper)
+	Sfx.At(Sfx.Has(style) and style or ("Pet" .. kind), from.Position, 1 + (lp.Level or 1) * -0.08)
 	task.spawn(function()
 		if kind == "Bite" then
 			-- dash in, bite, hop back

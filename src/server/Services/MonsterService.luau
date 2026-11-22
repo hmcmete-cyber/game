@@ -695,14 +695,24 @@ local function think(info)
 		if os.clock() >= info.Cooldowns[i] and dist <= a.Range then
 			info.Cooldowns[i] = os.clock() + a.Cooldown * (info.Enraged and Defs.EnrageCooldown or 1)
 			info.RecoverNext = Defs.Recovery
-			Sfx.At(Sfx.ElementOf(a.Id), info.Root.Position, (def.Boss and 0.75 or 1) * Sfx.PitchFor(a.Id)) -- cast sound by element, pitched per ability
+			-- v2.28: every ability has its own sound (fallback: element cue, pitched)
+			if Sfx.Has(a.Id) then
+				Sfx.At(a.Id, info.Root.Position)
+			else
+				Sfx.At(Sfx.ElementOf(a.Id), info.Root.Position, (def.Boss and 0.75 or 1) * Sfx.PitchFor(a.Id))
+			end
 			runAction(info, Abilities.F[a.Id], makeCtx(info, target, tRoot), a)
 			return
 		end
 	end
 	if dist <= def.Melee.Range and os.clock() >= info.MeleeReady then
 		info.MeleeReady = os.clock() + def.Melee.Cooldown
-		Sfx.At("Melee", info.Root.Position, def.Boss and 0.7 or 1)
+		local mcue = info.Type .. "Melee" -- v2.28 each character's own melee sound
+		if Sfx.Has(mcue) then
+			Sfx.At(mcue, info.Root.Position)
+		else
+			Sfx.At("Melee", info.Root.Position, def.Boss and 0.7 or 1)
+		end
 		runAction(info, Abilities.Melee, makeCtx(info, target, tRoot), def.Melee)
 		return
 	end

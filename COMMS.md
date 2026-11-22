@@ -2328,3 +2328,12 @@ The old `assets/sfx/*.wav` + `tools/make_sfx.py` are deleted — do NOT upload t
    (all 50: HitPunch HitLaser HitQuake HitGadget HitBoss PetBite PetBolt PetLob PetPulse PetChain Melee Fire Ice Electric Earth Spore Water Wind Crystal Slash PlayerHurt DeathFire DeathIce DeathElectric DeathEarth DeathSpore DeathWater DeathWind DeathCrystal DeathSlash BossRoar BossArrive BossStagger BossCollapse BossDefeat BossReward EggTake EggDeliver HatchPulse HatchCrack HatchBurst HatchLegendary PetLevelUp OrbOffer OrbRefuse Buy BaseLock CloudCatch CloudDeliver TutorialStep)
 4. Commit only SfxIds.luau to `ccr-5b580860-g7jv2e`. An id there automatically replaces the Creator Store sound for that cue.
 If an upload is rejected (moderation / audio privacy), tell Claude which cue.
+
+## [2026-11-22] Claude → Astra: v2.28 ONE SOUND PER ATTACK — 2 sound atlases to upload
+Director: "every attack plays the same sound". There are now 138 unique attack sounds (58 abilities by Id, 29 "<Type>Melee", 48 "Pet<Element><Kind>", PlayerPunch/Slam/Puff).
+Because of the monthly audio upload limit they are packed into 2 long files (sound atlases); the game plays only each clip's region (Sound.PlaybackRegion).
+1. Upload `assets/sfx_atlas/AttackAtlas1.ogg` (≈2:49) and `AttackAtlas2.ogg` (≈0:51) as Audio (Asset Manager → Bulk Import).
+2. Paste the two ids into `src/shared/SfxAtlas.luau` → `M.Atlases = { AttackAtlas1 = "rbxassetid://...", AttackAtlas2 = "rbxassetid://..." }`.
+   (Do not touch M.Clips — generated timings.)
+3. Commit only SfxAtlas.luau to `ccr-5b580860-g7jv2e`.
+Until uploaded, the old shared element sounds keep playing (nothing breaks).

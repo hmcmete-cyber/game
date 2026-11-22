@@ -187,11 +187,49 @@ local function playLayers(parent: Instance, cue, pitchScale: number?, cueName: s
 	end
 end
 
+-- v2.28 one sound per attack, packed in sound atlases (Shared/SfxAtlas):
+-- play only that clip's part of the long atlas file
+local Atlas = { Atlases = {}, Clips = {} }
+pcall(function()
+	Atlas = require(script.Parent:WaitForChild("SfxAtlas", 5))
+end)
+local function atlasClip(name: string)
+	local clip = Atlas.Clips[name]
+	local id = clip and Atlas.Atlases[clip[1]]
+	if id and id ~= "" then
+		return clip, id
+	end
+	return nil, nil
+end
+-- true when this cue/attack has its own sound (atlas clip uploaded, or a cue)
+function Sfx.Has(name: string): boolean
+	return atlasClip(name) ~= nil or Sfx.Cues[name] ~= nil
+end
+local function playAtlas(parent: Instance, name: string, pitchScale: number?): boolean
+	local clip, id = atlasClip(name)
+	if not clip then
+		return false
+	end
+	local s = Instance.new("Sound")
+	s.SoundId = id
+	s.Volume = 0.85
+	s.PlaybackSpeed = (pitchScale or 1) * (1 + (math.random() * 2 - 1) * 0.03)
+	s.RollOffMode = Enum.RollOffMode.InverseTapered
+	s.RollOffMinDistance = 12
+	s.RollOffMaxDistance = 220
+	s.PlaybackRegionsEnabled = true
+	s.PlaybackRegion = NumberRange.new(clip[2], clip[2] + clip[3])
+	s.Parent = parent
+	s:Play()
+	Debris:AddItem(s, clip[3] / s.PlaybackSpeed + 0.6)
+	return true
+end
+
 local holder
 -- 3D sound at a world position (server: everyone nearby hears it)
 function Sfx.At(cueName: string, pos: Vector3, pitchScale: number?)
 	local cue = Sfx.Cues[cueName]
-	if not cue then
+	if not cue and not atlasClip(cueName) then
 		return
 	end
 	if not holder or not holder.Parent then
@@ -204,7 +242,9 @@ function Sfx.At(cueName: string, pos: Vector3, pitchScale: number?)
 	a.Size = Vector3.one * 0.2
 	a.CFrame = CFrame.new(pos)
 	a.Parent = holder
-	playLayers(a, cue, pitchScale, cueName)
+	if not playAtlas(a, cueName, pitchScale) then
+		playLayers(a, cue, pitchScale, cueName)
+	end
 	Debris:AddItem(a, 6)
 end
 
@@ -218,6 +258,13 @@ function Sfx.Global(cueName: string, pitchScale: number?)
 			holder.Parent = workspace
 		end
 		playLayers(holder, cue, pitchScale, cueName) -- sounds not inside a part play 2D for everyone
+	elseif atlasClip(cueName) then
+		if not holder or not holder.Parent then
+			holder = Instance.new("Folder")
+			holder.Name = "SfxEmitters"
+			holder.Parent = workspace
+		end
+		playAtlas(holder, cueName, pitchScale)
 	end
 end
 

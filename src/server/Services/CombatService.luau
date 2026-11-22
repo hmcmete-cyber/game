@@ -68,6 +68,7 @@ end
 CombatService.Hit = hit
 
 local FxKit = require(game:GetService("ReplicatedStorage").Shared.FxKit)
+local Sfx = require(game:GetService("ReplicatedStorage").Shared.Sfx)
 local WIND = Color3.fromRGB(190, 230, 255)
 local HitFx = require(game:GetService("ReplicatedStorage").Shared.HitFx)
 
@@ -107,6 +108,7 @@ local function attack(player: Player, kind: unknown, aim: unknown)
 		-- v2.22: gust slash + wind pop in front of the fist
 		FxKit.Slash(CFrame.lookAt(root.Position + look * 3, root.Position + look * 8), WIND, 0.9)
 		HitFx.Play("PlayerPunch", root.Position + look * 5, 0.6, look)
+		Sfx.At("PlayerPunch", root.Position) -- v2.28 own swing sound (once uploaded)
 		for _, m in targets() do
 			local c = centre(m)
 			if c then
@@ -131,6 +133,7 @@ local function attack(player: Player, kind: unknown, aim: unknown)
 			end
 			local pos = root.Position
 			HitFx.Play("PlayerSlam", pos - Vector3.new(0, 2, 0), 1.1) -- v2.23
+			Sfx.At("PlayerSlam", pos)
 			FxKit.Shockwave(pos - Vector3.new(0, 2.5, 0), spec.Radius * 1.3, WIND)
 			for _, m in targets() do
 				local c = centre(m)
@@ -150,6 +153,7 @@ local function attack(player: Player, kind: unknown, aim: unknown)
 		end
 		dir = dir.Unit
 		local ball = puffFx(from)
+		Sfx.At("PlayerPuff", from)
 		FxKit.Trail(ball, WIND, 2)
 		Debris:AddItem(ball, spec.Range / spec.Speed + 0.3)
 		local travelled = 0

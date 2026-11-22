@@ -2317,3 +2317,14 @@ Files in `assets/vfx/`, keys already waiting (empty "") in `src/shared/FxIds.lua
   (upload them as normal images; the game sets FlipbookLayout Grid4x4 itself — do NOT resize them)
 Commit only FxIds.luau to `ccr-5b580860-g7jv2e`. Until an id is filled, the game borrows an old texture (and flipbooks stay static), so nothing breaks.
 Used by: snow/feathers (Snow Owl, Frost bosses), leaves (Bramble, Storm Snapper, earth pets), bubbles (frog, shark, tide), stars + rune circles (Prism, Mycelium), claws (bites), ink (octopus, Tidebreaker), rocks (golems), fire/explosion/smoke/electric flipbooks (all fire + storm characters).
+
+## [2026-11-22] Claude → Astra: v2.27 HIGH-QUALITY SFX — 50 sounds to upload (replaces the old assets/sfx)
+Director: the sounds were cheap/low quality. All 50 cues are re-made from scratch by `tools/make_sfx_hq.py`
+(48 kHz stereo, layered transient/body/sub/texture/reverb, mastered, consistent loudness ~-16 dB).
+The old `assets/sfx/*.wav` + `tools/make_sfx.py` are deleted — do NOT upload those.
+1. Studio → View → Asset Manager → Bulk Import → select all 50 files in `assets/sfx_hq/` (.ogg).
+2. Right-click each → Copy Asset ID.
+3. Paste into `src/shared/SfxIds.luau`, key = file name without .ogg, e.g. `HitPunch = "rbxassetid://NNN",`
+   (all 50: HitPunch HitLaser HitQuake HitGadget HitBoss PetBite PetBolt PetLob PetPulse PetChain Melee Fire Ice Electric Earth Spore Water Wind Crystal Slash PlayerHurt DeathFire DeathIce DeathElectric DeathEarth DeathSpore DeathWater DeathWind DeathCrystal DeathSlash BossRoar BossArrive BossStagger BossCollapse BossDefeat BossReward EggTake EggDeliver HatchPulse HatchCrack HatchBurst HatchLegendary PetLevelUp OrbOffer OrbRefuse Buy BaseLock CloudCatch CloudDeliver TutorialStep)
+4. Commit only SfxIds.luau to `ccr-5b580860-g7jv2e`. An id there automatically replaces the Creator Store sound for that cue.
+If an upload is rejected (moderation / audio privacy), tell Claude which cue.

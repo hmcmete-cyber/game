@@ -113,7 +113,8 @@ local OUTFIT = {
 		-- and used to swing the staff through his head
 		local rh = model:FindFirstChild("LeftHand") :: BasePart?
 		if rh then
-			block(model, rh, "Staff", Vector3.new(0.3, 5, 0.3), CFrame.new(0, 1, -0.2), Color3.fromRGB(120, 80, 50))
+			-- held IN FRONT of the fist (z -0.6) so the pole runs past the arm, not through it
+			block(model, rh, "Staff", Vector3.new(0.3, 5, 0.3), CFrame.new(0, 0.6, -0.6), Color3.fromRGB(120, 80, 50))
 			local gem = Instance.new("Part")
 			gem.Name = "StaffGem"
 			gem.Shape = Enum.PartType.Ball
@@ -121,7 +122,7 @@ local OUTFIT = {
 			gem.Color = Color3.fromRGB(150, 220, 255)
 			gem.Material = Enum.Material.Neon
 			gem.CastShadow = false
-			weldTo(gem, rh, CFrame.new(0, 3.7, -0.2), model)
+			weldTo(gem, rh, CFrame.new(0, 3.3, -0.6), model)
 		end
 	end,
 }

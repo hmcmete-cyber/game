@@ -4,8 +4,8 @@
 -- Upload assets/sfx_atlas/AttackAtlas*.ogg and paste their ids in Atlases.
 local M = {}
 M.Atlases = {
-	AttackAtlas1 = "",
-	AttackAtlas2 = "",
+	AttackAtlas1 = "rbxassetid://140105418640954",
+	AttackAtlas2 = "rbxassetid://122509800776030",
 }
 -- clip = { atlas, start (s), length (s) }
 M.Clips = {

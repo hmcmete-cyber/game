@@ -80,9 +80,9 @@ return {
 		Frames = {
 			{ 0, {  } },
 			{ 0.2, { LowerTorso = { 0, 0, 0, 0, -0.4, 0 }, LeftUpperArm = { 20, 0, -40, 0, 0, 0 }, RightUpperArm = { 20, 0, 40, 0, 0, 0 }, LeftUpperLeg = { 25, 0, 0, 0, 0, 0 }, LeftLowerLeg = { -40, 0, 0, 0, 0, 0 }, RightUpperLeg = { 25, 0, 0, 0, 0, 0 }, RightLowerLeg = { -40, 0, 0, 0, 0, 0 } } },
-			{ 0.45, { LowerTorso = { 0, 0, 0, 0, 0.5, 0 }, Head = { 15, 0, 0, 0, 0, 0 }, LeftUpperArm = { 0, 0, -165, 0, 0, 0 }, RightUpperArm = { 0, 0, 165, 0, 0, 0 } } },
+			{ 0.45, { LowerTorso = { 0, 0, 0, 0, 0.5, 0 }, Head = { 15, 0, 0, 0, 0, 0 }, LeftUpperArm = { -12, 0, -150, 0, 0, 0 }, RightUpperArm = { -12, 0, 150, 0, 0, 0 } } },
 			{ 0.7, { Head = { 10, 0, 0, 0, 0, 0 }, LeftUpperArm = { 0, 0, -150, 0, 0, 0 }, LeftLowerArm = { 0, 0, -20, 0, 0, 0 }, RightUpperArm = { 0, 0, 150, 0, 0, 0 }, RightLowerArm = { 0, 0, 20, 0, 0, 0 } } },
-			{ 0.95, { Head = { 15, 0, 0, 0, 0, 0 }, LeftUpperArm = { 0, 0, -165, 0, 0, 0 }, RightUpperArm = { 0, 0, 165, 0, 0, 0 } } },
+			{ 0.95, { Head = { 15, 0, 0, 0, 0, 0 }, LeftUpperArm = { -12, 0, -150, 0, 0, 0 }, RightUpperArm = { -12, 0, 150, 0, 0, 0 } } },
 			{ 1.3, {  } },
 		},
 	},
@@ -142,7 +142,7 @@ return {
 		Priority = "Action2",
 		Frames = {
 			{ 0, { LeftUpperArm = { 0, 0, -120, 0, 0, 0 }, RightUpperArm = { 0, 0, 120, 0, 0, 0 } } },
-			{ 0.15, { UpperTorso = { -8, 0, 0, 0, 0, 0 }, LeftUpperArm = { 0, 0, -170, 0, 0, 0 }, RightUpperArm = { 0, 0, 170, 0, 0, 0 }, LeftUpperLeg = { -8, 0, 0, 0, 0, 0 }, RightUpperLeg = { -8, 0, 0, 0, 0, 0 } } },
+			{ 0.15, { UpperTorso = { -8, 0, 0, 0, 0, 0 }, LeftUpperArm = { -12, 0, -150, 0, 0, 0 }, RightUpperArm = { -12, 0, 150, 0, 0, 0 }, LeftUpperLeg = { -8, 0, 0, 0, 0, 0 }, RightUpperLeg = { -8, 0, 0, 0, 0, 0 } } },
 			{ 0.45, { UpperTorso = { -20, 0, 0, 0, 0, 0 }, Head = { -15, 0, 0, 0, 0, 0 }, LeftUpperArm = { 20, 0, -60, 0, 0, 0 }, RightUpperArm = { 150, 0, 15, 0, 0, 0 }, LeftUpperLeg = { -20, 0, 0, 0, 0, 0 }, RightUpperLeg = { 10, 0, 0, 0, 0, 0 }, RightLowerLeg = { -30, 0, 0, 0, 0, 0 } } },
 			{ 0.7, { UpperTorso = { -15, 0, 0, 0, 0, 0 }, Head = { -10, 0, 0, 0, 0, 0 }, LeftUpperArm = { 20, 0, -60, 0, 0, 0 }, RightUpperArm = { 140, 0, 15, 0, 0, 0 }, LeftUpperLeg = { -15, 0, 0, 0, 0, 0 }, RightUpperLeg = { 5, 0, 0, 0, 0, 0 }, RightLowerLeg = { -25, 0, 0, 0, 0, 0 } } },
 		},
@@ -160,9 +160,9 @@ return {
 		Loop = true,
 		Priority = "Action",
 		Frames = {
-			{ 0, { UpperTorso = { 3, 0, 0, 0, 0, 0 }, Head = { 10, 0, 0, 0, 0, 0 }, LeftUpperArm = { 0, 0, -172, 0, 0, 0 }, RightUpperArm = { 0, 0, 172, 0, 0, 0 }, LeftUpperLeg = { 0, 0, 3, 0, 0, 0 }, RightUpperLeg = { 0, 0, -3, 0, 0, 0 } } },
-			{ 0.4, { UpperTorso = { 5, 4, 0, 0, 0, 0 }, Head = { 14, 6, 0, 0, 0, 0 }, LeftUpperArm = { -5, 0, -168, 0, 0, 0 }, RightUpperArm = { 5, 0, 168, 0, 0, 0 }, LeftUpperLeg = { 4, 0, 3, 0, 0, 0 }, RightUpperLeg = { -4, 0, -3, 0, 0, 0 } } },
-			{ 0.8, { UpperTorso = { 3, 0, 0, 0, 0, 0 }, Head = { 10, 0, 0, 0, 0, 0 }, LeftUpperArm = { 0, 0, -172, 0, 0, 0 }, RightUpperArm = { 0, 0, 172, 0, 0, 0 }, LeftUpperLeg = { 0, 0, 3, 0, 0, 0 }, RightUpperLeg = { 0, 0, -3, 0, 0, 0 } } },
+			{ 0, { UpperTorso = { 3, 0, 0, 0, 0, 0 }, Head = { 10, 0, 0, 0, 0, 0 }, LeftUpperArm = { -12, 0, -150, 0, 0, 0 }, RightUpperArm = { -12, 0, 150, 0, 0, 0 }, LeftUpperLeg = { 0, 0, 3, 0, 0, 0 }, RightUpperLeg = { 0, 0, -3, 0, 0, 0 } } },
+			{ 0.4, { UpperTorso = { 5, 4, 0, 0, 0, 0 }, Head = { 14, 6, 0, 0, 0, 0 }, LeftUpperArm = { -17, 0, -150, 0, 0, 0 }, RightUpperArm = { -7, 0, 150, 0, 0, 0 }, LeftUpperLeg = { 4, 0, 3, 0, 0, 0 }, RightUpperLeg = { -4, 0, -3, 0, 0, 0 } } },
+			{ 0.8, { UpperTorso = { 3, 0, 0, 0, 0, 0 }, Head = { 10, 0, 0, 0, 0, 0 }, LeftUpperArm = { -12, 0, -150, 0, 0, 0 }, RightUpperArm = { -12, 0, 150, 0, 0, 0 }, LeftUpperLeg = { 0, 0, 3, 0, 0, 0 }, RightUpperLeg = { 0, 0, -3, 0, 0, 0 } } },
 		},
 	},
 	UpdraftDropLand = { -- Heavy hero landing at the hub after riding DOWN: knee + fist, then stand

@@ -620,6 +620,33 @@ local function clearCarry(player: Player, sendBack: boolean?)
 	return c
 end
 
+-- v2.34 CLOUDEX: every cloud type that ever entered your base (delivered or in
+-- your vault) stays discovered. Client reads player attribute "Cloudex" =
+-- JSON { [Type] = count, [Type_Shiny] = count }.
+local function syncCloudex(player: Player)
+	local data = DataService.Get(player)
+	if not data then
+		return
+	end
+	data.Collection = data.Collection or {}
+	local seen = table.clone(data.Collection)
+	for _, entry in (type(data.Vault) == "table" and data.Vault or {}) do
+		if type(entry) == "table" and entry.Type then
+			local key = entry.Shiny and (entry.Type .. "_Shiny") or entry.Type
+			seen[key] = math.max(seen[key] or 0, 1)
+			seen[entry.Type] = math.max(seen[entry.Type] or 0, 1)
+		end
+	end
+	for key, n in seen do
+		local base = string.gsub(key, "_Shiny$", "")
+		if base ~= key then
+			seen[base] = math.max(seen[base] or 0, n) -- a shiny counts as found too
+		end
+	end
+	player:SetAttribute("Cloudex", game:GetService("HttpService"):JSONEncode(seen))
+end
+WeatherService.SyncCloudex = syncCloudex
+
 local function deliver(player: Player, c, nest: BasePart)
 	local def = Weather.Types[c.Type]
 	require(ReplicatedStorage.Shared.Sfx).At("CloudDeliver", nest.Position)
@@ -665,6 +692,7 @@ local function deliver(player: Player, c, nest: BasePart)
 		end
 	end
 	Remotes.Delivered:FireClient(player, reward, c.Type, c.Shiny, nest.Position)
+	syncCloudex(player)
 end
 
 local function catch(player: Player, sphere: BasePart)
@@ -1321,6 +1349,7 @@ end
 function WeatherService.OnPlayerAdded(player: Player)
 	player:SetAttribute("BaseSpeed", Config.WalkSpeed)
 	refreshVaults(player)
+	syncCloudex(player)
 
 	local function onCharacter(char: Model)
 		local hum = char:WaitForChild("Humanoid") :: Humanoid

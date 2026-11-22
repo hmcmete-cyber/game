@@ -132,7 +132,8 @@ function HutBuilder.IncubatorHut(parent: Instance, i: number, base: CFrame, acce
 	-- raised round-ish floor + an octagonal low wall with an OPEN front
 	-- (v2.13 director: nothing may block the entrance)
 	for x = 0, 1 do
-		part(m, "Inner" .. x, V(13, 2.3, 13), base * CF(0, 1.75, 0) * A(0, x * math.pi / 4, 0), RGB(250, 240, 225))
+		-- v2.34: the two rotated squares overlapped at the SAME height and z-fought
+		part(m, "Inner" .. x, V(13, 2.3, 13), base * CF(0, 1.75 - x * 0.04, 0) * A(0, x * math.pi / 4, 0), RGB(250, 240, 225))
 	end
 	for k = 0, 7 do
 		local a = k / 8 * math.pi * 2

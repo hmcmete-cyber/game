@@ -151,8 +151,8 @@ local function playLayers(parent: Instance, cue, pitchScale: number?, cueName: s
 		s.Volume = 0.8
 		s.PlaybackSpeed = (pitchScale or 1) * (1 + (math.random() * 2 - 1) * 0.04)
 		s.RollOffMode = Enum.RollOffMode.InverseTapered
-		s.RollOffMinDistance = 12
-		s.RollOffMaxDistance = 220
+		s.RollOffMinDistance = 7
+		s.RollOffMaxDistance = 95
 		s.Parent = parent
 		s:Play()
 		Debris:AddItem(s, 8)
@@ -170,8 +170,8 @@ local function playLayers(parent: Instance, cue, pitchScale: number?, cueName: s
 		s.Volume = layer.Volume
 		s.PlaybackSpeed = layer.Pitch * (pitchScale or 1) * (1 + (math.random() * 2 - 1) * layer.Jitter)
 		s.RollOffMode = Enum.RollOffMode.InverseTapered
-		s.RollOffMinDistance = 12
-		s.RollOffMaxDistance = 220
+		s.RollOffMinDistance = 7
+		s.RollOffMaxDistance = 95
 		for _, name in USE_FX and layer.Fx or {} do
 			local make = FX[name]
 			if make then
@@ -215,8 +215,8 @@ local function playAtlas(parent: Instance, name: string, pitchScale: number?): b
 	s.Volume = 0.85
 	s.PlaybackSpeed = (pitchScale or 1) * (1 + (math.random() * 2 - 1) * 0.03)
 	s.RollOffMode = Enum.RollOffMode.InverseTapered
-	s.RollOffMinDistance = 12
-	s.RollOffMaxDistance = 220
+	s.RollOffMinDistance = 7
+	s.RollOffMaxDistance = 95
 	s.PlaybackRegionsEnabled = true
 	s.PlaybackRegion = NumberRange.new(clip[2], clip[2] + clip[3])
 	s.Parent = parent

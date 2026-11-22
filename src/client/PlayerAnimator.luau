@@ -95,6 +95,17 @@ function PlayerAnimator.Start()
 		end
 		local carrying = player:GetAttribute("Carrying")
 		local air = root:FindFirstChild("AirLift")
+		-- v2.34: while ragdolled (laser, knocks) it's PURE physics: no pose on top
+		-- (PlatformStand is also set by the ragdoll, which used to start "Slip")
+		local ragdolled = (player:GetAttribute("RagdollUntil") or 0) > workspace:GetServerTimeNow()
+		if ragdolled then
+			for name, t in tracks do
+				if t and t.IsPlaying then
+					t:Stop(0.05)
+				end
+			end
+			return
+		end
 		setLoop("LeashHold", carrying ~= nil and carrying ~= "")
 		-- float pose only while riding UP (riding down plays UpdraftDive from Movement)
 		setLoop("UpdraftFloat", air ~= nil and air.Enabled and (air :: LinearVelocity).VectorVelocity.Y > 0)
@@ -119,7 +130,14 @@ function PlayerAnimator.Start()
 		PlayerAnimator.Play("Cheer")
 	end)
 	remotes:WaitForChild("Knock").OnClientEvent:Connect(function()
-		PlayerAnimator.Play("Knocked")
+		-- v2.34: when the hit ragdolls you (laser, big knocks) it's a pure ragdoll,
+		-- no flinch animation on top
+		task.delay(0.05, function()
+			if (player:GetAttribute("RagdollUntil") or 0) > workspace:GetServerTimeNow() then
+				return
+			end
+			PlayerAnimator.Play("Knocked")
+		end)
 	end)
 end
 

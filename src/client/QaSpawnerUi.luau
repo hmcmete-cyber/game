@@ -82,6 +82,12 @@ local TABS = {
 		entry("Unlock all Orb items", Color3.fromRGB(180, 255, 180), function()
 			remote:FireServer("UnlockAll")
 		end)
+		entry("+5 of every forge material", Color3.fromRGB(255, 170, 90), function()
+			remote:FireServer("Materials")
+		end)
+		entry("+1 of every biome totem", Color3.fromRGB(120, 200, 255), function()
+			remote:FireServer("Totems")
+		end)
 	end,
 }
 

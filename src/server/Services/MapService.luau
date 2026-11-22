@@ -477,6 +477,28 @@ local function buildPlaceholder(): Instance
 		HutBuilder.PetHut(expansion, i, CFrame.lookAt(hutTop, Vector3.new(center.X, hutTop.Y, center.Z)), accent)
 	end
 
+	-- v2.35 Poseidon's forge on its own pad on the hub's south edge
+	do
+		local fDir = Vector3.new(0, 0, -1)
+		local fPos = fDir * 82 + Vector3.new(0, Y - 0.5, 0)
+		newPart(expansion, "ForgePad", Vector3.new(22, 1, 22), CFrame.lookAt(fPos, fPos + fDir), Color3.fromRGB(150, 140, 135), {
+			Material = Enum.Material.Slate,
+		})
+		local linkPos = fDir * 61 + Vector3.new(0, Y - 0.5, 0)
+		newPart(route, "ForgeLink", Vector3.new(10, 1, 20), CFrame.lookAt(linkPos, linkPos + fDir), hubColor, { Material = Enum.Material.Marble })
+		local floor = fPos + Vector3.new(0, 0.5, 0)
+		shopStall(decor, "Forge", floor, Vector3.new(0, Y, 0), "Poseidon", "FORGE", Color3.fromRGB(80, 200, 230))
+		-- anvil + glowing forge fire beside the stall
+		local cf = CFrame.lookAt(floor, Vector3.new(0, floor.Y, 0))
+		newPart(decor, "AnvilBase", Vector3.new(2, 1.6, 1.4), cf * CFrame.new(6.5, 0.8, -4), Color3.fromRGB(60, 60, 70), {})
+		newPart(decor, "AnvilTop", Vector3.new(3.4, 0.8, 1.6), cf * CFrame.new(6.5, 2, -4), Color3.fromRGB(80, 80, 92), {})
+		local fire = newPart(decor, "ForgeFire", Vector3.new(3, 1, 3), cf * CFrame.new(-7, 0.6, -3), Color3.fromRGB(255, 120, 40), { Material = Enum.Material.Neon })
+		local f = Instance.new("Fire")
+		f.Size = 6
+		f.Heat = 8
+		f.Parent = fire
+	end
+
 	-- v2.35 THE shared Egg Nursery (one per server) on its own pad at the hub's
 	-- edge: everybody uses it, but each player only SEES their own egg, timer
 	-- and hatch (drawn by the client, Client/NurseryClient)

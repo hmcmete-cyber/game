@@ -22,6 +22,7 @@ local NpcAnimator = require(script.Parent:WaitForChild("NpcAnimator"))
 local MonsterAnimator = require(script.Parent:WaitForChild("MonsterAnimator"))
 local CloudexUi = require(script.Parent:WaitForChild("CloudexUi"))
 local NurseryClient = require(script.Parent:WaitForChild("NurseryClient"))
+local ForgeUi = require(script.Parent:WaitForChild("ForgeUi"))
 local SoundManager = require(script.Parent:WaitForChild("SoundManager"))
 local PlayerAnimator = require(script.Parent:WaitForChild("PlayerAnimator"))
 local QaPanel = require(script.Parent:WaitForChild("QaPanel"))
@@ -46,6 +47,7 @@ NpcAnimator.Start()
 MonsterAnimator.Start() -- v2.32 monster animations in published games
 task.spawn(CloudexUi.Start) -- v2.34 collection tracker (right side)
 task.spawn(NurseryClient.Start) -- v2.35 shared nursery: your own egg/timer/hatch
+task.spawn(ForgeUi.Start) -- v2.35 Poseidon forge window
 SoundManager.Start()
 PlayerAnimator.Start()
 WorldFx.Start()

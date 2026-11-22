@@ -176,6 +176,10 @@ local function onDeath(info)
 	if info.LastHitBy and info.LastHitBy.Parent then
 		info.LastHitBy:SetAttribute("LastKillAt", now()) -- pets: "after a kill" buffs
 	end
+	-- v2.35 Poseidon materials: normal monsters drop one for their killer
+	if MonsterService.OnKill and not info.Def.Boss then
+		task.spawn(MonsterService.OnKill, info.LastHitBy, info)
+	end
 	-- XP: killer 100 %, helpers with >= 10 % of the damage get AssistShare
 	local total = 0
 	for _, d in info.Damage do

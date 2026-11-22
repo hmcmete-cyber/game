@@ -35,6 +35,15 @@ local LOOKS = {
 		Hat = Color3.fromRGB(255, 210, 90),
 		TitleColor = Color3.fromRGB(255, 215, 120),
 	},
+	-- v2.35 Poseidon the Blacksmith: forges biome totems from monster materials
+	Poseidon = {
+		Title = "Blacksmith",
+		Shop = "Forge",
+		Torso = Color3.fromRGB(40, 120, 170),
+		Legs = Color3.fromRGB(35, 60, 90),
+		Hat = Color3.fromRGB(80, 200, 220),
+		TitleColor = Color3.fromRGB(120, 220, 255),
+	},
 }
 
 local function weldTo(part: BasePart, to: BasePart, offset: CFrame, model: Model)
@@ -95,6 +104,28 @@ local OUTFIT = {
 		if rh then
 			block(model, rh, "Wrench", Vector3.new(0.25, 1.4, 0.25), CFrame.new(0, -0.5, -0.3) * CFrame.Angles(math.rad(70), 0, 0), Color3.fromRGB(170, 175, 185))
 			block(model, rh, "WrenchHead", Vector3.new(0.6, 0.3, 0.3), CFrame.new(0, -0.8, -0.95), Color3.fromRGB(170, 175, 185))
+		end
+	end,
+	-- Poseidon: sea-god blacksmith - seaweed-green beard, leather apron, a
+	-- trident in one hand and a forge hammer on his belt
+	Poseidon = function(model: Model, head: BasePart, torso: BasePart)
+		local sea, gold, leather = Color3.fromRGB(60, 190, 200), Color3.fromRGB(255, 205, 80), Color3.fromRGB(120, 80, 50)
+		block(model, head, "Beard", Vector3.new(1.1, 1, 0.35), CFrame.new(0, -0.6, -0.55), Color3.fromRGB(70, 170, 150))
+		block(model, head, "Hair", Vector3.new(1.35, 0.45, 1.35), CFrame.new(0, 0.75, 0.05), Color3.fromRGB(70, 170, 150))
+		block(model, head, "CrownBand", Vector3.new(1.4, 0.25, 1.4), CFrame.new(0, 0.62, 0), gold, Enum.Material.SmoothPlastic)
+		for i, x in { -0.45, 0, 0.45 } do
+			block(model, head, "Spike" .. i, Vector3.new(0.2, i == 2 and 0.6 or 0.4, 0.2), CFrame.new(x, i == 2 and 1.05 or 0.95, -0.6), gold)
+		end
+		block(model, torso, "Apron", Vector3.new(1.8, 2, 0.15), CFrame.new(0, -0.5, -0.56), leather)
+		block(model, torso, "Belt", Vector3.new(2.05, 0.3, 1.1), CFrame.new(0, -0.8, 0), Color3.fromRGB(60, 45, 35))
+		block(model, torso, "Hammer", Vector3.new(0.5, 0.5, 0.9), CFrame.new(0.95, -0.9, 0), Color3.fromRGB(120, 120, 130))
+		local lh = model:FindFirstChild("LeftHand") :: BasePart?
+		if lh then
+			block(model, lh, "TridentPole", Vector3.new(0.25, 6, 0.25), CFrame.new(0, 1.2, -0.6), gold)
+			for i, x in { -0.45, 0, 0.45 } do
+				block(model, lh, "Prong" .. i, Vector3.new(0.18, 0.9, 0.18), CFrame.new(x, 4.6, -0.6), sea, Enum.Material.Neon)
+			end
+			block(model, lh, "Cross", Vector3.new(1.1, 0.2, 0.2), CFrame.new(0, 4.15, -0.6), gold)
 		end
 	end,
 	-- Aurelius: royal upgrade master — square crown with prongs, cape, gold belt
@@ -166,7 +197,7 @@ local function decorate(model: Model, look)
 		role.BackgroundTransparency = 1
 		role.Font = Enum.Font.GothamBold
 		role.TextScaled = true
-		role.Text = look.Shop == "Items" and "SHOP" or "UPGRADES"
+		role.Text = look.Shop == "Items" and "SHOP" or (look.Shop == "Forge" and "FORGE" or "UPGRADES")
 		role.TextColor3 = look.TitleColor
 		role.Parent = plate
 		gui.Parent = head
@@ -211,7 +242,7 @@ function NpcService.Spawn(spot: BasePart, who: string, openShop: RemoteEvent)
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "ShopPrompt"
-	prompt.ActionText = look.Shop == "Items" and "Shop" or "Upgrades"
+	prompt.ActionText = look.Shop == "Items" and "Shop" or (look.Shop == "Forge" and "Forge" or "Upgrades")
 	prompt.ObjectText = `{(Config.VendorDisplay and Config.VendorDisplay[who]) or who} - {look.Title}`
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
 	prompt.HoldDuration = 0

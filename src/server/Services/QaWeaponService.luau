@@ -226,6 +226,16 @@ local function onSpawn(player: Player, category: unknown, id: unknown)
 	elseif category == "Coins" then
 		d.Coins = (d.Coins or 0) + 10000
 		DataService.Sync(player)
+	elseif category == "Materials" then
+		local Forge = require(script.Parent:WaitForChild("ForgeService"))
+		for mid in require(RS.Shared.ForgeDefs).Materials do
+			Forge.Give(player, mid, 5)
+		end
+	elseif category == "Totems" then
+		local Forge = require(script.Parent:WaitForChild("ForgeService"))
+		for _, biome in require(RS.Shared.ForgeDefs).Biomes do
+			Forge.GiveTotem(player, biome, 1)
+		end
 	elseif category == "UnlockAll" then
 		local Catalog = require(RS.Shared.VendorCatalog)
 		d.Unlocks = d.Unlocks or {}

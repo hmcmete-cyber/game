@@ -101,6 +101,7 @@ safe("PetService.Start", PetService.Start, DataService, MonsterService)
 InventoryService.Hooks.MonsterBlast = PetService.Blast -- v2.13 Tayron gadgets
 safe("require(Services.VendorOrbService).Start", require(Services.VendorOrbService).Start, DataService, WeatherService, remoteTable) -- v2.13 vendor orbs
 safe("require(Services.TutorialService).Start", require(Services.TutorialService).Start, DataService) -- v2.18 first-visit tutorial
+safe("ForgeService.Start", require(Services.ForgeService).Start, DataService, MonsterService, remoteTable) -- v2.35 Poseidon + totems + realms
 safe("require(Services.EggService).Start", require(Services.EggService).Start, DataService, PetService, remoteTable, require(Services.MonsterDeaths))
 safe("StyleSample.Start", StyleSample.Start, require(Services.MonsterRigs)) -- Studio only: v2.1 style review island
 

@@ -254,6 +254,7 @@ function QaWeaponService.Start(monsterService)
 	openRemote.Parent = remotes
 	spawnRemote.OnServerEvent:Connect(onSpawn)
 	local function give(player: Player)
+		print(`[QA] {player.Name} ({player.UserId}) joined - QA tools: {allowed(player) and "YES" or "no"}`)
 		if not allowed(player) then
 			return
 		end

@@ -136,4 +136,4 @@ for _, player in Players:GetPlayers() do
 	task.spawn(onPlayerAdded, player)
 end
 
-print(`[{Config.GameName}] Server ready`)
+print(`[{Config.GameName}] Server ready - build {Config.Version} - QaEverywhere={tostring(Config.QaEverywhere)}`)

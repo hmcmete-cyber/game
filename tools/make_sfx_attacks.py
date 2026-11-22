@@ -233,6 +233,10 @@ def _(): return H.mix(H.filt(H.pink(1.6), "bp", [150, 2000]) * H.env_adsr(1.6, 0
 @snd("InkSweep", "hall", 0.22)
 def _(): return H.mix(gust(0.5, 200, 1500, 0.8), H.at(H.mix(H.filt(H.brown(0.7), "lp", 700) * H.env_exp(0.7, 0.01, 0.2), H.splash(0.5, 0.5) * 0.5), 0.2))
 
+ABILITY_NAMES = set(A.keys())  # v2.30: everything defined above = special abilities
+BOSS_ABILITIES = {"PillarRise", "RidgeShockwave", "AvalancheSweep", "IceRing", "SporeDoubles", "RootSnare", "ThunderWave",
+                  "TongueSweep", "ShardBarrage", "CrystalWalls", "LavaLanes", "CraterStomp", "TideWall", "InkSweep"}
+
 # =====================================================================
 # MELEE per character (28): body size + element texture + its own gesture
 # =====================================================================
@@ -319,6 +323,132 @@ for _name, (_fn, _r) in H.C.items():
 UI = {"Buy", "TutorialStep", "CloudDeliver", "CloudCatch", "PetLevelUp", "BossReward", "OrbOffer", "OrbRefuse", "EggTake", "EggDeliver"}
 
 
+
+# ---------------------------------------------------------------------
+# v2.30 CINEMATIC PASS (director: "make the sounds cooler")
+#   riser   : reversed swell + L->R sweep leading into the hit (anticipation)
+#   sub     : chest-hitting sub drop on the impact
+#   stinger : element-tuned low boom tone (each element its own pitch)
+#   braam   : trailer brass for bosses
+#   punch   : parallel compression + warm low saturation, wider highs
+# ---------------------------------------------------------------------
+ELEMENT_KEYS = [
+    ("Crystal", ["Shard", "Crystal", "Prism", "Refract", "Geo", "Pincer"]),
+    ("Ice", ["Frost", "Ice", "Snow", "Glacier", "Avalanche", "Permafrost", "Shell"]),
+    ("Electric", ["Volt", "Thunder", "Static", "Storm", "Chain", "Croak", "Snap", "Gulp", "Bogstorm"]),
+    ("Fire", ["Flame", "Ember", "Magma", "Lava", "Fire", "Cinder", "Scorch", "Smold", "Fuse", "Caldera", "Crater", "Ash"]),
+    ("Spore", ["Spore", "Sprout", "Root", "Mycel", "Cap", "Lullaby", "Glowmoth", "Shroom"]),
+    ("Water", ["Ink", "Tide", "Tentacle", "Tongue", "Octo", "Skyfin", "Fin", "Tail"]),
+    ("Wind", ["Gust", "Vortex", "Wind", "Wool", "Puff", "Wing", "Gale", "Snowpeck"]),
+    ("Earth", ["Quake", "Slam", "Boulder", "Rubble", "Pillar", "Ridge", "Stomp", "Mesa", "Bristle", "Gnash", "Moss", "Orbit", "Thorn", "Bramble", "Pound", "Vine", "Frenzy", "Void"]),
+]
+TONE = {"Crystal": 82.4, "Ice": 73.4, "Electric": 61.7, "Fire": 55.0, "Spore": 65.4, "Water": 58.3, "Wind": 87.3, "Earth": 49.0, "Slash": 69.3}
+
+
+def element_of(name):
+    for el, keys in ELEMENT_KEYS:
+        for k in keys:
+            if k in name:
+                return el
+    return "Slash"
+
+
+def onset(st):
+    m = np.abs(st).max(axis=0)
+    e = np.convolve(m, np.ones(240) / 240, mode="same")
+    i = int(np.argmax(e > 0.5 * e.max()))
+    return i / H.SR
+
+
+def riser(d=0.22):
+    sw = H.sweep_filter(H.white(d), "bp", 300, 2400, q_bw=0.7) * np.linspace(0, 1, H.n(d)) ** 2.2
+    rev = H.filt(H.pink(d), "lp", 1500) * np.linspace(0, 1, H.n(d)) ** 3 * 0.8
+    mono = sw + rev
+    pan = np.linspace(-0.8, 0.8, H.n(d))  # sweep left -> right
+    return np.stack([mono * (1 - pan) / 2 * 1.4, mono * (1 + pan) / 2 * 1.4])
+
+
+def sub_drop(f0=72, d=0.45, amp=1.0):
+    y = H.sweep_osc(f0, f0 * 0.45, d) * H.env_exp(d, 0.002, d * 0.35)
+    return H.drive(y * 1.8, 2.2) * amp
+
+
+def stinger(f, d=0.7, amp=0.6):
+    x = H.tt(d)
+    y = np.sin(2 * np.pi * f * x) + 0.5 * np.sin(2 * np.pi * f * 2 * x) + 0.25 * np.sin(2 * np.pi * f * 3.01 * x)
+    y = H.filt(y, "lp", 900) * H.env_exp(d, 0.004, d * 0.4)
+    return H.drive(y, 1.6) * amp
+
+
+def braam(f=55.0, d=1.6, amp=0.7):
+    y = np.zeros(H.n(d))
+    for ratio in (1, 1.5, 2):
+        for det in (-0.006, 0, 0.007):
+            y += H.sweep_osc(f * ratio * (1 + det), f * ratio * (1 + det), d, "saw") / 9
+    y = H.sweep_filter(y, "lp", 180, 1600, order=2) * H.env_adsr(d, 0.04, 0.3, 0.75, d * 0.45)
+    return H.drive(y * 2.5, 2.0) * amp
+
+
+def put(base, layer, t):
+    """mix a stereo/mono layer into stereo base at time t"""
+    if layer.ndim == 1:
+        layer = np.stack([layer, layer])
+    i = H.n(max(0, t))
+    L = max(base.shape[1], i + layer.shape[1])
+    out = np.zeros((2, L))
+    out[:, : base.shape[1]] += base
+    out[:, i:i + layer.shape[1]] += layer
+    return out
+
+
+def punch(st, amount=0.6):
+    out = []
+    for ch in st:
+        low = H.filt(ch, "lp", 250, 2)
+        warm = H.drive(low * 2.2, 2.0) * 0.35          # warm low saturation
+        comp = np.tanh(ch * 4.0) / 4.0 * 3.0           # parallel compression
+        out.append(ch + warm + comp * amount)
+    st = np.stack(out)
+    mid, side = (st[0] + st[1]) / 2, (st[0] - st[1]) / 2
+    side = side + H.filt(mid, "hp", 3000) * 0.12        # wider highs
+    return np.stack([mid + side, mid - side])
+
+
+def cinematic(name, st):
+    if name in UI:
+        return st
+    pet = name.startswith("Pet") and name not in ("PetLevelUp",)
+    el = element_of(name)
+    t0 = onset(st)
+    if name in ABILITY_NAMES:
+        boss = name in BOSS_ABILITIES
+        st = put(st, np.zeros((2, 1)), 0)
+        lead = 0.22
+        st = put(np.zeros((2, H.n(lead))), st, lead)   # make room for the riser
+        st = put(st, riser(lead + 0.02), 0)
+        st = put(st, sub_drop(80 if not boss else 60, 0.5 if not boss else 0.8, 0.9), lead + t0)
+        st = put(st, stinger(TONE[el], 0.8, 0.5), lead + t0)
+        if boss:
+            st = put(st, braam(TONE[el], 1.8, 0.65), lead + t0)
+        return punch(st, 0.7)
+    if name.endswith("Melee"):
+        big = any(b in name for b in ("Mesa", "Frostpeak", "Mycelium", "Bogstorm", "PrismSov", "Caldera", "Tidebreaker"))
+        st = put(st, sub_drop(90 if not big else 60, 0.35 if not big else 0.6, 0.7), t0)
+        if big:
+            st = put(st, stinger(TONE[el], 0.6, 0.45), t0)
+        return punch(st, 0.6)
+    if pet:
+        return punch(put(st, sub_drop(110, 0.2, 0.35), t0), 0.35)
+    if name.startswith("Player"):
+        return punch(put(st, sub_drop(95, 0.25, 0.5), t0), 0.5)
+    # base cues: deaths, bosses, hits, eggs ...
+    if name.startswith("Boss") and name != "BossReward":
+        st = put(st, braam(TONE.get(element_of(name), 55.0), 2.0, 0.6), t0)
+    if name.startswith("Death") or name.startswith("Hit") or name in ("HatchBurst", "HatchLegendary"):
+        st = put(st, sub_drop(70, 0.6, 0.8), t0)
+        st = put(st, stinger(TONE.get(name.replace("Death", ""), 55.0), 0.8, 0.4), t0)
+    return punch(st, 0.55)
+
 def darken(name, st):
     """v2.29 director: no bright/tinny sounds - roll off the top, add weight"""
     cut = 8000 if name in UI else 5500
@@ -331,7 +461,7 @@ def darken(name, st):
 
 
 GAP = 0.35
-MAX_LEN = 175.0  # seconds per atlas (well under Roblox's audio length limit)
+MAX_LEN = 179.0  # seconds per atlas (well under Roblox's audio length limit)
 
 
 def encode(path_ogg, st):
@@ -351,7 +481,7 @@ if __name__ == "__main__":
     atlases, clips = [], {}
     cur, cur_len, idx = [], 0.0, 1
     for name, fn in A.items():
-        st = H.master(darken(name, fn()), target_rms=0.15)
+        st = H.master(darken(name, cinematic(name, fn())), target_rms=0.15)
         L = st.shape[1] / H.SR
         if cur_len + L + GAP > MAX_LEN and cur:
             atlases.append(cur)
@@ -379,11 +509,6 @@ if __name__ == "__main__":
     for name, (atl, start, length) in clips.items():
         lines.append('\t%s = { "%s", %s, %s },' % (name, atl, start, length))
     lines += ["}", "return M", ""]
-    # keep ids already pasted
-    if os.path.exists(LUA):
-        old = open(LUA).read()
-        import re
-        for m in re.finditer(r'(AttackAtlas\d+) = "(rbxassetid://\d+)"', old):
-            lines = [l.replace('\t%s = "",' % m.group(1), '\t%s = "%s",' % (m.group(1), m.group(2))) for l in lines]
+    # (ids are NOT kept: every run changes the clip timings -> re-upload the atlases)
     open(LUA, "w").write("\n".join(lines))
     print("clips:", len(clips), "atlases:", len(atlases), [round(sum(p.shape[1] for p in a) / H.SR, 1) for a in atlases])

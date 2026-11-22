@@ -23,7 +23,7 @@ local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PetDefs = require(ReplicatedStorage.Shared.PetDefs)
-local PetModels = require(script.Parent:WaitForChild("PetModels"))
+local PetModels = require(game:GetService("ReplicatedStorage").Shared.PetModels) -- v2.35 shared (client nursery)
 local Sfx = require(game:GetService("ReplicatedStorage").Shared.Sfx)
 
 local EggService = {}
@@ -60,9 +60,10 @@ local function baseIndex(player: Player): number?
 	return nil
 end
 
-local function nurseryOf(i: number?): Model?
-	local exp = i and workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Expansion")
-	return exp and exp:FindFirstChild("IncubatorHut" .. i) or nil
+-- v2.35: ONE shared nursery for the whole server (Map/Expansion/SharedNursery)
+local function nurseryOf(_i: number?): Model?
+	local exp = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Expansion")
+	return exp and exp:FindFirstChild("SharedNursery") or nil
 end
 
 local function fx(size: Vector3, cf: CFrame, color: Color3, shape: Enum.PartType?): BasePart
@@ -213,7 +214,7 @@ local function carryEgg(player: Player, eggKey: string)
 		dropCarried(player, root.Position)
 	end))
 	carried[player] = { Key = eggKey, Model = egg, Conns = conns }
-	hint(player, `Carry the {PetDefs.Eggs[eggKey].Name} to the Egg Nursery at your base!`, 5)
+	hint(player, `Carry the {PetDefs.Eggs[eggKey].Name} to the Egg Nursery on the hub!`, 5)
 	return true
 end
 
@@ -324,7 +325,7 @@ end
 ------------------------------------------------------------------------
 -- 2) incubator
 ------------------------------------------------------------------------
-local shownEgg = {} -- [IncubatorHut] = egg Model
+local hatchRemote: RemoteEvent? = nil -- v2.35 "play your hatch show" (client)
 
 local function remaining(d): number?
 	local inc = d and d.Incubator
@@ -334,60 +335,21 @@ local function remaining(d): number?
 	return math.max(0, inc.ReadyAt - os.time())
 end
 
+-- v2.35 shared nursery: the egg, the timer board and the prompt text are
+-- drawn per player by the CLIENT (Client/NurseryClient) from attributes, so
+-- everyone in the one nursery sees only their own egg.
+--   IncubEgg = egg key | nil   IncubReadyAt = server time it is ready
+--   EggsWaiting = eggs in storage
 local function refreshNursery(player: Player)
-	local hut = nurseryOf(baseIndex(player))
-	if not hut then
+	local d = data(player)
+	if not d then
 		return
 	end
-	local d = data(player)
-	local inc = d and d.Incubator
-	local spot = hut:FindFirstChild("EggSpot")
-	local current = shownEgg[hut]
-	if inc and spot then
-		if not current or current:GetAttribute("Egg") ~= inc.Egg then
-			if current then
-				current:Destroy()
-			end
-			local egg = PetModels.Egg(inc.Egg, 0.8)
-			egg:PivotTo(spot.CFrame)
-			egg.Parent = hut
-			shownEgg[hut] = egg
-		end
-	elseif current then
-		current:Destroy()
-		shownEgg[hut] = nil
-	end
-end
-
-local function updateBoards()
-	for _, player in Players:GetPlayers() do
-		local hut = nurseryOf(baseIndex(player))
-		local d = data(player)
-		if hut and d then
-			local board = hut:FindFirstChild("TimerBoard")
-			local label = board and board:FindFirstChild("Timer") and board.Timer:FindFirstChild("Text")
-			local prompt = hut:FindFirstChild("IncubatorPrompt") and hut.IncubatorPrompt:FindFirstChild("IncubatorPrompt")
-			local left = remaining(d)
-			local text, action
-			if left == nil then
-				text = #d.Eggs > 0 and `{#d.Eggs} egg(s) waiting` or "Empty"
-				action = "Incubate"
-			elseif left > 0 then
-				text = string.format("%d:%02d", math.floor(left / 60), left % 60)
-				action = "Check"
-			else
-				text = "READY!"
-				action = "Hatch!"
-			end
-			if label then
-				label.Text = text
-				label.TextColor3 = left == 0 and Color3.fromRGB(120, 255, 140) or Color3.fromRGB(255, 240, 200)
-			end
-			if prompt then
-				prompt.ActionText = action
-			end
-		end
-	end
+	local inc = d.Incubator
+	local left = remaining(d)
+	player:SetAttribute("IncubEgg", inc and inc.Egg or nil)
+	player:SetAttribute("IncubReadyAt", left and (workspace:GetServerTimeNow() + left) or nil)
+	player:SetAttribute("EggsWaiting", #d.Eggs)
 end
 
 local hatching = {}
@@ -422,170 +384,14 @@ local function hatch(player: Player, forceTop: boolean?)
 	end
 	local def = PetDefs.Types[petId]
 	d.Incubator = nil -- consume first (no double hatch)
-	local hut = nurseryOf(baseIndex(player))
-	local spot = hut and hut:FindFirstChild("EggSpot")
-	local egg = hut and shownEgg[hut]
-	if egg then
-		shownEgg[hut] = nil
-	end
 	local rar = RARITY_INDEX[def.Rarity] or 1
-	local rcolor = PetDefs.RARITY[def.Rarity].Color
+	refreshNursery(player)
+	-- v2.35: the hatch show plays on THIS player's screen only (shared nursery)
+	if hatchRemote then
+		hatchRemote:FireClient(player, eggKey, petId)
+	end
 	task.spawn(function()
-		if egg and spot then
-			local base = egg:GetPivot()
-			local light = Instance.new("PointLight")
-			light.Color = rcolor
-			light.Range = 12
-			light.Brightness = 0
-			light.Parent = egg.PrimaryPart
-			-- escalating charge: one wobble+pulse per rarity step
-			-- v2.17 EPIC / LEGENDARY CINEMATIC: a light pillar from the sky, three
-			-- orbiting rings of glowing motes, the egg levitates higher with every
-			-- pulse, shockwaves; at the burst: spinning light rays, a giant flash,
-			-- confetti, and the pet descends from above in a halo
-			local show = rar >= 4
-			local showParts = {}
-			if show then
-				local top = base.Position
-				local pillar = fx(Vector3.new(220, 1, 1), CFrame.new(top + Vector3.new(0, 110, 0)) * CFrame.Angles(0, 0, math.pi / 2), rcolor, Enum.PartType.Cylinder)
-				pillar.Transparency = 0.35
-				TweenService:Create(pillar, TweenInfo.new(1.2), { Size = Vector3.new(220, 9, 9) }):Play()
-				table.insert(showParts, pillar)
-				for ringN = 1, 3 do
-					for k = 1, 8 do
-						local mote = fx(Vector3.one * 0.7, CFrame.new(top), ringN == 2 and Color3.fromRGB(255, 240, 180) or rcolor, Enum.PartType.Ball)
-						table.insert(showParts, mote)
-						task.spawn(function()
-							local t0 = os.clock()
-							while mote.Parent do
-								local t = os.clock() - t0
-								local a = k / 8 * math.pi * 2 + t * (1.5 + ringN * 0.8) * (ringN % 2 == 0 and -1 or 1)
-								local es = math.max(1, egg:GetScale() / 0.8) -- rings widen as the egg grows
-								local r = (4 + ringN * 1.6) * es
-								mote.CFrame = CFrame.new(egg:GetPivot().Position + Vector3.new(math.cos(a) * r, (ringN * 1.5 + math.sin(t * 2 + k) * 0.4) * es, math.sin(a) * r))
-								task.wait()
-							end
-						end)
-					end
-				end
-				Sfx.Global("BossArrive")
-			end
-			-- v2.21 director: the rarer the pet, the BIGGER the egg grows before it
-			-- cracks (Legendary ~20 studs = 3-4 players tall). Big eggs rise up
-			-- out of the glass dome so they never clip the hut.
-			local TARGET_H = { 5.5, 7.5, 10, 15, 21 } -- egg height (studs) per rarity
-			local EGG_H = 5.6 -- egg model height at scale 1
-			local startScale = egg:GetScale()
-			local endScale = math.max(startScale, (TARGET_H[rar] or 6) / EGG_H)
-			local lift = rar >= 3 and 11 or 0 -- clear the dome top
-			local base0 = base
-			local steps = 1 + rar
-			for step = 1, steps do
-				local f = step / steps
-				local grow = startScale + (endScale - startScale) * f
-				egg:ScaleTo(grow)
-				base = base0 + Vector3.new(0, lift * math.min(1, f * 1.5), 0)
-				if show then
-					base += Vector3.new(0, 0.7 * step, 0) -- levitate
-					local ring = fx(Vector3.new(0.3, 2, 2), CFrame.new(spot.Position + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.pi / 2), rcolor, Enum.PartType.Cylinder)
-					TweenService:Create(ring, TweenInfo.new(0.6), { Size = Vector3.new(0.2, 26 + step * 4, 26 + step * 4), Transparency = 1 }):Play()
-					game:GetService("Debris"):AddItem(ring, 0.7)
-				end
-				local deep = 1 / math.sqrt(grow / startScale) -- bigger egg = deeper crack
-				for k = 1, 8 do
-					egg:PivotTo(base * CFrame.Angles(0, 0, math.sin(k * 1.6) * 0.18 * (step / 2)))
-					if k == 3 or k == 6 then
-						Sfx.At("HatchCrack", egg:GetPivot().Position, deep * (0.9 + math.random() * 0.25))
-					end
-					task.wait(0.04)
-				end
-				light.Brightness = step * 1.2
-				Sfx.At("HatchPulse", egg:GetPivot().Position, deep * (0.9 + step * 0.05))
-				-- v2.22: a crack flash on the shell each pulse
-				FxKit.Impact(egg:GetPivot().Position + Vector3.new(math.random(-10, 10) / 10, 2.8 * grow, math.random(-10, 10) / 10), step >= 3 and rcolor or Color3.fromRGB(255, 245, 220), 0.6 + grow * 0.4)
-				light.Range = 10 + step * 6 + grow * 4
-				emit(egg.PrimaryPart, step >= 3 and rcolor or Color3.fromRGB(255, 255, 255), 8 + step * 10, 6 + step * 3, 0.4 + step * 0.1, "rbxasset://textures/particles/sparkles_main.dds")
-				task.wait(0.35)
-			end
-			-- burst: shell layers fly apart
-			local eggScale = egg:GetScale()
-			local pos = egg:GetPivot().Position + Vector3.new(0, 2.8 * eggScale, 0) -- egg centre
-			for _, w in egg:GetDescendants() do
-				if w:IsA("WeldConstraint") or w:IsA("Weld") then
-					w:Destroy()
-				end
-			end
-			for _, p in egg:GetDescendants() do
-				if p:IsA("BasePart") and p.Name ~= "Root" then
-					p.Anchored = true
-					local out = (p.Position - pos)
-					out = out.Magnitude > 0.1 and out.Unit or Vector3.yAxis
-					TweenService:Create(p, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-						CFrame = p.CFrame + out * (4 + eggScale * 3) + Vector3.new(0, 2, 0), Transparency = 1,
-					}):Play()
-				end
-			end
-			emit(egg.PrimaryPart, rcolor, 30 + rar * 25, 18 + rar * 4, 1)
-			-- v2.22 layered burst, bigger for rarer eggs
-			if rar >= 4 then
-				FxKit.Explosion(pos, rcolor, 0.8 + eggScale * 0.5)
-				FxKit.Tornado(spot.Position, rcolor, 1.2 + rar * 0.2, 1.8)
-			else
-				FxKit.Burst(pos, rcolor, 0.7 + eggScale * 0.4)
-			end
-			Sfx.At("HatchBurst", pos, 1 / math.sqrt(eggScale / startScale))
-			if show then
-				-- spinning light rays + flash + confetti
-				local flash = Instance.new("PointLight")
-				flash.Color = rcolor
-				flash.Range = 60
-				flash.Brightness = 10
-				flash.Parent = spot
-				TweenService:Create(flash, TweenInfo.new(2), { Brightness = 0 }):Play()
-				game:GetService("Debris"):AddItem(flash, 2.2)
-				for k = 1, 12 do
-					local a = k / 12 * math.pi * 2
-					local ray = fx(Vector3.new(0.6, 0.6, 30), CFrame.new(pos) * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, -15), k % 2 == 0 and rcolor or Color3.fromRGB(255, 245, 200))
-					ray.Transparency = 0.2
-					TweenService:Create(ray, TweenInfo.new(1.6), { CFrame = CFrame.new(pos) * CFrame.Angles(0, a + 1.2, 0) * CFrame.new(0, 0, -15), Transparency = 1 }):Play()
-					game:GetService("Debris"):AddItem(ray, 1.7)
-				end
-				emit(spot, Color3.fromRGB(255, 230, 120), 200, 35, 0.9)
-				emit(spot, rcolor, 200, 30, 0.8)
-				for _, part in showParts do
-					TweenService:Create(part, TweenInfo.new(1), { Transparency = 1 }):Play()
-					game:GetService("Debris"):AddItem(part, 1.1)
-				end
-			end
-			if rar >= 5 then
-				Sfx.Global("HatchLegendary")
-			end
-			Debris:AddItem(egg, 1)
-			-- the pet pops out, spins and lands
-			local pet = PetModels.Build(petId)
-			pet:SetAttribute("NoAnim", true) -- scaled during the reveal: PetAnimator leaves it alone
-			pet:PivotTo(spot.CFrame + Vector3.new(0, 1, 0))
-			pet:ScaleTo(0.3)
-			pet.Parent = hut
-			local frames = show and 40 or 12
-			local halo = show and fx(Vector3.new(0.3, 5, 5), spot.CFrame, Color3.fromRGB(255, 235, 150), Enum.PartType.Cylinder) or nil
-			for k = 1, frames do
-				local f = k / frames
-				pet:ScaleTo(0.3 + 0.7 * f)
-				local h = show and (14 * (1 - f) + 1) or (1 + math.sin(f * math.pi) * 3)
-				pet:PivotTo(spot.CFrame * CFrame.new(0, h, 0) * CFrame.Angles(0, f * math.pi * (show and 6 or 4), 0))
-				if halo then
-					halo.CFrame = CFrame.new(spot.Position + Vector3.new(0, h + 4, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-				end
-				task.wait(0.04)
-			end
-			if halo then
-				TweenService:Create(halo, TweenInfo.new(1), { Transparency = 1 }):Play()
-				game:GetService("Debris"):AddItem(halo, 1.1)
-			end
-			task.wait(1.6)
-			pet:Destroy()
-		end
+		task.wait(2.2 + (1 + rar) * 0.7 + (rar >= 4 and 2.4 or 1.2))
 		PetService.Grant(player, petId)
 		DataService.SaveSoon(player)
 		local msg = `You hatched a {def.Rarity} {def.Name}! {PetDefs.BuffText(def)}`
@@ -616,12 +422,7 @@ local function startIncubating(player: Player): boolean
 	return true
 end
 
-local function onNurseryPrompt(player: Player, hut: Model)
-	local i = hut:GetAttribute("BaseIndex")
-	if baseIndex(player) ~= i then
-		hint(player, "This is someone else's nursery.", 3)
-		return
-	end
+local function onNurseryPrompt(player: Player, _hut: Model)
 	local d = data(player)
 	local left = remaining(d)
 	if left == nil then
@@ -682,6 +483,13 @@ function EggService.Start(dataService, petService, remotes, monsterDeaths)
 	dropsFolder.Name = "EggDrops"
 	dropsFolder.Parent = workspace
 	monsterDeaths.OnBossDefeated = EggService.BossDefeated
+	do -- v2.35: per-player hatch show (shared nursery)
+		local folder = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
+		local r = Instance.new("RemoteEvent")
+		r.Name = "NurseryHatch"
+		r.Parent = folder
+		hatchRemote = r
+	end
 
 	-- hook prompts once the map exists
 	task.spawn(function()
@@ -713,7 +521,7 @@ function EggService.Start(dataService, petService, remotes, monsterDeaths)
 	local function setup(player: Player)
 		task.spawn(function()
 			for _ = 1, 40 do
-				if DataService.Get(player) and baseIndex(player) then
+				if DataService.Get(player) then
 					break
 				end
 				task.wait(0.5)
@@ -766,17 +574,6 @@ function EggService.Start(dataService, petService, remotes, monsterDeaths)
 		local r = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		dropCarried(p, r and r.Position or nil)
 		hatching[p] = nil
-		local hut = nurseryOf(baseIndex(p))
-		if hut and shownEgg[hut] then
-			shownEgg[hut]:Destroy()
-			shownEgg[hut] = nil
-		end
-	end)
-	task.spawn(function()
-		while true do
-			task.wait(1)
-			updateBoards()
-		end
 	end)
 	-- carried eggs are delivered when you reach your own nursery
 	task.spawn(function()

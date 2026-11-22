@@ -267,7 +267,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.20" -- v2.35 climbable mushroom vines
+local MAP_VERSION = "2.21" -- v2.35 one shared nursery on the hub; pet huts behind bases
 local BASE_RING = 240 -- v2.13: distance of the 12 bases from the hub centre
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
@@ -464,17 +464,35 @@ local function buildPlaceholder(): Instance
 		-- across the base would overlap the neighbouring base's pet hut (bases
 		-- are only ~72 studs apart), so "opposite" is across the base, outward.
 		local accent = Color3.fromHSV((i - 1) / 12, 0.45, 1)
-		local padTop = padPos + Vector3.new(0, 0.5, 0)
-		HutBuilder.PetHut(expansion, i, CFrame.lookAt(padTop, Vector3.new(center.X, padTop.Y, center.Z)), accent)
-		local nurseryPos = center + dir * 48 + Vector3.new(0, -0.5, 0)
-		local nursery = newPart(expansion, "NurseryPad" .. i, Vector3.new(20, 1, 20), CFrame.lookAt(nurseryPos, nurseryPos + dir), Color3.fromRGB(220, 225, 235), {
+		-- v2.35 (director): ONE shared nursery per server (on the hub). The pet
+		-- hut moves to where each base's own nursery used to be (behind the base).
+		local hutPos = center + dir * 48 + Vector3.new(0, -0.5, 0)
+		local hutPad = newPart(expansion, "PetHutPad" .. i, Vector3.new(20, 1, 20), CFrame.lookAt(hutPos, hutPos + dir), Color3.fromRGB(220, 225, 235), {
 			Material = Enum.Material.Concrete,
 		})
-		nursery:SetAttribute("NurserySlot", i)
+		hutPad:SetAttribute("PetHutSlot", i)
 		local link2 = center + dir * 28.5 + Vector3.new(0, -0.5, 0)
-		newPart(expansion, "NurseryLink" .. i, Vector3.new(6, 1, 20), CFrame.lookAt(link2, link2 + dir), hubColor, { Material = Enum.Material.Marble })
-		local nurseryTop = nurseryPos + Vector3.new(0, 0.5, 0)
-		HutBuilder.IncubatorHut(expansion, i, CFrame.lookAt(nurseryTop, Vector3.new(center.X, nurseryTop.Y, center.Z)), accent)
+		newPart(expansion, "PetHutLink" .. i, Vector3.new(6, 1, 20), CFrame.lookAt(link2, link2 + dir), hubColor, { Material = Enum.Material.Marble })
+		local hutTop = hutPos + Vector3.new(0, 0.5, 0)
+		HutBuilder.PetHut(expansion, i, CFrame.lookAt(hutTop, Vector3.new(center.X, hutTop.Y, center.Z)), accent)
+	end
+
+	-- v2.35 THE shared Egg Nursery (one per server) on its own pad at the hub's
+	-- edge: everybody uses it, but each player only SEES their own egg, timer
+	-- and hatch (drawn by the client, Client/NurseryClient)
+	do
+		local nDir = Vector3.new(0, 0, 1)
+		local nPos = nDir * 84 + Vector3.new(0, Y - 0.5, 0)
+		newPart(expansion, "NurseryPad", Vector3.new(24, 1, 24), CFrame.lookAt(nPos, nPos + nDir), Color3.fromRGB(235, 228, 245), {
+			Material = Enum.Material.Marble,
+		})
+		local linkPos = nDir * 62 + Vector3.new(0, Y - 0.5, 0)
+		newPart(route, "NurseryLink", Vector3.new(10, 1, 22), CFrame.lookAt(linkPos, linkPos + nDir), hubColor, { Material = Enum.Material.Marble })
+		local top = nPos + Vector3.new(0, 0.5, 0)
+		local hut = HutBuilder.IncubatorHut(expansion, 0, CFrame.lookAt(top, Vector3.new(0, top.Y, 0)), Color3.fromRGB(255, 190, 230))
+		hut.Name = "SharedNursery"
+		hut:SetAttribute("Shared", true)
+		hut.ModelStreamingMode = Enum.ModelStreamingMode.Persistent -- every client always has it
 	end
 
 	------------------------------------------------------------------

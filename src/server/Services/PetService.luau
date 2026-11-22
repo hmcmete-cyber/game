@@ -17,7 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PetDefs = require(ReplicatedStorage.Shared.PetDefs)
 local BiomeMap = require(ReplicatedStorage.Shared.BiomeMap)
-local PetModels = require(script.Parent:WaitForChild("PetModels"))
+local PetModels = require(game:GetService("ReplicatedStorage").Shared.PetModels) -- v2.35 shared (client nursery)
 local Sfx = require(game:GetService("ReplicatedStorage").Shared.Sfx)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 

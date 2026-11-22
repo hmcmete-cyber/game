@@ -798,7 +798,7 @@ function MonsterDeaths.Play(info, onDone: () -> ())
 				collapse(model, pos, color)
 				Sfx.Global("BossDefeat")
 				-- v2.23 cinematic layer: the boss's own signature explosion + light pillar
-				HitFx.Play(typeName, pos + Vector3.new(0, 8, 0), 3.2)
+				HitFx.Play(typeName, pos + Vector3.new(0, 8, 0), 1.6)
 				FxKit.Pillar(pos, color, 90, 1.6)
 				local f = B[typeName]
 				if f then

@@ -52,7 +52,7 @@ local function styledHit(st: string?, pos: Vector3, color: Color3, count: number
 	local sc = math.clamp(count / 18, 0.5, 2.2)
 	local r = st and HitFx.Styles[st]
 	if r and r.Boss then
-		sc *= 1.35
+		sc *= 0.8 -- boss recipes are already huge
 	end
 	HitFx.Play(st or HitFx.StyleForColor(color), pos, sc, dir)
 end

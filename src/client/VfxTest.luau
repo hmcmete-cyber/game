@@ -54,10 +54,36 @@ function VfxTest.Start()
 		label.Text = `VFX TEST  [L] next  [K] play:  {list[idx]}  ({idx}/{#list})`
 	end
 	show()
+	gui.Enabled = false
 	gui.Parent = player:WaitForChild("PlayerGui")
+	-- only near a test dummy (80 studs): the label shows and the keys work
+	local function nearDummy(): Vector3?
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root then
+			return nil
+		end
+		local best, pos = 80, nil
+		for _, dm in CollectionService:GetTagged("TestDummy") do
+			local r = dm:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if r and (r.Position - root.Position).Magnitude < best then
+				best = (r.Position - root.Position).Magnitude
+				pos = r.Position
+			end
+		end
+		return pos
+	end
+	task.spawn(function()
+		while gui.Parent do
+			gui.Enabled = nearDummy() ~= nil
+			task.wait(0.3)
+		end
+	end)
 	local busy = 0
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then
+			return
+		end
+		if not gui.Enabled then
 			return
 		end
 		if input.KeyCode == Enum.KeyCode.L then
@@ -74,21 +100,15 @@ function VfxTest.Start()
 			return
 		end
 		busy = os.clock() + 0.4
-		-- nearest test dummy within 80 studs, else 14 studs in front of you
-		local pos = root.Position + root.CFrame.LookVector * 14
-		local best = 80
-		for _, d in CollectionService:GetTagged("TestDummy") do
-			local r = d:FindFirstChild("HumanoidRootPart") :: BasePart?
-			if r and (r.Position - root.Position).Magnitude < best then
-				best = (r.Position - root.Position).Magnitude
-				pos = r.Position
-			end
+		local pos = nearDummy()
+		if not pos then
+			return
 		end
 		local style = list[idx]
 		if style == "Red" then
 			FxKit.RedExplosion(pos, 1)
 		else
-			local bossScale = HitFx.Styles[style] and HitFx.Styles[style].Boss and 1.8 or 1
+			local bossScale = HitFx.Styles[style] and HitFx.Styles[style].Boss and 1.1 or 1
 			HitFx.Build(style, pos, bossScale)
 		end
 		task.delay(0.15, function()

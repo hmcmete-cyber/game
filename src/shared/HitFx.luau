@@ -1,174 +1,608 @@
--- v2.23 SIGNATURE HIT VFX (director: "every character gets its own hit
--- effect, at the same detail as the red showcase explosion").
+-- v2.24 SIGNATURE HIT VFX — every character has its OWN choreography
+-- (director: "all looked dim and alike — every one must be unique and grand").
+-- Shapes are solid neon geometry (daylight-readable, bloom glows them) built
+-- from Shared/FxPrims; particles add sparkle on top.
 --
--- One engine, many RECIPES. A recipe says which layers a hit has:
---   colours (Core / Main / Deep), implosion, star flares, dark splatter,
---   SPIKES of a kind:
---     Beam   tapered 3D light spikes (the showcase look)
---     Shard  solid crystal / ice prisms shooting out
---     Bolt   crackling lightning branches
---     Arc    curved wind / water slash arcs spinning outwards
---     Drop   water crown splash + droplets
---     Rock   chunky rocks flung with gravity
---     Spore  puffing spore cloud + drifting motes
---     Feather feathers / petals fluttering down
---   sparks, debris, ground (ring, scorch, dust), plume (smoke, embers),
---   EXTRAS: Pillars (ground spikes rising), Tornado, Geyser, Bubbles,
---           SkyBolts, Swirl, Ink.
---
--- HitFx.Play(style, pos, scale?, dir?, color?)
---   server: tells every client to build it (smooth + cheap for the server)
---   client: builds it now
--- Styles: monster type names (Prismaw...), "Pet<Element><Kind>", "Player*",
--- or element names (Fire, Ice...). Unknown styles fall back by element.
+-- HitFx.Play(style, pos, scale?, dir?)   server -> all clients build it
+-- HitFx.Build(style, pos, scale?, dir?)  client: build now
+-- Styles: monster type names, "PlayerPunch/Slam/Puff", "Pet<Element><Kind>",
+-- element fallbacks (Fire, Ice, ...), "Red" (the showcase).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local Debris = game:GetService("Debris")
 
 local FxKit = require(script.Parent:WaitForChild("FxKit"))
+local X = require(script.Parent:WaitForChild("FxPrims"))
 local L = FxKit.Lib
-local tex, ns, emitter, emitNow, anchor, light = L.Tex, L.NS, L.Emitter, L.EmitNow, L.Anchor, L.Light
 
 local HitFx = {}
-
 local RGB = Color3.fromRGB
-local WHITE = Color3.new(1, 1, 1)
+local W = X.WHITE
+local NEON, GLASS, ICE, FF = Enum.Material.Neon, Enum.Material.Glass, Enum.Material.Ice, Enum.Material.ForceField
+local SLATE, SAND, WOOD, BASALT, PLASTIC = Enum.Material.Slate, Enum.Material.Sandstone, Enum.Material.Wood, Enum.Material.Basalt, Enum.Material.SmoothPlastic
 
-------------------------------------------------------------------------
--- recipes
-------------------------------------------------------------------------
-local function merge(base, over)
-	local t = table.clone(base)
-	for k, v in over or {} do
-		t[k] = v
+local function after(t: number, f)
+	task.delay(t, f)
+end
+-- CFrame whose UpVector points along dir (rings facing a direction)
+local function facing(c: Vector3, dir: Vector3): CFrame
+	return CFrame.lookAt(c, c + dir) * CFrame.Angles(-math.pi / 2, 0, 0)
+end
+local function groundCF(g: Vector3): CFrame
+	return CFrame.new(g + Vector3.new(0, 0.3, 0))
+end
+local function bolts(from: Vector3, n: number, len: number, color: Color3, w: number, dist)
+	for i = 1, n do
+		FxKit.Lightning(from, from + dist(i) * len * (0.6 + math.random() * 0.6), color, w, true)
 	end
-	return t
+end
+local function skyBolts(g: Vector3, n: number, color: Color3, s: number)
+	for k = 1, n do
+		after((k - 1) * 0.07, function()
+			local off = Vector3.new((math.random() - 0.5) * 10 * s, 0, (math.random() - 0.5) * 10 * s)
+			FxKit.Lightning(g + off + Vector3.new(0, 55, 0), g + off, W:Lerp(color, 0.3), 0.9 * s, true)
+			X.Dome(g + off, 0.5 * s, 3.5 * s, color, 0.3)
+		end)
+	end
+end
+-- jaws: two crescents in the vertical plane of `fwd` snapping shut
+local function jaws(c: Vector3, fwd: Vector3, R: number, width: number, color: Color3, tip: Color3)
+	local side = fwd:Cross(Vector3.yAxis)
+	side = side.Magnitude > 0.05 and side.Unit or Vector3.xAxis
+	X.Arc(c, side, Vector3.yAxis, R, width, color, 0.45, -1.4, { Sweep = math.pi * 0.8, Tip = tip, R0 = 0.8 })
+	X.Arc(c, side, -Vector3.yAxis, R, width, color, 0.45, 1.4, { Sweep = math.pi * 0.8, Tip = tip, R0 = 0.8 })
+end
+-- ellipsoid (mushroom cap / cloud): Part + Sphere mesh, grows and fades
+local function blob(pos: Vector3, size: Vector3, toSize: Vector3, color: Color3, mat: Enum.Material, a0: number, t: number)
+	local p = X.Part(Vector3.one, CFrame.new(pos), color, mat, a0, t + 0.2)
+	local m = Instance.new("SpecialMesh")
+	m.MeshType = Enum.MeshType.Sphere
+	m.Scale = size
+	m.Parent = p
+	X.Tween(m, t, { Scale = toSize })
+	X.Tween(p, t, { Transparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	return p
 end
 
--- element bases (every character starts from one and changes it)
-local E = {}
-E.Fire = {
-	Core = RGB(255, 240, 200), Main = RGB(255, 110, 30), Deep = RGB(120, 20, 0), Implode = true, Flare = 2, Splat = true,
-	Spikes = { Kind = "Beam", N = 34, Len = 13, Width = 1.1, Up = 0.35 },
-	Sparks = { N = 60, Speed = 90, Grav = 60 }, Debris = { Tex = "Glow", N = 20, Color = RGB(255, 170, 60), Grav = -10, Speed = 30 },
-	Ground = { Ring = true, Scorch = "Spikes", Dust = RGB(90, 40, 20) }, Plume = { Smoke = RGB(60, 30, 25), Embers = RGB(255, 150, 50) },
-}
-E.Ice = {
-	Core = RGB(240, 252, 255), Main = RGB(140, 220, 255), Deep = RGB(40, 100, 180), Implode = true, Flare = 2,
-	Spikes = { Kind = "Shard", N = 16, Len = 8, Width = 1, Up = 0.4, Mat = "Ice" },
-	Sparks = { N = 40, Speed = 70, Grav = 50 }, Debris = { Tex = "Shard", N = 30, Color = RGB(220, 245, 255), Grav = 80, Speed = 35 },
-	Ground = { Ring = true, Scorch = "Crackle", Dust = RGB(230, 245, 255) }, Plume = { Smoke = RGB(220, 240, 255) },
-	Extra = { "Pillars" }, PillarMat = "Ice",
-}
-E.Crystal = {
-	Core = WHITE, Main = RGB(150, 190, 255), Deep = RGB(110, 60, 230), Implode = true, Flare = 2,
-	Spikes = { Kind = "Shard", N = 18, Len = 9, Width = 0.9, Up = 0.3, Mat = "Glass" },
-	Sparks = { N = 55, Speed = 85, Grav = 30 }, Debris = { Tex = "Shard", N = 26, Color = RGB(200, 170, 255), Grav = 60, Speed = 40 },
-	Ground = { Ring = true, Scorch = "Ring", Dust = RGB(190, 180, 255) }, Plume = { Embers = RGB(190, 220, 255) },
-}
-E.Electric = {
-	Core = WHITE, Main = RGB(130, 190, 255), Deep = RGB(70, 60, 220), Flare = 2,
-	Spikes = { Kind = "Bolt", N = 7, Len = 14, Width = 0.35, Up = 0.2 },
-	Sparks = { N = 70, Speed = 110, Grav = 20 }, Debris = { Tex = "Glow", N = 24, Color = RGB(200, 230, 255), Grav = 0, Speed = 40 },
-	Ground = { Ring = true, Scorch = "Crackle", Dust = RGB(120, 140, 200) }, Plume = { Embers = RGB(180, 220, 255) },
-}
-E.Spore = {
-	Core = RGB(255, 235, 250), Main = RGB(235, 110, 220), Deep = RGB(110, 40, 140), Flare = 1,
-	Spikes = { Kind = "Spore", N = 26, Len = 8, Width = 1, Up = 0.5 },
-	Sparks = { N = 20, Speed = 40, Grav = -5 }, Debris = { Tex = "Glow", N = 40, Color = RGB(255, 190, 245), Grav = -6, Speed = 14 },
-	Ground = { Ring = true, Scorch = "Smoke", Dust = RGB(200, 150, 210) }, Plume = { Smoke = RGB(200, 140, 210) },
-}
-E.Water = {
-	Core = RGB(235, 250, 255), Main = RGB(60, 170, 255), Deep = RGB(10, 60, 150), Flare = 1,
-	Spikes = { Kind = "Drop", N = 18, Len = 9, Width = 0.8, Up = 0.8 },
-	Sparks = { N = 30, Speed = 60, Grav = 80 }, Debris = { Tex = "Glow", N = 50, Color = RGB(170, 225, 255), Grav = 90, Speed = 40 },
-	Ground = { Ring = true, Scorch = "Ring", Dust = RGB(200, 235, 255) }, Plume = { Smoke = RGB(220, 240, 255) },
-}
-E.Wind = {
-	Core = WHITE, Main = RGB(190, 240, 255), Deep = RGB(90, 160, 200), Flare = 1,
-	Spikes = { Kind = "Arc", N = 8, Len = 7, Width = 1.2, Up = 0.2 },
-	Sparks = { N = 30, Speed = 70, Grav = 0 }, Debris = { Tex = "Smoke", N = 14, Color = RGB(240, 250, 255), Grav = -2, Speed = 30 },
-	Ground = { Ring = true, Dust = RGB(235, 245, 255) }, Extra = { "Swirl" },
-}
-E.Earth = {
-	Core = RGB(255, 240, 210), Main = RGB(230, 170, 90), Deep = RGB(90, 60, 30), Flare = 1, Splat = true,
-	Spikes = { Kind = "Rock", N = 14, Len = 8, Width = 1.4, Up = 0.7, Mat = "Slate", Color = RGB(150, 120, 90) },
-	Sparks = { N = 30, Speed = 60, Grav = 70 }, Debris = { Tex = "Smoke", N = 16, Color = RGB(170, 140, 110), Grav = 10, Speed = 25 },
-	Ground = { Ring = true, Scorch = "Crackle", Dust = RGB(170, 140, 100) }, Plume = { Smoke = RGB(140, 115, 90) },
-	Extra = { "Pillars" }, PillarMat = "Slate",
-}
-E.Slash = merge(E.Fire, { Main = RGB(255, 60, 60), Deep = RGB(80, 0, 10), Extra = nil })
-HitFx.Elements = E
-
--- every character (monster type name) gets its own recipe
+------------------------------------------------------------------------
+-- signatures: fn(c = hit centre, g = ground below, s = scale, d = direction?)
+------------------------------------------------------------------------
 local S = {}
--- Canyon (crystal)
-S.Prismaw = merge(E.Crystal, { Main = RGB(120, 220, 255), Deep = RGB(60, 120, 255), Spikes = { Kind = "Shard", N = 12, Len = 10, Width = 0.6, Up = 0.1, Mat = "Glass" }, Flare = 2 })
-S.Shardstorm = merge(E.Crystal, { Main = RGB(190, 150, 255), Spikes = { Kind = "Shard", N = 22, Len = 7, Width = 0.7, Up = 0.2, Mat = "Glass" }, Extra = { "Tornado" } })
-S.Geoscuttle = merge(E.Crystal, { Main = RGB(255, 140, 220), Deep = RGB(150, 40, 160), Spikes = { Kind = "Shard", N = 10, Len = 6, Width = 1.2, Up = 0.6, Mat = "Glass" }, Extra = { "Pillars" }, PillarMat = "Glass" })
--- Mountains (ice)
-S.Frostback = merge(E.Ice, { Spikes = { Kind = "Shard", N = 10, Len = 7, Width = 1.5, Up = 0.8, Mat = "Ice" }, Extra = { "Pillars" } })
-S.Snowpeck = merge(E.Ice, { Main = RGB(230, 245, 255), Spikes = { Kind = "Feather", N = 26, Len = 8, Width = 1, Up = 0.3 }, Extra = { "Swirl" } })
-S.Rubbleye = merge(E.Earth, { Main = RGB(200, 120, 255), Deep = RGB(60, 20, 90), Core = RGB(245, 220, 255), Implode = true,
-	Spikes = { Kind = "Rock", N = 12, Len = 9, Width = 1.3, Up = 0.4, Mat = "Slate", Color = RGB(110, 100, 120) }, Extra = { "Swirl" } })
--- Marsh (storm)
-S.Voltwraith = merge(E.Electric, { Main = RGB(170, 140, 255), Deep = RGB(90, 30, 200), Spikes = { Kind = "Bolt", N = 9, Len = 16, Width = 0.3, Up = 0 }, Extra = { "SkyBolts" } })
-S.Gulpvine = merge(E.Electric, { Main = RGB(140, 255, 160), Deep = RGB(30, 120, 60), Spikes = { Kind = "Bolt", N = 6, Len = 11, Width = 0.35, Up = 0.3 }, Plume = { Smoke = RGB(80, 120, 70) } })
-S.Croakle = merge(E.Electric, { Main = RGB(120, 220, 255), Spikes = { Kind = "Bolt", N = 6, Len = 12, Width = 0.4, Up = 0.4 }, Extra = { "Bubbles" } })
-S.Gnashgut = merge(E.Water, { Main = RGB(150, 230, 80), Deep = RGB(40, 90, 20), Core = RGB(230, 255, 200), Splat = true,
-	Spikes = { Kind = "Drop", N = 16, Len = 8, Width = 1, Up = 0.6 }, Ground = { Ring = true, Scorch = "Spikes", Dust = RGB(120, 160, 60) } })
--- Volcanic (fire)
-S.Cindermaw = merge(E.Fire, { Spikes = { Kind = "Beam", N = 44, Len = 16, Width = 1.3, Up = 0.5 }, Extra = { "Geyser" } })
-S.Smoldlet = merge(E.Fire, { Main = RGB(255, 160, 40), Spikes = { Kind = "Beam", N = 26, Len = 9, Width = 1, Up = 0.4 }, Plume = { Smoke = RGB(50, 45, 45), Embers = RGB(255, 180, 70) } })
-S.Scorchtail = merge(E.Fire, { Main = RGB(255, 80, 30), Deep = RGB(140, 0, 0), Spikes = { Kind = "Beam", N = 30, Len = 12, Width = 0.8, Up = 0.1 }, Extra = { "Tornado" } })
--- Mushroom (spore)
-S.Capstride = merge(E.Spore, { Main = RGB(255, 120, 150), Spikes = { Kind = "Spore", N = 30, Len = 9, Width = 1.2, Up = 0.6 } })
-S.Sporeback = merge(E.Spore, { Main = RGB(200, 255, 120), Deep = RGB(60, 120, 30), Spikes = { Kind = "Beam", N = 28, Len = 9, Width = 0.5, Up = 0.4 }, Extra = { "Pillars" }, PillarMat = "Grass" })
-S.Glowmoth = merge(E.Spore, { Main = RGB(140, 255, 230), Deep = RGB(40, 120, 140), Spikes = { Kind = "Feather", N = 30, Len = 8, Width = 0.8, Up = 0.4 }, Extra = { "Swirl" } })
--- Plateau (earth)
-S.Bristlehulk = merge(E.Earth, { Main = RGB(140, 220, 90), Deep = RGB(70, 50, 20), Spikes = { Kind = "Beam", N = 30, Len = 10, Width = 0.7, Up = 0.5 }, Extra = { "Pillars" }, PillarMat = "Wood" })
-S.Mossgrave = merge(E.Earth, { Main = RGB(130, 200, 90), Spikes = { Kind = "Rock", N = 16, Len = 10, Width = 1.8, Up = 0.8, Mat = "Slate", Color = RGB(100, 120, 80) } })
-S.Puffhorn = merge(E.Wind, { Main = RGB(255, 250, 220), Spikes = { Kind = "Arc", N = 10, Len = 8, Width = 1.6, Up = 0.4 }, Extra = { "SkyBolts" } })
--- Coast (water)
-S.Skyfin = merge(E.Water, { Spikes = { Kind = "Arc", N = 8, Len = 9, Width = 1.4, Up = 0.2 }, Extra = { "Bubbles" } })
-S.Octoblob = merge(E.Water, { Main = RGB(150, 80, 230), Deep = RGB(30, 10, 50), Splat = true, Extra = { "Ink" } })
--- bosses: bigger, every layer turned up, plus their own signature extra
-S.MesaColossus = merge(E.Earth, { Main = RGB(255, 200, 110), Spikes = { Kind = "Rock", N = 22, Len = 14, Width = 2.2, Up = 0.8, Mat = "Sandstone", Color = RGB(210, 160, 100) }, Extra = { "Pillars", "Geyser" }, PillarMat = "Sandstone", Boss = true })
-S.FrostpeakWarden = merge(E.Ice, { Spikes = { Kind = "Shard", N = 22, Len = 12, Width = 1.6, Up = 0.6, Mat = "Ice" }, Extra = { "Pillars", "Swirl" }, Boss = true })
-S.MyceliumMonarch = merge(E.Spore, { Main = RGB(255, 150, 230), Spikes = { Kind = "Spore", N = 40, Len = 12, Width = 1.6, Up = 0.6 }, Extra = { "Pillars", "Swirl" }, PillarMat = "Grass", Boss = true })
-S.BogstormCroaker = merge(E.Electric, { Spikes = { Kind = "Bolt", N = 12, Len = 20, Width = 0.5, Up = 0.2 }, Extra = { "SkyBolts", "Bubbles" }, Boss = true })
-S.PrismSovereign = merge(E.Crystal, { Spikes = { Kind = "Shard", N = 26, Len = 13, Width = 1.1, Up = 0.3, Mat = "Glass" }, Extra = { "Pillars", "Tornado" }, PillarMat = "Glass", Boss = true })
-S.CalderaTitan = merge(E.Fire, { Spikes = { Kind = "Beam", N = 60, Len = 22, Width = 1.8, Up = 0.6 }, Extra = { "Geyser", "Pillars" }, PillarMat = "Basalt", Boss = true })
-S.Tidebreaker = merge(E.Water, { Spikes = { Kind = "Drop", N = 26, Len = 14, Width = 1.3, Up = 0.9 }, Extra = { "Ink", "Bubbles", "Swirl" }, Boss = true })
--- minions
-S.Shroomling = merge(E.Spore, { Spikes = { Kind = "Spore", N = 14, Len = 5, Width = 0.8, Up = 0.5 } })
--- the player (cloud wind) and the showcase red
-S.PlayerPunch = merge(E.Wind, { Main = RGB(200, 235, 255), Spikes = { Kind = "Arc", N = 5, Len = 6, Width = 1.2, Up = 0 }, Extra = nil })
-S.PlayerSlam = merge(E.Wind, { Spikes = { Kind = "Arc", N = 10, Len = 10, Width = 1.6, Up = 0.1 }, Extra = { "Swirl" }, Splat = false })
-S.PlayerPuff = merge(E.Wind, { Spikes = { Kind = "Spore", N = 14, Len = 6, Width = 1.2, Up = 0.3 }, Extra = nil, Main = RGB(245, 250, 255) })
-S.Red = merge(E.Fire, { Main = RGB(255, 45, 35), Deep = RGB(45, 0, 5), Spikes = { Kind = "Beam", N = 56, Len = 14, Width = 1.2, Up = 0.3 }, Extra = nil, Plume = { Smoke = RGB(110, 20, 20), Embers = RGB(255, 120, 90) } })
-HitFx.Styles = S
+local function def(name: string, fn, boss: boolean?)
+	S[name] = { Fn = fn, Boss = boss == true }
+end
 
--- pets: element of their egg's biome + attack kind
+-- ===== CANYON (crystal) =====
+-- Crystal Stalker: refraction lances — a fan of cyan crystal spears and a
+-- full rainbow split of light, with a prism ring facing the strike
+def("Prismaw", function(c, g, s, d)
+	local fwd = X.Horizontal(d)
+	X.Implode(c, RGB(120, 230, 255), s)
+	after(0.14, function()
+		X.Flash(c, RGB(140, 230, 255), s, 2)
+		X.Crystals(c, 7, 13 * s, 1.1 * s, RGB(120, 220, 255), W, GLASS, X.Fan(fwd, 7, 0.55, 0.1), { Color2 = RGB(200, 160, 255) })
+		for i, col in { RGB(255, 60, 60), RGB(255, 160, 40), RGB(255, 240, 60), RGB(80, 255, 120), RGB(60, 160, 255), RGB(190, 90, 255) } do
+			X.Spikes(c, 3, 16 * s, 0.5 * s, col, col, X.Fan((fwd + Vector3.new(0, (i - 3.5) * 0.08, 0)).Unit, 3, 0.35, 0.05), { Glow = 0.9 })
+		end
+		X.Ring(facing(c, fwd), 1, 10 * s, 0.9 * s, 0.6 * s, RGB(140, 230, 255), 0.5, { Color2 = RGB(220, 150, 255) })
+		X.Sparks(c, RGB(160, 230, 255), s, 50, 90, 20)
+		X.Shake(c, s)
+	end)
+end)
+-- Crystal Whirlwind: violet shards orbit in a spinning ring, then the
+-- whirl flings them outward while a crystal tornado rises
+def("Shardstorm", function(c, g, s, d)
+	local shards = {}
+	for i = 1, 10 do
+		shards[i] = X.Part(Vector3.new(0.9 * s, 0.9 * s, 3 * s), CFrame.new(c), i % 2 == 0 and RGB(190, 140, 255) or RGB(240, 220, 255), GLASS, 0.05, 1.5)
+	end
+	X.Run(0.4, function(f)
+		for i, p in shards do
+			local a = i / 10 * math.pi * 2 + f * 9
+			local pos = c + Vector3.new(math.cos(a) * 5 * s, (f - 0.5) * 3 * s, math.sin(a) * 5 * s)
+			p.CFrame = CFrame.lookAt(pos, pos + Vector3.new(-math.sin(a), 0.2, math.cos(a)))
+		end
+		if f >= 1 then
+			for i, p in shards do
+				local a = i / 10 * math.pi * 2 + 9
+				local out = Vector3.new(math.cos(a), 0.15, math.sin(a))
+				X.Tween(p, 0.45, { CFrame = p.CFrame + out * 16 * s, Transparency = 1 })
+			end
+		end
+	end)
+	FxKit.Tornado(g, RGB(170, 120, 255), 0.9 * s, 1)
+	after(0.4, function()
+		X.Flash(c, RGB(190, 140, 255), s, 1)
+		X.Crystals(c, 10, 9 * s, 0.8 * s, RGB(190, 150, 255), W, GLASS, X.Flat())
+		X.Ring(groundCF(g), 2, 13 * s, 1 * s, 0.6 * s, RGB(170, 120, 255), 0.55, { Spin = 3 })
+		X.Shake(c, s)
+	end)
+end)
+-- Crystal Scuttler: pink crystal pincers burst from the ground on both
+-- sides and clamp shut on the target
+def("Geoscuttle", function(c, g, s, d)
+	local fwd = X.Horizontal(d)
+	local side = fwd:Cross(Vector3.yAxis).Unit
+	for sgn = -1, 1, 2 do
+		for k = 1, 5 do
+			local a = (k / 5) * math.pi * 0.8
+			local at = g + side * sgn * math.cos(a) * 6 * s + fwd * (math.sin(a) * 6 - 3) * s
+			local h = (3 + k) * s
+			local p = X.Part(Vector3.new(1.2 * s, h, 1.2 * s), CFrame.new(at - Vector3.new(0, h / 2, 0)), k % 2 == 0 and RGB(255, 120, 210) or RGB(255, 200, 240), GLASS, 0.05, 2.2)
+			local tilt = CFrame.Angles(0, 0, -sgn * 0.5)
+			after(k * 0.04, function()
+				X.Tween(p, 0.14, { CFrame = CFrame.new(at + Vector3.new(0, h * 0.3, 0)) * CFrame.lookAt(Vector3.zero, fwd).Rotation * tilt }, Enum.EasingStyle.Back)
+				after(0.9, function()
+					X.Tween(p, 0.5, { Transparency = 1, Size = Vector3.new(0.1, h, 0.1) })
+				end)
+			end)
+		end
+	end
+	jaws(c, fwd, 6 * s, 1.6 * s, RGB(255, 110, 200), W)
+	after(0.25, function()
+		X.Flash(c, RGB(255, 130, 220), s, 2)
+		X.Spikes(c, 18, 9 * s, 0.6 * s, RGB(255, 150, 230), RGB(150, 40, 160), X.Sphere(0.3))
+		X.Sparks(c, RGB(255, 170, 230), s, 40, 70, 40)
+		X.Shake(c, s)
+	end)
+end)
+
+-- ===== MOUNTAINS (ice) =====
+-- Glacier Tortoise: a frost dome bursts outward, a ring of great ice spikes
+-- erupts and the ground freezes over with cracks
+def("Frostback", function(c, g, s, d)
+	X.Flash(c, RGB(170, 230, 255), s, 1)
+	X.Dome(c, 2 * s, 13 * s, RGB(150, 220, 255), 0.8, FF, 0.1, 1)
+	X.Pillars(g, 9, 7 * s, 8 * s, 2 * s, RGB(170, 225, 255), ICE, 1.1)
+	X.Ring(groundCF(g), 1, 15 * s, 1.6 * s, 0.4 * s, W, 0.7, { Color2 = RGB(170, 230, 255) })
+	X.Mark(g, "Crackle", RGB(140, 210, 255), 22 * s, 2.5, 0.7)
+	X.Motes(c + Vector3.new(0, 6 * s, 0), W, s, 40, 14, 6, 2.2)
+	X.Shake(c, s)
+end)
+-- Snow Owl: a giant spinning snowflake blooms, feathers flutter down and
+-- icy wind arcs whirl around it
+def("Snowpeck", function(c, g, s, d)
+	X.Snowflake(c + Vector3.new(0, 1 * s, 0), RGB(200, 240, 255), 11 * s, 1.2)
+	X.Flash(c, RGB(220, 245, 255), 0.8 * s, 2)
+	for k = 1, 4 do
+		X.Arc(c, Vector3.yAxis, Vector3.new(math.cos(k * 1.6), 0, math.sin(k * 1.6)), 8 * s, 1.4 * s, RGB(220, 245, 255), 0.6, 4, { Tip = W })
+	end
+	X.Debris(c + Vector3.new(0, 3 * s, 0), W, s * 1.3, 26, "Shard", 22, 6)
+	X.Shake(c, 0.7 * s)
+end)
+-- Watching Rubble: a black void sphere swallows the light, then the eye
+-- blinks open — purple shock, rocks blasted out
+def("Rubbleye", function(c, g, s, d)
+	local void = X.Dome(c, 6 * s, 0.6 * s, RGB(15, 5, 25), 0.35, PLASTIC, 0.05, 0.05)
+	X.Implode(c, RGB(170, 90, 255), s)
+	X.Ring(facing(c, Vector3.yAxis), 9 * s, 1, 0.7 * s, 0.7 * s, RGB(170, 90, 255), 0.35, { Spin = -4 })
+	after(0.35, function()
+		void:Destroy()
+		X.Flash(c, RGB(180, 90, 255), s * 1.1, 2)
+		X.Spikes(c, 26, 12 * s, 1 * s, RGB(150, 70, 255), RGB(20, 0, 40), X.Sphere(0.1), { Glow = 0.4 })
+		X.Rocks(c, 10, 1.6 * s, RGB(100, 95, 115), SLATE, 30 * s, X.Sphere(0.4))
+		X.Ring(facing(c, Vector3.yAxis), 1, 14 * s, 1 * s, 0.6 * s, RGB(190, 110, 255), 0.5)
+		X.Mark(g, "Spikes", RGB(30, 0, 50), 16 * s, 2)
+		X.Shake(c, 1.2 * s)
+	end)
+end)
+
+-- ===== MARSH (storm) =====
+-- Storm Wraith: lightning rains from the sky, a crackling violet dome and a
+-- web of bolts across the ground
+def("Voltwraith", function(c, g, s, d)
+	skyBolts(g, 5, RGB(170, 140, 255), s)
+	after(0.2, function()
+		X.Flash(c, RGB(170, 140, 255), s, 2)
+		X.Dome(c, 2 * s, 10 * s, RGB(160, 120, 255), 0.25, FF, 0, 1)
+		after(0.12, function()
+			X.Dome(c, 3 * s, 12 * s, RGB(200, 180, 255), 0.3, FF, 0.1, 1)
+		end)
+		bolts(g + Vector3.new(0, 0.5, 0), 8, 14 * s, RGB(190, 170, 255), 0.45 * s, X.Flat())
+		X.Sparks(c, RGB(190, 170, 255), s, 70, 110, 15)
+		X.Mark(g, "Crackle", RGB(150, 120, 255), 20 * s, 1.5, 1)
+		X.Shake(c, 1.2 * s)
+	end)
+end)
+-- Storm Snapper: giant green jaws snap, thorny vines spike up and green
+-- lightning crackles from the bite
+def("Gulpvine", function(c, g, s, d)
+	local fwd = X.Horizontal(d)
+	jaws(c, fwd, 7 * s, 2 * s, RGB(120, 255, 120), RGB(230, 255, 150))
+	after(0.3, function()
+		X.Flash(c, RGB(150, 255, 140), s, 1)
+		bolts(c, 6, 12 * s, RGB(170, 255, 170), 0.4 * s, X.Sphere(0.2))
+		X.Spikes(g, 20, 8 * s, 0.7 * s, RGB(90, 200, 70), RGB(60, 40, 20), X.Sphere(1.2), { Glow = 0.3 })
+		X.Ring(groundCF(g), 1, 10 * s, 0.9 * s, 0.5 * s, RGB(120, 255, 120), 0.5)
+		X.Shake(c, s)
+	end)
+end)
+-- Storm Frog: three booming sound-wave rings roll forward, bubbles burst
+-- and little bolts jump between them
+def("Croakle", function(c, g, s, d)
+	local fwd = X.Horizontal(d)
+	for k = 0, 2 do
+		after(k * 0.11, function()
+			X.Ring(facing(c + fwd * k * 2 * s, fwd), 1.5 * s, (7 + k * 3) * s, 0.8 * s, 0.6 * s, k == 1 and W or RGB(100, 220, 255), 0.5)
+		end)
+	end
+	X.Flash(c, RGB(120, 220, 255), 0.8 * s, 1)
+	X.Motes(c, RGB(160, 235, 255), 1.2 * s, 30, 16, -8, 1.8)
+	bolts(c, 4, 9 * s, RGB(170, 230, 255), 0.35 * s, X.Sphere(0.3, fwd))
+	X.Shake(c, 0.8 * s)
+end)
+-- Fanged Glutton: rows of fangs CHOMP shut, then acid sprays and hisses
+def("Gnashgut", function(c, g, s, d)
+	local fwd = X.Horizontal(d)
+	local side = fwd:Cross(Vector3.yAxis).Unit
+	for row = -1, 1, 2 do
+		for k = -3, 3 do
+			local at = c + side * k * 1.2 * s - fwd * 1 * s
+			local tooth = X.Part(Vector3.new(0.8 * s, 2.2 * s, 0.8 * s), CFrame.new(at + Vector3.new(0, row * 4 * s, 0)) * CFrame.Angles(0, 0, row > 0 and math.pi or 0), W, NEON, 0, 1.2)
+			X.Tween(tooth, 0.16, { CFrame = CFrame.new(at + Vector3.new(0, row * 1.1 * s, 0)) * CFrame.Angles(0, 0, row > 0 and math.pi or 0) }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+			after(0.45, function()
+				X.Tween(tooth, 0.3, { Transparency = 1 })
+			end)
+		end
+	end
+	after(0.17, function()
+		X.Flash(c, RGB(170, 255, 90), s, 1)
+		X.Splat(c, RGB(160, 255, 60), RGB(40, 90, 10), s)
+		X.Spikes(c, 22, 9 * s, 0.8 * s, RGB(190, 255, 80), RGB(60, 120, 20), X.Sphere(0.6), { Glow = 0.5 })
+		X.Mark(g, "Spikes", RGB(120, 220, 40), 14 * s, 2.5, 0.6)
+		X.Motes(g + Vector3.new(0, 1, 0), RGB(180, 255, 90), s, 30, 10, -6, 1.6)
+		X.Shake(c, s)
+	end)
+end)
+
+-- ===== VOLCANIC (fire) =====
+-- Magma Tyrant: the ground splits with glowing magma cracks, a lava column
+-- erupts and molten meteors rain down
+def("Cindermaw", function(c, g, s, d)
+	X.Fissures(g, 7, 15 * s, RGB(255, 120, 30), s, 1.6)
+	after(0.12, function()
+		X.Column(g, 34 * s, 6 * s, RGB(255, 110, 30), 0.9)
+		X.Flash(c, RGB(255, 140, 40), 1.2 * s, 2)
+		X.Splat(c, RGB(255, 90, 20), RGB(90, 10, 0), s)
+		X.Spikes(c, 40, 15 * s, 1.3 * s, RGB(255, 120, 30), RGB(120, 10, 0), X.Sphere(0.5))
+		X.Meteors(g, 4, RGB(255, 130, 40), s)
+		X.Smoke(c + Vector3.new(0, 4 * s, 0), RGB(70, 40, 35), s, 10, 10)
+		X.Motes(c, RGB(255, 160, 60), s, 40, 24, -9, 2)
+		X.Shake(c, 1.4 * s)
+	end)
+end)
+-- Ember Blob: the fuse pops — a fat orange fireball dome, then a little
+-- mushroom cloud of smoke with embers
+def("Smoldlet", function(c, g, s, d)
+	X.Implode(c, RGB(255, 170, 60), s * 0.8)
+	after(0.14, function()
+		X.Dome(c, 1 * s, 9 * s, RGB(255, 150, 40), 0.4, NEON, 0, 1)
+		X.Dome(c, 0.5 * s, 6 * s, RGB(255, 240, 180), 0.25, NEON, 0, 1)
+		X.Ring(groundCF(g), 1, 12 * s, 1.2 * s, 0.5 * s, RGB(255, 150, 40), 0.5)
+		blob(c + Vector3.new(0, 6 * s, 0), Vector3.new(4, 2, 4) * s, Vector3.new(14, 6, 14) * s, RGB(90, 70, 65), PLASTIC, 0.2, 1.4)
+		X.Smoke(c, RGB(80, 60, 55), s, 12, 22)
+		X.Motes(c, RGB(255, 180, 70), s, 36, 26, -10, 1.8)
+		X.Shake(c, s)
+	end)
+end)
+-- Lava Salamander: a flaming dash — a chain of fire blasts runs forward
+-- along a burning trail and ends in a fire twister
+def("Scorchtail", function(c, g, s, d)
+	local fwd = X.Horizontal(d)
+	local start = g - fwd * 6 * s
+	for k = 0, 5 do
+		after(k * 0.06, function()
+			local p = start + fwd * k * 2.6 * s
+			X.Dome(p + Vector3.new(0, 1.2 * s, 0), 0.6 * s, 3.6 * s, k % 2 == 0 and RGB(255, 70, 30) or RGB(255, 180, 60), 0.3)
+			X.Spikes(p + Vector3.new(0, 1 * s, 0), 6, 6 * s, 0.6 * s, RGB(255, 90, 30), RGB(120, 0, 0), X.Sphere(1))
+			local trail = X.Part(Vector3.new(1.4 * s, 0.2, 2.8 * s), CFrame.lookAt(p + Vector3.new(0, 0.15, 0), p + Vector3.new(0, 0.15, 0) + fwd), RGB(255, 90, 30), NEON, 0, 2)
+			after(0.8, function()
+				X.Tween(trail, 0.6, { Transparency = 1 })
+			end)
+		end)
+	end
+	after(0.36, function()
+		FxKit.Tornado(g + fwd * 9 * s, RGB(255, 80, 30), 0.8 * s, 0.9)
+		X.Flash(c + fwd * 8 * s, RGB(255, 90, 30), s, 1)
+		X.Shake(c, s)
+	end)
+end)
+
+-- ===== MUSHROOM (spore) =====
+-- Toadstool Strider: a pink mushroom-shaped spore cloud blooms (stem +
+-- cap) with polka-dot motes drifting out
+def("Capstride", function(c, g, s, d)
+	X.Column(g, 9 * s, 3 * s, RGB(255, 220, 230), 0.8)
+	blob(g + Vector3.new(0, 9 * s, 0), Vector3.new(4, 1.5, 4) * s, Vector3.new(18, 6, 18) * s, RGB(255, 90, 140), NEON, 0.1, 1.2)
+	blob(g + Vector3.new(0, 9.5 * s, 0), Vector3.new(3, 1.2, 3) * s, Vector3.new(14, 5, 14) * s, RGB(255, 200, 220), FF, 0, 1.2)
+	X.Smoke(g + Vector3.new(0, 4 * s, 0), RGB(255, 160, 200), s, 14, 6)
+	X.Motes(g + Vector3.new(0, 9 * s, 0), W, 1.3 * s, 30, 18, 3, 2.2)
+	X.Ring(groundCF(g), 1, 11 * s, 1 * s, 0.4 * s, RGB(255, 120, 170), 0.6)
+	X.Shake(c, 0.8 * s)
+end)
+-- Fungal Brute: spine spray — a hedgehog burst of lime spines and green
+-- spore puffs
+def("Sporeback", function(c, g, s, d)
+	X.Flash(c, RGB(190, 255, 110), 0.9 * s, 1)
+	X.Spikes(c, 46, 14 * s, 0.45 * s, RGB(200, 255, 110), RGB(50, 110, 20), X.Sphere(0.9), { Glow = 0.6, Grow = 0.06 })
+	X.Crystals(c, 8, 7 * s, 0.6 * s, RGB(160, 230, 80), RGB(240, 255, 200), NEON, X.Sphere(0.6))
+	X.Smoke(c, RGB(150, 210, 90), s, 12, 4)
+	X.Mark(g, "Smoke", RGB(90, 150, 40), 14 * s, 2)
+	X.Shake(c, s)
+end)
+-- Spore Moth: glowing dust spirals up in a triple helix, two shimmering
+-- wings flare open
+def("Glowmoth", function(c, g, s, d)
+	X.Helix(g, 14 * s, 4 * s, RGB(120, 255, 230), 3, 6, 1.3, s)
+	local a = L.Anchor(CFrame.new(c), 2)
+	for k = -1, 1, 2 do
+		L.EmitNow(L.Emitter(a, {
+			Texture = L.Tex("Flare"), Color = ColorSequence.new(W, RGB(120, 255, 230)), Brightness = 6, LightEmission = 1, ZOffset = 3,
+			Size = L.NS({ { 0, 3 * s }, { 0.2, 16 * s }, { 1, 0 } }), Squash = L.NS({ { 0, -1.2 }, { 1, -1.2 } }),
+			Rotation = NumberRange.new(k * 35), Lifetime = NumberRange.new(0.7), Speed = NumberRange.new(0),
+		}), 1)
+	end
+	X.Motes(c, RGB(160, 255, 235), 1.2 * s, 50, 12, -2, 2.5)
+	X.Arc(c, Vector3.yAxis, Vector3.xAxis, 7 * s, 1.2 * s, RGB(120, 255, 230), 0.8, 5)
+	X.Shake(c, 0.6 * s)
+end)
+def("Shroomling", function(c, g, s, d)
+	blob(c, Vector3.new(2, 1.5, 2) * s, Vector3.new(9, 5, 9) * s, RGB(255, 150, 200), NEON, 0.15, 0.7)
+	X.Motes(c, RGB(255, 200, 230), s, 20, 12, 2, 1.5)
+end)
+
+-- ===== PLATEAU (earth) =====
+-- Bramble Brute: a ring of thorny brambles bursts from the ground with
+-- flying leaves
+def("Bristlehulk", function(c, g, s, d)
+	X.Pillars(g, 12, 5 * s, 5 * s, 0.9 * s, RGB(110, 80, 45), WOOD, 0.9)
+	X.Spikes(g + Vector3.new(0, 0.5, 0), 30, 9 * s, 0.6 * s, RGB(140, 220, 70), RGB(70, 50, 20), X.Sphere(1.1), { Glow = 0.35 })
+	X.Flash(c, RGB(190, 255, 120), 0.8 * s, 1)
+	X.Debris(c, RGB(120, 200, 70), s * 1.2, 30, "Shard", 30, 15)
+	X.Ring(groundCF(g), 1, 10 * s, 1 * s, 0.6 * s, RGB(150, 230, 90), 0.5)
+	X.Shake(c, s)
+end)
+-- Mossy Golem: an earthquake — mossy fissures, a rolling ring of rock and a
+-- big dust wave
+def("Mossgrave", function(c, g, s, d)
+	X.Fissures(g, 6, 13 * s, RGB(170, 255, 110), s, 1.4)
+	X.Ring(groundCF(g), 1, 14 * s, 2.2 * s, 1.6 * s, RGB(105, 120, 85), 0.8, { Mat = SLATE, Color2 = RGB(80, 110, 60), Segs = 22 })
+	X.Rocks(c, 12, 2 * s, RGB(110, 125, 90), SLATE, 34 * s, X.Sphere(0.8))
+	X.Dust(g, RGB(150, 135, 105), s, 30)
+	X.Flash(c, RGB(200, 255, 150), 0.8 * s, 1)
+	X.Motes(c, RGB(160, 240, 110), s, 24, 14, -3, 1.8)
+	X.Shake(c, 1.3 * s)
+end)
+-- Cloud Ram: a fluffy thunder-wool puff with yellow static zaps
+def("Puffhorn", function(c, g, s, d)
+	blob(c, Vector3.new(4, 3, 4) * s, Vector3.new(16, 11, 16) * s, RGB(250, 250, 255), PLASTIC, 0.05, 0.9)
+	X.Smoke(c, RGB(245, 245, 255), 1.3 * s, 14, 2)
+	bolts(c, 6, 10 * s, RGB(255, 240, 90), 0.35 * s, X.Sphere(0.2))
+	X.Ring(groundCF(g), 1, 12 * s, 0.8 * s, 0.4 * s, RGB(255, 240, 110), 0.5)
+	X.Sparks(c, RGB(255, 240, 100), s, 40, 80, 10)
+	X.Shake(c, 0.8 * s)
+end)
+
+-- ===== COAST (water) =====
+-- Sky Shark: an X-shaped bite of two water crescents, a splash crown and
+-- falling droplets
+def("Skyfin", function(c, g, s, d)
+	local fwd = X.Horizontal(d)
+	local side = fwd:Cross(Vector3.yAxis).Unit
+	X.Arc(c, fwd, (Vector3.yAxis + side).Unit, 7 * s, 2 * s, RGB(80, 190, 255), 0.5, -2.2, { Sweep = math.pi, Tip = W })
+	X.Arc(c, fwd, (Vector3.yAxis - side).Unit, 7 * s, 2 * s, RGB(80, 190, 255), 0.5, 2.2, { Sweep = math.pi, Tip = W })
+	after(0.15, function()
+		X.Flash(c, RGB(110, 200, 255), s, 1)
+		X.Spikes(g + Vector3.new(0, 0.5, 0), 22, 10 * s, 1 * s, RGB(200, 240, 255), RGB(40, 120, 220), X.Sphere(2), { Glow = 0.5 })
+		X.Motes(c, RGB(170, 225, 255), 1.3 * s, 40, 30, 80, 1.2)
+		X.Ring(groundCF(g), 1, 12 * s, 1.2 * s, 1.2 * s, RGB(120, 210, 255), 0.6, { Mat = GLASS })
+		X.Shake(c, s)
+	end)
+end)
+-- Tide Octopus: eight ink tentacles whip out from a dark splat
+def("Octoblob", function(c, g, s, d)
+	X.Tentacles(c, 8, 12 * s, 1.4 * s, RGB(150, 70, 230), RGB(40, 10, 60), 1.1)
+	X.Flash(c, RGB(170, 90, 255), 0.9 * s, 1)
+	X.Splat(c, RGB(90, 30, 140), RGB(10, 0, 20), s)
+	X.Mark(g, "Spikes", RGB(20, 5, 35), 18 * s, 3)
+	X.Smoke(c, RGB(50, 20, 70), s, 14, 2)
+	X.Shake(c, s)
+end)
+
+-- ===== BOSSES (everything bigger, several stages) =====
+def("MesaColossus", function(c, g, s, d)
+	X.Fissures(g, 9, 22 * s, RGB(255, 200, 90), s * 1.3, 2)
+	after(0.15, function()
+		X.Pillars(g, 14, 10 * s, 14 * s, 3 * s, RGB(215, 165, 105), SAND, 1.4)
+		X.Column(g, 60 * s, 7 * s, RGB(255, 210, 110), 1.1)
+		X.Flash(c, RGB(255, 210, 120), 1.5 * s, 2)
+		X.Rocks(c, 16, 3 * s, RGB(200, 150, 95), SAND, 40 * s, X.Sphere(0.9))
+		X.Ring(groundCF(g), 2, 26 * s, 3 * s, 2 * s, RGB(200, 155, 100), 1, { Mat = SAND, Segs = 30 })
+		X.Dust(g, RGB(220, 190, 140), 1.5 * s, 40)
+		X.Shake(c, 2 * s)
+	end)
+end, true)
+def("FrostpeakWarden", function(c, g, s, d)
+	X.Snowflake(c + Vector3.new(0, 4 * s, 0), RGB(190, 235, 255), 22 * s, 1.5)
+	X.Dome(c, 3 * s, 22 * s, RGB(160, 220, 255), 1, FF, 0.05, 1)
+	X.Pillars(g, 14, 12 * s, 14 * s, 3 * s, RGB(175, 225, 255), ICE, 1.5)
+	X.Ring(groundCF(g), 2, 26 * s, 2.5 * s, 0.6 * s, W, 0.9, { Color2 = RGB(170, 230, 255), Segs = 36 })
+	X.Flash(c, RGB(200, 240, 255), 1.5 * s, 2)
+	X.Motes(c + Vector3.new(0, 12 * s, 0), W, 1.5 * s, 70, 20, 8, 3)
+	X.Shake(c, 2 * s)
+end, true)
+def("MyceliumMonarch", function(c, g, s, d)
+	X.Rune(g, 14 * s, RGB(255, 120, 220), 6, 1.8)
+	X.Helix(g, 24 * s, 7 * s, RGB(255, 140, 230), 4, 8, 1.6, 1.3 * s)
+	after(0.3, function()
+		X.Column(g, 18 * s, 5 * s, RGB(255, 220, 240), 1)
+		blob(g + Vector3.new(0, 18 * s, 0), Vector3.new(6, 2, 6) * s, Vector3.new(34, 11, 34) * s, RGB(255, 90, 190), NEON, 0.1, 1.6)
+		X.Flash(c, RGB(255, 140, 230), 1.5 * s, 2)
+		X.Motes(g + Vector3.new(0, 16 * s, 0), W, 1.6 * s, 60, 24, 3, 3)
+		X.Shake(c, 1.8 * s)
+	end)
+end, true)
+def("BogstormCroaker", function(c, g, s, d)
+	skyBolts(g, 9, RGB(150, 210, 255), 1.3 * s)
+	for k = 0, 3 do
+		after(k * 0.1, function()
+			X.Ring(groundCF(g + Vector3.new(0, k * 1.5 * s, 0)), 2, (14 + k * 6) * s, 1.2 * s, 0.8 * s, k % 2 == 0 and W or RGB(120, 200, 255), 0.6)
+		end)
+	end
+	after(0.25, function()
+		X.Dome(c, 3 * s, 18 * s, RGB(140, 200, 255), 0.4, FF, 0, 1)
+		bolts(g + Vector3.new(0, 0.5, 0), 12, 24 * s, RGB(180, 230, 255), 0.6 * s, X.Flat())
+		X.Flash(c, RGB(170, 220, 255), 1.5 * s, 2)
+		X.Shake(c, 2 * s)
+	end)
+end, true)
+def("PrismSovereign", function(c, g, s, d)
+	X.Rune(g, 16 * s, RGB(150, 200, 255), 5, 1.8)
+	-- crystal cage: spears from a ring converge on the centre, then burst
+	for k = 1, 12 do
+		local a = k / 12 * math.pi * 2
+		local from = c + Vector3.new(math.cos(a) * 18 * s, 6 * s, math.sin(a) * 18 * s)
+		local p = X.Part(Vector3.new(1.2 * s, 1.2 * s, 6 * s), CFrame.lookAt(from, c), k % 2 == 0 and RGB(150, 200, 255) or RGB(210, 170, 255), GLASS, 0.05, 1.5)
+		X.Tween(p, 0.4, { CFrame = CFrame.lookAt(c + (from - c).Unit * 3 * s, c) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		after(0.4, function()
+			X.Tween(p, 0.3, { Transparency = 1 })
+		end)
+	end
+	after(0.42, function()
+		X.Flash(c, W, 1.8 * s, 2)
+		X.Column(g, 70 * s, 8 * s, RGB(200, 220, 255), 1.2)
+		X.Crystals(c, 20, 16 * s, 1.4 * s, RGB(150, 200, 255), W, GLASS, X.Sphere(0.3), { Color2 = RGB(210, 160, 255) })
+		for _, col in { RGB(255, 60, 60), RGB(255, 200, 40), RGB(80, 255, 120), RGB(60, 160, 255), RGB(190, 90, 255) } do
+			X.Spikes(c, 6, 20 * s, 0.7 * s, col, col, X.Sphere(0.2), { Glow = 0.9 })
+		end
+		X.Shake(c, 2 * s)
+	end)
+end, true)
+def("CalderaTitan", function(c, g, s, d)
+	X.Fissures(g, 10, 24 * s, RGB(255, 110, 20), 1.4 * s, 2.2)
+	after(0.15, function()
+		X.Column(g, 70 * s, 10 * s, RGB(255, 100, 20), 1.3)
+		X.Pillars(g, 12, 11 * s, 10 * s, 3 * s, RGB(50, 35, 35), BASALT, 1.5)
+		X.Flash(c, RGB(255, 130, 40), 1.8 * s, 2)
+		X.Splat(c, RGB(255, 80, 10), RGB(80, 5, 0), 1.6 * s)
+		X.Spikes(c, 60, 22 * s, 1.8 * s, RGB(255, 110, 20), RGB(110, 5, 0), X.Sphere(0.6))
+		X.Meteors(g, 10, RGB(255, 120, 30), 1.4 * s)
+		X.Smoke(c + Vector3.new(0, 10 * s, 0), RGB(60, 40, 35), 1.6 * s, 18, 14)
+		X.Shake(c, 2.4 * s)
+	end)
+end, true)
+def("Tidebreaker", function(c, g, s, d)
+	X.Ring(groundCF(g), 3, 24 * s, 2.5 * s, 7 * s, RGB(70, 170, 255), 1.1, { Mat = GLASS, Alpha = 0.15, Color2 = RGB(150, 220, 255), Segs = 34 })
+	X.Tentacles(c, 8, 18 * s, 2 * s, RGB(80, 170, 255), RGB(20, 60, 140), 1.3)
+	after(0.2, function()
+		X.Flash(c, RGB(120, 210, 255), 1.5 * s, 2)
+		X.Spikes(g + Vector3.new(0, 1, 0), 34, 18 * s, 1.4 * s, RGB(210, 245, 255), RGB(30, 110, 220), X.Sphere(2))
+		X.Motes(c, RGB(170, 225, 255), 1.6 * s, 70, 40, 80, 1.4)
+		X.Mark(g, "Spikes", RGB(15, 20, 50), 22 * s, 3)
+		X.Shake(c, 2 * s)
+	end)
+end, true)
+
+-- ===== PLAYER (cloud wind) =====
+def("PlayerPunch", function(c, g, s, d)
+	local fwd = d or X.Horizontal(nil)
+	for k = 1, 3 do
+		X.Arc(c, fwd, Vector3.new(math.cos(k * 2.1), math.sin(k * 2.1), 0), (3 + k) * s, 1.3 * s, RGB(190, 230, 255), 0.35, 3, { Tip = W, Sweep = math.pi * 0.6 })
+	end
+	X.Dome(c, 0.4 * s, 3 * s, W, 0.2)
+	X.Sparks(c, RGB(200, 235, 255), s, 18, 60, 10)
+end)
+def("PlayerSlam", function(c, g, s, d)
+	X.Ring(groundCF(g), 1, 13 * s, 1.6 * s, 0.8 * s, W, 0.55, { Color2 = RGB(190, 230, 255) })
+	blob(g + Vector3.new(0, 1.5 * s, 0), Vector3.new(4, 1.5, 4) * s, Vector3.new(16, 4, 16) * s, W, PLASTIC, 0.1, 0.6)
+	X.Dust(g, RGB(240, 245, 255), s, 30)
+	for k = 1, 4 do
+		X.Arc(g + Vector3.new(0, 1, 0), Vector3.yAxis, Vector3.new(math.cos(k * 1.57), 0, math.sin(k * 1.57)), 9 * s, 1.4 * s, RGB(200, 235, 255), 0.5, 3, { Tip = W })
+	end
+	X.Shake(c, s)
+end)
+def("PlayerPuff", function(c, g, s, d)
+	blob(c, Vector3.new(2, 2, 2) * s, Vector3.new(9, 8, 9) * s, W, PLASTIC, 0.05, 0.6)
+	X.Smoke(c, RGB(245, 248, 255), s, 10, 3)
+	X.Motes(c, RGB(210, 235, 255), s, 18, 18, 0, 1)
+end)
+
+-- the showcase red (kept as its own style)
+def("Red", function(c, g, s, d)
+	FxKit.RedExplosion(c, s)
+end)
+
+-- element fallbacks (ability hits whose caster is unknown)
+local ELEMENT_STYLE = {
+	Fire = "Smoldlet", Ice = "Frostback", Crystal = "Prismaw", Electric = "Voltwraith", Spore = "Capstride",
+	Water = "Skyfin", Wind = "Puffhorn", Earth = "Mossgrave", Slash = "Red",
+}
+
+------------------------------------------------------------------------
+-- pets: element palette x attack kind (+ an element accent)
+------------------------------------------------------------------------
+local PAL = {
+	Earth = { RGB(230, 180, 90), RGB(90, 60, 30) }, Ice = { RGB(160, 225, 255), RGB(40, 100, 180) },
+	Spore = { RGB(240, 120, 220), RGB(110, 40, 140) }, Electric = { RGB(140, 190, 255), RGB(70, 60, 220) },
+	Crystal = { RGB(170, 150, 255), RGB(90, 50, 200) }, Fire = { RGB(255, 120, 40), RGB(120, 20, 0) },
+	Water = { RGB(70, 180, 255), RGB(10, 60, 150) }, Wind = { RGB(200, 240, 255), RGB(90, 160, 200) },
+}
+local ACCENT = {
+	Earth = function(c, g, s) X.Rocks(c, 5, 1 * s, RGB(150, 120, 90), SLATE, 22 * s, X.Sphere(0.8)) end,
+	Ice = function(c, g, s) X.Crystals(c, 6, 5 * s, 0.6 * s, RGB(180, 230, 255), W, ICE, X.Sphere(0.4)) end,
+	Spore = function(c, g, s) X.Smoke(c, RGB(240, 160, 230), s, 6, 4) X.Motes(c, W, s, 14, 10, -3, 1.6) end,
+	Electric = function(c, g, s) bolts(c, 3, 7 * s, RGB(180, 210, 255), 0.25 * s, X.Sphere(0.2)) end,
+	Crystal = function(c, g, s) X.Crystals(c, 6, 5 * s, 0.6 * s, RGB(190, 160, 255), W, GLASS, X.Sphere(0.3)) end,
+	Fire = function(c, g, s) X.Motes(c, RGB(255, 160, 60), s, 20, 16, -8, 1.5) end,
+	Water = function(c, g, s) X.Motes(c, RGB(160, 220, 255), s, 22, 20, 70, 1) end,
+	Wind = function(c, g, s) X.Arc(c, Vector3.yAxis, Vector3.xAxis, 5 * s, 1 * s, W, 0.5, 4) end,
+}
+local KIND = {
+	Bite = function(c, g, s, d, m, k)
+		jaws(c, X.Horizontal(d), 4 * s, 1.2 * s, m, W)
+		after(0.25, function()
+			X.Flash(c, m, 0.6 * s, 1)
+		end)
+	end,
+	Bolt = function(c, g, s, d, m, k)
+		X.Flash(c, m, 0.7 * s, 2)
+		X.Spikes(c, 12, 8 * s, 0.5 * s, m, k, d and X.Fan(X.Horizontal(d), 12, 0.6, 0.15) or X.Sphere(0.3))
+		X.Ring(facing(c, X.Horizontal(d)), 0.5, 6 * s, 0.6 * s, 0.4 * s, m, 0.4)
+	end,
+	Lob = function(c, g, s, d, m, k)
+		X.Meteors(g, 1, m, s)
+		after(0.35, function()
+			X.Fissures(g, 4, 6 * s, m, 0.7 * s, 1)
+		end)
+	end,
+	Pulse = function(c, g, s, d, m, k)
+		X.Ring(groundCF(g), 1, 10 * s, 0.9 * s, 0.5 * s, m, 0.5)
+		after(0.1, function()
+			X.Ring(groundCF(g), 1, 7 * s, 0.7 * s, 0.4 * s, W, 0.45)
+		end)
+		X.Dome(c, 1 * s, 7 * s, m, 0.5, FF, 0.1, 1)
+	end,
+	Chain = function(c, g, s, d, m, k)
+		X.Flash(c, m, 0.6 * s, 1)
+		bolts(c, 5, 8 * s, W:Lerp(m, 0.4), 0.3 * s, X.Sphere(0.2))
+	end,
+	Mend = function(c, g, s, d, m, k)
+		X.Helix(g, 8 * s, 2.5 * s, m, 2, 5, 1, 0.8 * s)
+	end,
+}
 local BIOME_ELEMENT = { Plateau = "Earth", Mountains = "Ice", Mushroom = "Spore", Marsh = "Electric", Canyon = "Crystal", Volcanic = "Fire", Coast = "Water" }
-local KIND_SPIKE = { Bite = "Beam", Bolt = nil, Lob = "Rock", Pulse = "Arc", Chain = "Bolt", Mend = "Spore" }
 local function petStyleFor(el: string, kind: string?): string
 	local name = "Pet" .. el .. (kind or "")
 	if not S[name] then
-		local base = E[el]
-		local over = { Implode = false, Extra = nil }
-		local k = KIND_SPIKE[kind or ""]
-		if k then
-			over.Spikes = merge(base.Spikes, { Kind = k, N = math.floor(base.Spikes.N * 0.6), Len = base.Spikes.Len * 0.75 })
-		end
-		if kind == "Lob" then
-			over.Extra = { "Pillars" }
-		elseif kind == "Pulse" then
-			over.Extra = { "Swirl" }
-		end
-		S[name] = merge(base, over)
+		local pal = PAL[el] or PAL.Wind
+		def(name, function(c, g, s, d)
+			local f = KIND[kind or ""] or KIND.Bolt
+			f(c, g, s, d, pal[1], pal[2])
+			local acc = ACCENT[el]
+			if acc then
+				acc(c, g, s)
+			end
+		end)
 	end
 	return name
 end
@@ -176,536 +610,97 @@ function HitFx.PetStyle(biome: string?, kind: string?): string
 	return petStyleFor(BIOME_ELEMENT[biome or ""] or "Wind", kind)
 end
 
-------------------------------------------------------------------------
--- engine (client)
-------------------------------------------------------------------------
-local function randDir(up: number, dir: Vector3?): Vector3
-	local d = Vector3.new(math.random() * 2 - 1, math.random() * 2 - 1 + up, math.random() * 2 - 1)
-	if dir then
-		d += dir * 1.6
-	end
-	if d.Magnitude < 0.05 then
-		return Vector3.yAxis
-	end
-	return d.Unit
-end
-
-local MATS = {
-	Ice = Enum.Material.Ice, Glass = Enum.Material.Glass, Slate = Enum.Material.Slate, Sandstone = Enum.Material.Sandstone,
-	Grass = Enum.Material.Grass, Wood = Enum.Material.Wood, Basalt = Enum.Material.Basalt,
-}
-
-local function fxPart(size: Vector3, cf: CFrame, color: Color3, mat: Enum.Material, life: number): BasePart
-	local p = Instance.new("Part")
-	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
-	p.Size = size
-	p.CFrame = cf
-	p.Color = color
-	p.Material = mat
-	p.Parent = L.Holder()
-	Debris:AddItem(p, life)
-	return p
-end
-
--- animate a value 0..1 over t seconds with a per-frame callback
-local function animate(t: number, step: (number) -> ())
-	local t0 = os.clock()
-	local conn
-	conn = RunService.Heartbeat:Connect(function()
-		local f = (os.clock() - t0) / t
-		if f >= 1 then
-			conn:Disconnect()
-			step(1)
-			return
-		end
-		step(f)
-	end)
-end
-
-local SPIKE = {}
-SPIKE.Beam = function(r, a, c, sc, dir)
-	local sp = r.Spikes
-	for _ = 1, sp.N do
-		L.Spike(a, randDir(sp.Up or 0, dir), (sp.Len * (0.5 + math.random() * 0.8)) * sc, (sp.Width * (0.45 + math.random() * 0.8)) * sc,
-			r.Main, r.Deep, 0.5, 0.07, 0.05 + math.random() * 0.08, 0.45)
-	end
-	for _ = 1, math.floor(sp.N * 0.45) do
-		L.Spike(a, randDir(sp.Up or 0, dir), (sp.Len * (0.3 + math.random() * 0.4)) * sc, (sp.Width * 0.25) * sc, WHITE, r.Main, 1, 0.05, 0.03, 0.22)
-	end
-end
-SPIKE.Shard = function(r, a, c, sc, dir)
-	local sp = r.Spikes
-	local mat = MATS[sp.Mat or "Glass"] or Enum.Material.Glass
-	for k = 1, sp.N do
-		local d = randDir(sp.Up or 0, dir)
-		local len = sp.Len * (0.6 + math.random() * 0.7) * sc
-		local w = sp.Width * (0.6 + math.random() * 0.6) * sc
-		local col = (k % 3 == 0) and r.Deep or r.Main
-		local base = CFrame.lookAt(c, c + d) * CFrame.Angles(0, 0, math.rad(45))
-		local p = fxPart(Vector3.new(w, w, 0.1), base, col, mat, 1.4)
-		p.Transparency = mat == Enum.Material.Glass and 0.15 or 0
-		local core = fxPart(Vector3.new(w * 0.35, w * 0.35, 0.1), base, r.Core, Enum.Material.Neon, 1.4)
-		local hold = 0.25 + math.random() * 0.2
-		animate(0.12, function(f)
-			local e = 1 - (1 - f) ^ 3
-			local L2 = len * e
-			p.Size = Vector3.new(w, w, L2)
-			p.CFrame = base * CFrame.new(0, 0, -L2 / 2 - 0.4 * sc)
-			core.Size = Vector3.new(w * 0.35, w * 0.35, L2 * 0.9)
-			core.CFrame = p.CFrame
-		end)
-		task.delay(0.12 + hold, function()
-			TweenService:Create(p, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, Size = Vector3.new(0.05, 0.05, len * 1.1) }):Play()
-			TweenService:Create(core, TweenInfo.new(0.3), { Transparency = 1 }):Play()
-		end)
-	end
-	SPIKE.Beam(merge(r, { Spikes = merge(sp, { N = math.floor(sp.N * 0.8), Width = sp.Width * 0.5 }) }), a, c, sc, dir)
-end
-SPIKE.Bolt = function(r, a, c, sc, dir)
-	local sp = r.Spikes
-	for _ = 1, sp.N do
-		local d = randDir(sp.Up or 0, dir)
-		FxKit.Lightning(c, c + d * sp.Len * (0.6 + math.random() * 0.6) * sc, r.Main, sp.Width * sc, true)
-	end
-	task.delay(0.1, function()
-		for _ = 1, math.floor(sp.N / 2) do
-			local d = randDir(sp.Up or 0, dir)
-			FxKit.Lightning(c, c + d * sp.Len * 0.7 * sc, WHITE:Lerp(r.Main, 0.4), sp.Width * 0.7 * sc, true)
-		end
-	end)
-	SPIKE.Beam(merge(r, { Spikes = merge(sp, { N = 14, Len = sp.Len * 0.5, Width = 0.5 }) }), a, c, sc, dir)
-end
-SPIKE.Arc = function(r, a, c, sc, dir)
-	local sp = r.Spikes
-	for k = 1, sp.N do
-		local n = randDir(0, nil)
-		if dir and k % 2 == 0 then
-			n = dir:Cross(Vector3.yAxis).Magnitude > 0.1 and dir:Cross(Vector3.yAxis).Unit or n
-		end
-		local seed = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
-		local cu = n:Cross(seed)
-		local u = cu.Magnitude > 0.01 and cu.Unit or n:Cross(Vector3.xAxis).Unit
-		local v = n:Cross(u).Unit
-		local R = sp.Len * (0.6 + math.random() * 0.6) * sc
-		local spin = (math.random() < 0.5 and -1 or 1) * (6 + math.random() * 6)
-		local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
-		a0.Parent, a1.Parent = a, a
-		local b = Instance.new("Beam")
-		b.Attachment0, b.Attachment1 = a0, a1
-		b.Segments = 20
-		b.FaceCamera = true
-		b.LightEmission, b.LightInfluence = 1, 0
-		L.Set(b, "Brightness", 3)
-		b.Texture = tex("BeamSoft")
-		b.Color = ColorSequence.new(WHITE, r.Main)
-		b.Width0, b.Width1 = 0.1 * sc, sp.Width * sc
-		b.Parent = a
-		local ang0 = math.random() * math.pi * 2
-		animate(0.55, function(f)
-			if not b.Parent then
-				return
-			end
-			local rr = R * (0.25 + 0.75 * (1 - (1 - f) ^ 2))
-			local ang = ang0 + spin * f
-			local uu = u * math.cos(ang) + v * math.sin(ang)
-			local vv = n:Cross(uu)
-			a0.CFrame = CFrame.fromMatrix(uu * rr, vv, n)
-			a1.CFrame = CFrame.fromMatrix(vv * rr, -uu, n)
-			b.CurveSize0, b.CurveSize1 = rr * 0.552, rr * 0.552
-			b.Transparency = ns({ { 0, 1 }, { 0.35, f * 0.9 }, { 1, 0.2 + f * 0.8 } })
-			if f >= 1 then
-				b:Destroy()
-			end
-		end)
-	end
-end
-SPIKE.Drop = function(r, a, c, sc, dir)
-	local sp = r.Spikes
-	-- water crown: arcs leaping up and out, then droplets fall
-	for k = 1, sp.N do
-		local ang = k / sp.N * math.pi * 2 + math.random() * 0.3
-		local out = Vector3.new(math.cos(ang), 0, math.sin(ang))
-		local len = sp.Len * (0.6 + math.random() * 0.6) * sc
-		local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
-		a0.Parent, a1.Parent = a, a
-		local side = out:Cross(Vector3.yAxis).Unit
-		a0.CFrame = CFrame.fromMatrix(Vector3.zero, Vector3.yAxis, side)
-		local b = Instance.new("Beam")
-		b.Attachment0, b.Attachment1 = a0, a1
-		b.Segments = 16
-		b.FaceCamera = true
-		b.LightEmission, b.LightInfluence = 0.7, 0.2
-		L.Set(b, "Brightness", 2)
-		b.Texture = tex("BeamSoft")
-		b.Color = ColorSequence.new(r.Core, r.Main)
-		b.Width0, b.Width1 = sp.Width * sc, 0.15 * sc
-		b.Parent = a
-		animate(0.6, function(f)
-			if not b.Parent then
-				return
-			end
-			local e = 1 - (1 - f) ^ 2
-			a1.CFrame = CFrame.fromMatrix(out * len * e - Vector3.new(0, 1.5 * sc * f, 0), Vector3.yAxis, side)
-			b.CurveSize0 = len * (sp.Up or 0.8) * (1 - f * 0.5)
-			b.CurveSize1 = -len * 0.3
-			b.Transparency = ns({ { 0, f * 0.8 }, { 1, 0.3 + f * 0.7 } })
-			if f >= 1 then
-				b:Destroy()
-			end
-		end)
-	end
-	emitNow(emitter(a, {
-		Texture = tex("Glow"), Color = ColorSequence.new(r.Core, r.Main), Brightness = 2, LightEmission = 0.6,
-		Size = ns({ { 0, 0.7 * sc }, { 1, 0.2 * sc } }), Lifetime = NumberRange.new(0.6, 1.1),
-		Speed = NumberRange.new(18 * sc, 38 * sc), SpreadAngle = Vector2.new(55, 55), EmissionDirection = Enum.NormalId.Top,
-		Acceleration = Vector3.new(0, -90, 0),
-	}), 40)
-end
-SPIKE.Rock = function(r, a, c, sc, dir)
-	local sp = r.Spikes
-	local mat = MATS[sp.Mat or "Slate"] or Enum.Material.Slate
-	for _ = 1, sp.N do
-		local d = randDir(sp.Up or 0.6, dir)
-		local w = sp.Width * (0.5 + math.random() * 0.8) * sc
-		local p = fxPart(Vector3.new(w, w * (0.7 + math.random() * 0.5), w * (0.7 + math.random() * 0.5)), CFrame.new(c), sp.Color or r.Deep, mat, 1.6)
-		local vel = d * (sp.Len * 4 * (0.6 + math.random() * 0.6)) * math.sqrt(sc) + Vector3.new(0, 10, 0)
-		local rot = Vector3.new(math.random() * 10 - 5, math.random() * 10 - 5, math.random() * 10 - 5)
-		animate(1.1, function(f)
-			if not p.Parent then
-				return
-			end
-			local t = f * 1.1
-			local pos = c + vel * t + Vector3.new(0, -45 * t * t, 0)
-			p.CFrame = CFrame.new(pos) * CFrame.Angles(rot.X * t, rot.Y * t, rot.Z * t)
-			if f > 0.7 then
-				p.Transparency = (f - 0.7) / 0.3
-			end
-		end)
-	end
-	SPIKE.Beam(merge(r, { Spikes = merge(sp, { N = math.floor(sp.N * 1.2), Width = sp.Width * 0.5 }) }), a, c, sc, dir)
-end
-SPIKE.Spore = function(r, a, c, sc, dir)
-	local sp = r.Spikes
-	-- puffing cloud of spores + motes drifting up
-	emitNow(emitter(a, {
-		Texture = tex("Smoke"), Color = ColorSequence.new(r.Main:Lerp(WHITE, 0.3), r.Deep), LightEmission = 0.3, LightInfluence = 0.4,
-		Size = ns({ { 0, 2 * sc }, { 0.3, 5 * sc }, { 1, 8 * sc } }), Transparency = ns({ { 0, 0.2 }, { 0.6, 0.45 }, { 1, 1 } }),
-		Lifetime = NumberRange.new(1, 1.8), Speed = NumberRange.new(sp.Len * 1.4 * sc, sp.Len * 2.4 * sc), Drag = 3,
-		RotSpeed = NumberRange.new(-60, 60), Acceleration = Vector3.new(0, 3, 0),
-	}), sp.N)
-	emitNow(emitter(a, {
-		Texture = tex("Glow"), Color = ColorSequence.new(WHITE, r.Main), Brightness = 3,
-		Size = ns({ { 0, 0.5 * sc }, { 0.5, 0.35 * sc }, { 1, 0 } }), Lifetime = NumberRange.new(1.2, 2.4),
-		Speed = NumberRange.new(6 * sc, 20 * sc), Drag = 2, Acceleration = Vector3.new(0, 4, 0),
-	}), sp.N * 2)
-	SPIKE.Beam(merge(r, { Spikes = merge(sp, { N = math.floor(sp.N * 0.5), Width = sp.Width * 0.5 }) }), a, c, sc, dir)
-end
-SPIKE.Feather = function(r, a, c, sc, dir)
-	local sp = r.Spikes
-	emitNow(emitter(a, {
-		Texture = tex("Shard"), Color = ColorSequence.new(WHITE, r.Main), Brightness = 1.5, LightEmission = 0.4,
-		Size = ns({ { 0, 0.9 * sc }, { 1, 0.6 * sc } }), Squash = ns({ { 0, -1.5 }, { 1, -1.5 } }),
-		Lifetime = NumberRange.new(1.2, 2.2), Speed = NumberRange.new(sp.Len * 2 * sc, sp.Len * 3.5 * sc), Drag = 4,
-		Acceleration = Vector3.new(0, -6, 0), RotSpeed = NumberRange.new(-200, 200),
-	}), sp.N)
-	SPIKE.Arc(merge(r, { Spikes = merge(sp, { N = 5 }) }), a, c, sc, dir)
-end
-
-local EXTRA = {}
-EXTRA.Pillars = function(r, g, sc)
-	local mat = MATS[r.PillarMat or "Slate"] or Enum.Material.Slate
-	local n = r.Boss and 10 or 6
-	for k = 1, n do
-		local ang = k / n * math.pi * 2 + math.random() * 0.4
-		local dist = (3 + math.random() * 4) * sc * (r.Boss and 1.5 or 1)
-		local at = g + Vector3.new(math.cos(ang) * dist, 0, math.sin(ang) * dist)
-		local h = (3 + math.random() * 4) * sc
-		local w = (0.8 + math.random() * 0.8) * sc
-		local tilt = CFrame.Angles(math.sin(ang) * 0.35, 0, -math.cos(ang) * 0.35)
-		local col = (k % 2 == 0) and r.Main or r.Deep:Lerp(r.Main, 0.4)
-		if mat == Enum.Material.Slate or mat == Enum.Material.Sandstone or mat == Enum.Material.Basalt or mat == Enum.Material.Wood or mat == Enum.Material.Grass then
-			col = (r.Spikes and r.Spikes.Color) or r.Deep:Lerp(RGB(150, 130, 110), 0.5)
-		end
-		local p = fxPart(Vector3.new(w, h, w), CFrame.new(at - Vector3.new(0, h / 2, 0)) * tilt * CFrame.Angles(0, ang, 0), col, mat, 2.2)
-		if mat == Enum.Material.Glass then
-			p.Transparency = 0.15
-		end
-		TweenService:Create(p, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { CFrame = CFrame.new(at + Vector3.new(0, h * 0.35, 0)) * tilt * CFrame.Angles(0, ang, 0) }):Play()
-		task.delay(0.9, function()
-			TweenService:Create(p, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { CFrame = CFrame.new(at - Vector3.new(0, h * 0.6, 0)) * tilt, Transparency = 1 }):Play()
-		end)
-	end
-end
-EXTRA.Tornado = function(r, g, sc)
-	FxKit.Tornado(g, r.Main, 0.8 * sc, 0.9)
-end
-EXTRA.Geyser = function(r, g, sc)
-	FxKit.Pillar(g, r.Main, 26 * sc, 0.8)
-	local a = anchor(CFrame.new(g), 2.5, Vector3.new(3 * sc, 0.2, 3 * sc))
-	emitNow(emitter(a, {
-		Texture = tex("Flame"), Color = FxKit.Hot(r.Main, true), Brightness = 3,
-		Shape = Enum.ParticleEmitterShape.Disc, EmissionDirection = Enum.NormalId.Top, SpreadAngle = Vector2.new(8, 8),
-		Size = ns({ { 0, 2 * sc }, { 0.5, 3 * sc }, { 1, 0.5 * sc } }), Transparency = ns({ { 0, 0.2 }, { 1, 1 } }),
-		Lifetime = NumberRange.new(0.5, 0.8), Speed = NumberRange.new(30 * sc, 45 * sc),
-	}), 40)
-end
-EXTRA.Bubbles = function(r, g, sc)
-	local a = anchor(CFrame.new(g + Vector3.new(0, 1, 0)), 3.5, Vector3.new(6 * sc, 1, 6 * sc))
-	emitNow(emitter(a, {
-		Texture = tex("Ring"), Color = ColorSequence.new(WHITE, r.Main), Brightness = 2, LightEmission = 0.6,
-		Shape = Enum.ParticleEmitterShape.Box, EmissionDirection = Enum.NormalId.Top, SpreadAngle = Vector2.new(20, 20),
-		Size = ns({ { 0, 0.4 * sc }, { 1, 1.2 * sc } }), Transparency = ns({ { 0, 0.1 }, { 0.85, 0.2 }, { 1, 1 } }),
-		Lifetime = NumberRange.new(1, 2.2), Speed = NumberRange.new(4 * sc, 10 * sc), Acceleration = Vector3.new(0, 3, 0),
-	}), 26)
-end
-EXTRA.SkyBolts = function(r, g, sc)
-	for k = 1, 3 do
-		task.delay(k * 0.07, function()
-			local off = Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)) * sc
-			FxKit.Lightning(g + off + Vector3.new(0, 45, 0), g + off, WHITE:Lerp(r.Main, 0.3), 0.5 * sc, true)
-		end)
-	end
-end
-EXTRA.Swirl = function(r, g, sc)
-	local a = anchor(CFrame.new(g + Vector3.new(0, 0.6, 0)), 1.5)
-	SPIKE.Arc(merge(r, { Spikes = { N = 6, Len = 7, Width = 1.4 } }), a, a.Position, sc, nil)
-end
-EXTRA.Ink = function(r, g, sc)
-	local a = anchor(CFrame.new(g + Vector3.new(0, 0.25, 0)), 4)
-	emitNow(emitter(a, {
-		Texture = tex("Spikes"), Color = ColorSequence.new(r.Deep), LightEmission = 0, LightInfluence = 0.3,
-		Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Top,
-		SpreadAngle = Vector2.new(0, 0), Speed = NumberRange.new(0.01),
-		Size = ns({ { 0, 6 * sc }, { 0.1, 15 * sc }, { 1, 16 * sc } }), Transparency = ns({ { 0, 0.05 }, { 0.75, 0.3 }, { 1, 1 } }),
-		Lifetime = NumberRange.new(3),
-	}), 1)
-	emitNow(emitter(a, {
-		Texture = tex("Smoke"), Color = ColorSequence.new(r.Deep, RGB(10, 5, 20)), LightEmission = 0, LightInfluence = 0.3,
-		Size = ns({ { 0, 2 * sc }, { 1, 7 * sc } }), Transparency = ns({ { 0, 0.15 }, { 1, 1 } }),
-		Lifetime = NumberRange.new(1.2, 2), Speed = NumberRange.new(8 * sc, 18 * sc), Drag = 2,
-	}), 18)
-end
-
-local function build(r, pos: Vector3, sc: number, dir: Vector3?)
-	local g = L.Ground(pos)
-	local c = pos
-	if (pos - g).Magnitude < 1 then
-		c = g + Vector3.new(0, 2 * sc, 0)
-	end
-	local function main()
-		local a = anchor(CFrame.new(c), 4)
-		a:SetAttribute("Shake", (r.Boss and 2 or 1) * sc)
-		-- core + flares
-		emitNow(emitter(a, {
-			Texture = tex("Glow"), Color = ColorSequence.new(WHITE, r.Core:Lerp(r.Main, 0.4)), Brightness = 7, ZOffset = 4,
-			Size = ns({ { 0, 3 * sc }, { 0.2, 7.5 * sc }, { 1, 1.5 * sc } }), Transparency = ns({ { 0, 0 }, { 0.5, 0.2 }, { 1, 1 } }),
-			Lifetime = NumberRange.new(0.28), Speed = NumberRange.new(0),
-		}), 2)
-		for k = 1, r.Flare or 1 do
-			emitNow(emitter(a, {
-				Texture = tex("Flare"), Color = ColorSequence.new(WHITE, r.Main), Brightness = 6 - k, ZOffset = 5,
-				Size = ns({ { 0, 4 * sc }, { 0.12, (22 - k * 8) * sc }, { 1, 2 * sc } }), Transparency = ns({ { 0, 0 }, { 0.6, 0.3 }, { 1, 1 } }),
-				Lifetime = NumberRange.new(0.42 - k * 0.06), Speed = NumberRange.new(0),
-				Rotation = NumberRange.new((k - 1) * 45 - 4, (k - 1) * 45 + 4), RotSpeed = NumberRange.new(-25, 25),
-			}), 1)
-		end
-		if r.Splat then
-			emitNow(emitter(a, {
-				Texture = tex("Spikes"), Color = ColorSequence.new(r.Main:Lerp(r.Deep, 0.5), r.Deep), LightEmission = 0.25, Brightness = 1.5, ZOffset = -1,
-				Size = ns({ { 0, 5 * sc }, { 0.15, 16 * sc }, { 1, 19 * sc } }), Transparency = ns({ { 0, 0 }, { 0.4, 0.2 }, { 1, 1 } }),
-				Lifetime = NumberRange.new(0.5), Speed = NumberRange.new(0), RotSpeed = NumberRange.new(-10, 10),
-			}), 2)
-		end
-		-- spikes of this character's kind
-		local f = r.Spikes and SPIKE[r.Spikes.Kind]
-		if f then
-			f(r, a, c, sc, dir)
-		end
-		-- sparks
-		local sp = r.Sparks
-		if sp then
-			emitNow(emitter(a, {
-				Texture = tex("Streak"), Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, WHITE), ColorSequenceKeypoint.new(0.25, r.Core:Lerp(r.Main, 0.5)), ColorSequenceKeypoint.new(1, r.Main),
-				}), Brightness = 5,
-				Orientation = Enum.ParticleOrientation.VelocityParallel, Squash = ns({ { 0, 3 }, { 1, 1.5 } }),
-				Size = ns({ { 0, 0.3 * sc }, { 0.3, 0.55 * sc }, { 1, 0 } }), Transparency = ns({ { 0, 0 }, { 0.8, 0.2 }, { 1, 1 } }),
-				Lifetime = NumberRange.new(0.3, 0.85), Speed = NumberRange.new(sp.Speed * 0.5 * sc, sp.Speed * sc), Drag = 4,
-				Acceleration = Vector3.new(0, -(sp.Grav or 40), 0), Rotation = NumberRange.new(0),
-			}), sp.N * math.min(1.5, sc))
-		end
-		-- debris
-		local db = r.Debris
-		if db then
-			emitNow(emitter(a, {
-				Texture = tex(db.Tex or "Shard"), Color = ColorSequence.new(db.Color, db.Color:Lerp(r.Deep, 0.5)),
-				LightEmission = db.Tex == "Glow" and 1 or 0.2, Brightness = db.Tex == "Glow" and 3 or 1,
-				Size = ns({ { 0, 0.55 * sc }, { 1, (db.Tex == "Smoke" and 2.5 or 0.2) * sc } }),
-				Transparency = ns({ { 0, db.Tex == "Smoke" and 0.4 or 0 }, { 1, 1 } }),
-				Lifetime = NumberRange.new(0.6, 1.3), Speed = NumberRange.new(db.Speed * 0.5 * sc, db.Speed * sc), Drag = 1.5,
-				Acceleration = Vector3.new(0, -(db.Grav or 60), 0), RotSpeed = NumberRange.new(-300, 300),
-			}), db.N)
-		end
-		-- ground
-		local gr = r.Ground
-		if gr then
-			local ga = anchor(CFrame.new(g + Vector3.new(0, 0.2, 0)), 4)
-			if gr.Ring then
-				emitNow(emitter(ga, {
-					Texture = tex("Ring"), Color = ColorSequence.new(r.Core, r.Main), Brightness = 4,
-					Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Top,
-					SpreadAngle = Vector2.new(0, 0), Speed = NumberRange.new(0.01),
-					Size = ns({ { 0, 2 * sc }, { 0.35, 16 * sc }, { 1, 22 * sc } }), Transparency = ns({ { 0, 0 }, { 0.5, 0.3 }, { 1, 1 } }),
-					Lifetime = NumberRange.new(0.5),
-				}), 1)
-			end
-			if gr.Scorch then
-				emitNow(emitter(ga, {
-					Texture = tex(gr.Scorch), Color = ColorSequence.new(r.Deep), LightEmission = gr.Scorch == "Crackle" and 0.6 or 0,
-					LightInfluence = 0.3, Brightness = 1.5,
-					Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Top,
-					SpreadAngle = Vector2.new(0, 0), Speed = NumberRange.new(0.01),
-					Size = ns({ { 0, 6 * sc }, { 0.1, 12 * sc }, { 1, 13 * sc } }), Transparency = ns({ { 0, 0.15 }, { 0.7, 0.4 }, { 1, 1 } }),
-					Lifetime = NumberRange.new(2.2),
-				}), 1)
-			end
-			if gr.Dust then
-				emitNow(emitter(ga, {
-					Texture = tex("Smoke"), Color = ColorSequence.new(gr.Dust), LightEmission = 0, LightInfluence = 0.6,
-					Size = ns({ { 0, 1.5 * sc }, { 1, 5 * sc } }), Transparency = ns({ { 0, 0.4 }, { 1, 1 } }),
-					Lifetime = NumberRange.new(0.6, 1), Speed = NumberRange.new(24 * sc, 38 * sc), Drag = 5,
-					Shape = Enum.ParticleEmitterShape.Disc, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
-					EmissionDirection = Enum.NormalId.Top, SpreadAngle = Vector2.new(85, 85),
-				}), 22)
-			end
-		end
-		-- plume
-		local pl = r.Plume
-		if pl then
-			if pl.Embers then
-				emitNow(emitter(a, {
-					Texture = tex("Glow"), Color = ColorSequence.new(WHITE, pl.Embers), Brightness = 4,
-					Size = ns({ { 0, 0.3 * sc }, { 1, 0 } }), Lifetime = NumberRange.new(1, 2),
-					Speed = NumberRange.new(6 * sc, 22 * sc), Drag = 1.2, Acceleration = Vector3.new(0, 9, 0),
-				}), 28)
-			end
-			if pl.Smoke then
-				emitNow(emitter(a, {
-					Texture = tex("Smoke"), Color = ColorSequence.new(pl.Smoke, pl.Smoke:Lerp(Color3.new(0, 0, 0), 0.6)),
-					LightEmission = 0, LightInfluence = 0.5, ZOffset = -2,
-					Size = ns({ { 0, 2.5 * sc }, { 1, 9 * sc } }), Transparency = ns({ { 0, 0.35 }, { 0.4, 0.4 }, { 1, 1 } }),
-					Lifetime = NumberRange.new(1, 1.8), Speed = NumberRange.new(3 * sc, 10 * sc), Drag = 1.5,
-					Acceleration = Vector3.new(0, 5, 0), RotSpeed = NumberRange.new(-30, 30),
-				}), 9)
-			end
-		end
-		for _, name in r.Extra or {} do
-			local fx = EXTRA[name]
-			if fx then
-				fx(r, g, sc)
-			end
-		end
-		light(a, r.Main, 40 * sc, 12, 0.7)
-	end
-	if r.Implode then
-		local pre = anchor(CFrame.new(c), 1.5, Vector3.one * 8 * sc)
-		emitNow(emitter(pre, {
-			Texture = tex("Streak"), Color = ColorSequence.new(WHITE, r.Main), Brightness = 4,
-			Shape = Enum.ParticleEmitterShape.Sphere, ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward,
-			ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
-			Orientation = Enum.ParticleOrientation.VelocityParallel, Squash = ns({ { 0, 2.5 }, { 1, 2.5 } }),
-			Size = ns({ { 0, 0.45 * sc }, { 1, 0.1 } }), Lifetime = NumberRange.new(0.13), Speed = NumberRange.new(30 * sc, 40 * sc),
-		}), 22)
-		task.delay(0.13, main)
-	else
-		main()
-	end
-end
+HitFx.Styles = S
 
 ------------------------------------------------------------------------
 -- public
 ------------------------------------------------------------------------
-local remote: RemoteEvent?
-local function getRemote(): RemoteEvent?
-	if remote and remote.Parent then
-		return remote
-	end
-	if RunService:IsServer() then
-		remote = ReplicatedStorage:FindFirstChild("HitFxPlay") :: RemoteEvent?
-		if not remote then
-			local r = Instance.new("RemoteEvent")
-			r.Name = "HitFxPlay"
-			r.Parent = ReplicatedStorage
-			remote = r
-		end
-	else
-		remote = ReplicatedStorage:FindFirstChild("HitFxPlay") :: RemoteEvent?
-	end
-	return remote
-end
-
 local ELEMENT_OF_COLOR = {
 	{ RGB(255, 120, 40), "Fire" }, { RGB(170, 235, 255), "Ice" }, { RGB(150, 200, 255), "Crystal" }, { RGB(140, 170, 255), "Electric" },
 	{ RGB(230, 120, 255), "Spore" }, { RGB(70, 170, 255), "Water" }, { RGB(220, 255, 235), "Wind" }, { RGB(230, 180, 100), "Earth" },
 }
--- nearest element for a colour (abilities without a known caster)
-function HitFx.StyleForColor(c: Color3): string
+function HitFx.StyleForColor(col: Color3): string
 	local best, bd = "Fire", math.huge
 	for _, e in ELEMENT_OF_COLOR do
-		local d = (e[1].R - c.R) ^ 2 + (e[1].G - c.G) ^ 2 + (e[1].B - c.B) ^ 2
-		if d < bd then
-			best, bd = e[2], d
+		local dd = (e[1].R - col.R) ^ 2 + (e[1].G - col.G) ^ 2 + (e[1].B - col.B) ^ 2
+		if dd < bd then
+			best, bd = e[2], dd
 		end
 	end
 	return best
 end
 
-function HitFx.Build(style: string, pos: Vector3, scale: number?, dir: Vector3?, color: Color3?)
-	if not S[style] and string.sub(style, 1, 3) == "Pet" then
-		-- "Pet<Element><Kind>" (built on demand on each client)
-		for el in E do
+local function resolve(style: string)
+	if S[style] then
+		return S[style]
+	end
+	if string.sub(style, 1, 3) == "Pet" then
+		for el in PAL do
 			if string.sub(style, 4, 3 + #el) == el then
-				petStyleFor(el, string.sub(style, 4 + #el))
-				break
+				return S[petStyleFor(el, string.sub(style, 4 + #el))]
 			end
 		end
 	end
-	local r = S[style] or E[style]
-	if not r then
-		local sfx = require(script.Parent:WaitForChild("Sfx"))
-		r = E[sfx.ElementOf(style)] or E.Fire
+	local alias = ELEMENT_STYLE[style]
+	if alias then
+		return S[alias]
 	end
-	if color then
-		r = merge(r, { Main = color, Deep = color:Lerp(Color3.new(0, 0, 0), 0.6) })
-	end
-	build(r, pos, math.clamp(scale or 1, 0.2, 4), dir)
+	local Sfx = require(script.Parent:WaitForChild("Sfx"))
+	return S[ELEMENT_STYLE[Sfx.ElementOf(style)] or "Red"]
 end
 
--- server: every client builds it; client: build now
-function HitFx.Play(style: string, pos: Vector3, scale: number?, dir: Vector3?, color: Color3?)
+function HitFx.Build(style: string, pos: Vector3, scale: number?, dir: Vector3?)
+	local entry = resolve(style)
+	if not entry then
+		return
+	end
+	local s = math.clamp(scale or 1, 0.25, 4)
+	local g = L.Ground(pos)
+	local c = pos
+	if (pos - g).Magnitude < 1.5 then
+		c = g + Vector3.new(0, 2.5 * s, 0)
+	end
+	entry.Fn(c, g, s, dir)
+end
+
+local remote: RemoteEvent?
+local function getRemote(): RemoteEvent?
+	if remote and remote.Parent then
+		return remote
+	end
+	remote = ReplicatedStorage:FindFirstChild("HitFxPlay") :: RemoteEvent?
+	if not remote and RunService:IsServer() then
+		local r = Instance.new("RemoteEvent")
+		r.Name = "HitFxPlay"
+		r.Parent = ReplicatedStorage
+		remote = r
+	end
+	return remote
+end
+
+function HitFx.Play(style: string, pos: Vector3, scale: number?, dir: Vector3?)
 	if RunService:IsServer() then
 		local r = getRemote()
 		if r then
-			r:FireAllClients(style, pos, scale or 1, dir, color)
+			r:FireAllClients(style, pos, scale or 1, dir)
 		end
 	else
-		HitFx.Build(style, pos, scale, dir, color)
+		HitFx.Build(style, pos, scale, dir)
 	end
 end
 
--- client: listen for server requests (skip far away ones)
 function HitFx.Listen()
 	task.spawn(function()
-		local r = ReplicatedStorage:WaitForChild("HitFxPlay", 60) :: RemoteEvent?
+		local r = ReplicatedStorage:WaitForChild("HitFxPlay", 120) :: RemoteEvent?
 		if not r then
 			return
 		end
-		r.OnClientEvent:Connect(function(style, pos, scale, dir, color)
+		r.OnClientEvent:Connect(function(style, pos, scale, dir)
 			local cam = workspace.CurrentCamera
-			if typeof(pos) ~= "Vector3" or (cam and (cam.CFrame.Position - pos).Magnitude > 450) then
+			if typeof(pos) ~= "Vector3" or type(style) ~= "string" or (cam and (cam.CFrame.Position - pos).Magnitude > 450) then
 				return
 			end
-			local ok, err = pcall(HitFx.Build, style, pos, scale, dir, color)
+			local ok, err = pcall(HitFx.Build, style, pos, scale, typeof(dir) == "Vector3" and dir or nil)
 			if not ok then
 				warn("[HitFx] " .. tostring(err))
 			end

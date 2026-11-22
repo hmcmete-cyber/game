@@ -62,10 +62,10 @@ ShopItems.Types = {
 		IconText = "SHD",
 		IconColor = Color3.fromRGB(110, 210, 255),
 		Price = 150,
-		Desc = "On your base: instant 30 s base shield. Elsewhere: 10 s personal shield (no damage, can't be tagged or shot)",
+		Desc = "On your base: instant 12 s base shield. Elsewhere: 4 s personal shield (no damage, can't be tagged or shot)",
 		Effect = "Shield",
-		Duration = 10,
-		BaseDuration = 30,
+		Duration = 4,
+		BaseDuration = 12,
 	},
 	GrapplingHook = {
 		DisplayName = "Grappling Hook",
@@ -134,7 +134,7 @@ end
 --   simple gear : reusable, short Cooldown after each use
 --   OP gear     : 3 charges that refill one by one (Recharge seconds each)
 -- Prices are for owning it forever (x5 of the old one-shot price).
-local OP_BASE = { LaserGun = 12, GrapplingHook = 8, ShieldGenerator = 90 }
+local OP_BASE = { LaserGun = 12, GrapplingHook = 8, ShieldGenerator = 180 } -- v2.35 shield nerf (was 90)
 local function cooldownFor(item): number
 	local e = item.Effect
 	if e == "EggWarm" then
@@ -167,7 +167,7 @@ for id, item in ShopItems.Types do
 	item.Price = math.floor((item.Price or 0) * 5 / 10 + 0.5) * 10
 	if OP_BASE[id] or (item.Tier or 0) >= 3 then
 		item.Op = true
-		item.MaxCharges = 3
+		item.MaxCharges = (id == "ShieldGenerator" or item.Effect == "ShieldNow") and 1 or 3 -- v2.35: shields 1 charge
 		item.Recharge = OP_BASE[id] or (item.Effect == "EggWarm" and item.Minutes * 60 * 2) or ((item.Tier or 3) >= 4 and 120 or 60)
 	else
 		item.Cooldown = cooldownFor(item)

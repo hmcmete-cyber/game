@@ -284,7 +284,7 @@ local function render()
 			local locked = item.Cloud ~= nil and not isUnlocked(id)
 			local owned = string.find(player:GetAttribute("Gear") or "", "," .. id .. ",", 1, true) ~= nil
 			-- v2.31 gear: owned forever; simple = cooldown, OP = 3 charges
-			local gearText = item.Op and `GEAR - 3 charges, +1 every {item.Recharge}s` or `GEAR - reuse every {item.Cooldown}s`
+			local gearText = item.Op and `GEAR - {item.MaxCharges} charge(s), +1 every {item.Recharge}s` or `GEAR - reuse every {item.Cooldown}s`
 			local desc = item.Desc .. "\n" .. gearText
 			local c = card(i, id, item.IconText, item.IconColor, item.DisplayName, locked and (desc .. "\n" .. lockText(item.Cloud, "Zeus")) or desc)
 			buyButton(c, locked and "Locked" or (owned and "OWNED" or (item.ComingSoon and "Coming soon" or `Buy - {item.Price} coins`)), not item.ComingSoon and not locked and not owned,

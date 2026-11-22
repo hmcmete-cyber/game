@@ -469,7 +469,7 @@ local function onStolen(thiefName: string, victimName: string, stormName: string
 end
 
 local function onAlarm(thiefName: string)
-	showAlert(`Thief! Tag {thiefName}!`, true, 3)
+	showAlert("Someone is in your base!", true, 3) -- v2.35 director wording
 	for i = 1, 3 do
 		task.delay((i - 1) * 0.35, function()
 			playSound(PING, 0.9, 0.6)

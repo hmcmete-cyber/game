@@ -72,17 +72,17 @@ local function makeUi()
 	pill.Name = "Pill"
 	pill.AnchorPoint = Vector2.new(0.5, 0)
 	pill.Position = UDim2.new(0.5, 0, 0, 92)
-	pill.Size = UDim2.fromOffset(300, 30)
+	pill.Size = UDim2.fromOffset(460, 46) -- v2.35 bigger event banner (was 300x30)
 	pill.BackgroundColor3 = Color3.fromRGB(16, 27, 48)
 	pill.BackgroundTransparency = 0.12
 	pill.Font = Enum.Font.GothamBold
-	pill.TextSize = 15
+	pill.TextSize = 24
 	pill.TextColor3 = Color3.new(1, 1, 1)
 	pill.Visible = false
 	pill.Parent = gui
 	Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
 	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 1.5
+	stroke.Thickness = 2.5
 	stroke.Parent = pill
 	gui.Parent = player:WaitForChild("PlayerGui")
 	return pill, stroke

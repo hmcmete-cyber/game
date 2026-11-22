@@ -106,8 +106,9 @@ local Config = {
 
 	-- Vault spheres on your base (store caught weather; rivals can steal them)
 	VaultCount = 4,
-	VaultIncomeInterval = 5, -- seconds between passive income ticks
-	VaultIncomeRate = 0.1, -- each stored weather pays 10% of its reward per tick
+	-- v2.35 director: too much money -> passive income ~6x lower
+	VaultIncomeInterval = 10, -- seconds between passive income ticks (was 5)
+	VaultIncomeRate = 0.035, -- each stored cloud pays 3.5% of its reward per tick (was 10%)
 	TouchRadius = 2.5, -- extra studs around a sphere that count as "touching"
 	GrabCooldown = 1.5, -- after dropping/delivering, can't instantly grab again
 

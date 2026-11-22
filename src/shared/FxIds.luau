@@ -5,6 +5,15 @@
 --   Glow = "rbxassetid://123456",
 -- Missing / empty = FxKit uses a built-in Roblox texture instead.
 return {
-	-- Glow = "", Flare = "", Streak = "", Spikes = "", Ring = "", Swirl = "",
-	-- Crackle = "", Flame = "", Smoke = "", Shard = "", BeamSoft = "",
+	Glow = "rbxassetid://100562771243896",
+	Flare = "rbxassetid://85035230383810",
+	Streak = "rbxassetid://98127654315523",
+	Spikes = "rbxassetid://77839383042140",
+	Ring = "rbxassetid://90036084454601",
+	Swirl = "rbxassetid://118641203065024",
+	Crackle = "rbxassetid://133785492267289",
+	Flame = "rbxassetid://88327614548703",
+	Smoke = "rbxassetid://106388195654282",
+	Shard = "rbxassetid://130473994971416",
+	BeamSoft = "rbxassetid://87558026840941",
 }

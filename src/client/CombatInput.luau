@@ -62,6 +62,7 @@ local function roundButton(gui: ScreenGui, text: string, pos: UDim2, fn)
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = Color3.fromRGB(105, 222, 239)
 	stroke.Thickness = 1.5
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- v2.40 ring, not letter outline
 	stroke.Parent = b
 	b.Activated:Connect(fn)
 end

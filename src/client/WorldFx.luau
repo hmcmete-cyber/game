@@ -72,7 +72,11 @@ local function makeUi()
 	pill.Name = "Pill"
 	pill.AnchorPoint = Vector2.new(0.5, 0)
 	pill.Position = UDim2.new(0.5, 0, 0, 92)
-	pill.Size = UDim2.fromOffset(460, 46) -- v2.35 bigger event banner (was 300x30)
+	-- v2.35 bigger event banner; v2.40 the pill grows with its text
+	pill.Size = UDim2.fromOffset(0, 46)
+	pill.AutomaticSize = Enum.AutomaticSize.X
+	pill.TextStrokeTransparency = 0.5 -- thin dark outline keeps letters crisp
+	pill.TextStrokeColor3 = Color3.new(0, 0, 0)
 	pill.BackgroundColor3 = Color3.fromRGB(16, 27, 48)
 	pill.BackgroundTransparency = 0.12
 	pill.Font = Enum.Font.GothamBold
@@ -81,8 +85,18 @@ local function makeUi()
 	pill.Visible = false
 	pill.Parent = gui
 	Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 26)
+	pad.PaddingRight = UDim.new(0, 26)
+	pad.Parent = pill
+	local lim = Instance.new("UISizeConstraint")
+	lim.MinSize = Vector2.new(300, 46)
+	lim.Parent = pill
 	local stroke = Instance.new("UIStroke")
 	stroke.Thickness = 2.5
+	-- v2.40: on a TextLabel the stroke went round the LETTERS (blurry green
+	-- blob); it is the pill's border
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = pill
 	gui.Parent = player:WaitForChild("PlayerGui")
 	return pill, stroke

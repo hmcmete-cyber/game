@@ -233,12 +233,12 @@ local function onSpawn(player: Player, category: unknown, id: unknown)
 	elseif category == "Materials" then
 		local Forge = require(script.Parent:WaitForChild("ForgeService"))
 		for mid in require(RS.Shared.ForgeDefs).Materials do
-			Forge.Give(player, mid, 5)
+			Forge.Give(player, mid, 5, true)
 		end
 	elseif category == "Totems" then
 		local Forge = require(script.Parent:WaitForChild("ForgeService"))
 		for _, biome in require(RS.Shared.ForgeDefs).Biomes do
-			Forge.GiveTotem(player, biome, 1)
+			Forge.GiveTotem(player, biome, 1, true)
 		end
 	elseif category == "UnlockAll" then
 		local Catalog = require(RS.Shared.VendorCatalog)

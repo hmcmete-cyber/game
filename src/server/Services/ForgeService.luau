@@ -34,6 +34,89 @@ local function data(player: Player)
 	return d
 end
 
+-- v2.40 (director): totems are real items in your inventory (a Tool per
+-- biome, "Mesa Totem x2"), held upright in the hand like the gear. The count
+-- itself stays in d.Totems; the tools only mirror it.
+local function makeTotemTool(biome: string): Tool?
+	local model = TotemModels.Make(biome)
+	if not model then
+		return nil
+	end
+	local tool = Instance.new("Tool")
+	tool.CanBeDropped = false
+	tool.RequiresHandle = true
+	tool.ToolTip = `Offer it at the altar behind the {biome} boss`
+	tool:SetAttribute("TotemBiome", biome)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.5, 0.5, 0.5)
+	handle.Transparency = 1
+	handle.CanCollide, handle.CanQuery, handle.CanTouch, handle.Massless = false, false, false, true
+	handle.CFrame = CFrame.new()
+	handle.Parent = tool
+	tool.Grip = CFrame.new()
+	-- grip at the bottom centre, ~2.6 studs tall, upright
+	local bbCF, bbSize = model:GetBoundingBox()
+	local grip = bbCF.Position - Vector3.new(0, bbSize.Y / 2 - 0.3, 0)
+	local k = 2.6 / math.max(bbSize.X, bbSize.Y, bbSize.Z, 0.1)
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			local cf = CFrame.new(-grip) * part.CFrame
+			part.Size *= k
+			part.CFrame = CFrame.new(cf.Position * k) * cf.Rotation
+			part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.Massless = false, false, false, false, true
+			local w = Instance.new("WeldConstraint")
+			w.Part0, w.Part1 = handle, part
+			w.Parent = part
+		end
+	end
+	model.Parent = tool
+	return tool
+end
+
+local function syncTools(player: Player)
+	local d = DataService.Get(player)
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	if not d or not d.Totems or not backpack then
+		return
+	end
+	local have = {}
+	for _, where in { backpack, player.Character } do
+		if where then
+			for _, t in where:GetChildren() do
+				local b = t:IsA("Tool") and t:GetAttribute("TotemBiome")
+				if b then
+					if have[b] then
+						t:Destroy() -- duplicate
+					else
+						have[b] = t
+					end
+				end
+			end
+		end
+	end
+	for _, biome in ForgeDefs.Biomes do
+		local n = d.Totems[biome] or 0
+		local tool = have[biome]
+		if n <= 0 then
+			if tool then
+				tool:Destroy()
+			end
+		else
+			if not tool then
+				tool = makeTotemTool(biome)
+				if tool then
+					tool.Parent = backpack
+				end
+			end
+			if tool then
+				local name = ForgeDefs.Totems[biome].Name
+				tool.Name = n > 1 and `{name} x{n}` or name
+			end
+		end
+	end
+end
+
 local function sync(player: Player)
 	local d = data(player)
 	if not d then
@@ -47,6 +130,7 @@ local function sync(player: Player)
 	end
 	player:SetAttribute("Totems", HttpService:JSONEncode(d.Totems))
 	player:SetAttribute("TotemsSeen", HttpService:JSONEncode(d.TotemsSeen))
+	syncTools(player)
 end
 ForgeService.Sync = sync
 
@@ -57,18 +141,24 @@ local function hint(player: Player, text: string, t: number?)
 end
 
 -- QA helper
-function ForgeService.Give(player: Player, id: string, n: number)
+function ForgeService.Give(player: Player, id: string, n: number, quiet: boolean?)
 	local d = data(player)
 	if d and ForgeDefs.Materials[id] then
 		d.Materials[id] = (d.Materials[id] or 0) + n
 		sync(player)
+		if not quiet then
+			hint(player, `+{n} {ForgeDefs.Materials[id].Name} (see Hephaestus' Forge)`, 2)
+		end
 	end
 end
-function ForgeService.GiveTotem(player: Player, biome: string, n: number)
+function ForgeService.GiveTotem(player: Player, biome: string, n: number, quiet: boolean?)
 	local d = data(player)
 	if d and ForgeDefs.Totems[biome] then
 		d.Totems[biome] = (d.Totems[biome] or 0) + n
 		sync(player)
+		if not quiet then
+			hint(player, `+{n} {ForgeDefs.Totems[biome].Name} (in your inventory)`, 2)
+		end
 	end
 end
 
@@ -312,6 +402,11 @@ function ForgeService.Start(dataService, monsterService, remotes)
 				task.wait(0.5)
 			end
 			sync(player)
+		end)
+		-- the Backpack is rebuilt on every respawn: put the totems back
+		player.CharacterAdded:Connect(function()
+			task.wait(0.5)
+			syncTools(player)
 		end)
 	end
 	for _, p in Players:GetPlayers() do

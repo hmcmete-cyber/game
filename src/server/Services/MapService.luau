@@ -267,7 +267,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.19" -- v2.34 nursery floor without z-fighting
+local MAP_VERSION = "2.20" -- v2.35 climbable mushroom vines
 local BASE_RING = 240 -- v2.13: distance of the 12 bases from the hub centre
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 

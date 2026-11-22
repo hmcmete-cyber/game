@@ -381,6 +381,7 @@ spawnMonster = function(typeName: string, at: Vector3?, life: number?, target: P
 	hum.Health = def.HP
 	hum.WalkSpeed = def.Speed
 	hum.HipHeight += def.Hover or 0
+	local baseHip = hum.HipHeight
 	if def.Rooted then
 		hum.WalkSpeed = 0
 		hum.JumpPower = 0
@@ -394,6 +395,7 @@ spawnMonster = function(typeName: string, at: Vector3?, life: number?, target: P
 	end)
 
 	local info = {
+		BaseHip = baseHip, -- v2.35 flying monsters rise from / glide back to this
 		Type = typeName, Def = def, Model = model, Root = r, Hum = hum, Home = pos,
 		Alive = true, Busy = false, Target = target, Aggro = {}, Damage = {}, LastHitBy = nil,
 		Cooldowns = {}, MeleeReady = 0, DamageMult = 1, MultUntil = 0, Conns = {}, Tracks = {},
@@ -666,6 +668,9 @@ local function think(info)
 		end
 	end
 	local target = info.Target
+	if not target and def.Hover and info.BaseHip and info.Hum.HipHeight > info.BaseHip + 0.5 then
+		info.Hum.HipHeight += (info.BaseHip - info.Hum.HipHeight) * 0.25 -- glide back down
+	end
 	if not target then
 		-- roam inside the habitat
 		if not def.Rooted and os.clock() > info.NextRoam then
@@ -722,6 +727,12 @@ local function think(info)
 	end
 	if not def.Rooted then
 		info.Hum:MoveTo(tRoot.Position)
+	end
+	-- v2.35 flying monsters (Hover) follow you UP: lift toward your height
+	if def.Hover and info.BaseHip then
+		local dy = tRoot.Position.Y - info.Root.Position.Y
+		local want = math.clamp(info.Hum.HipHeight + dy, info.BaseHip, info.BaseHip + 45)
+		info.Hum.HipHeight += (want - info.Hum.HipHeight) * 0.35
 	end
 end
 

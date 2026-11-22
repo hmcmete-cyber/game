@@ -962,6 +962,27 @@ function ContinentBuilder.Build(ctx)
 		detail.Parent = decor
 		return brim
 	end
+	-- v2.35 director: "we can't get up the big mushroom" -> a climbable vine
+	-- ladder (TrussPart) just OUTSIDE the cap rim, from the ground to the cap top
+	local function vineLadder(name: string, base: Vector3, capR: number, brimTop: number, away: Vector3?)
+		local dir = away and Vector3.new(away.X, 0, away.Z) or Vector3.new(math.cos(capR * 3.1), 0, math.sin(capR * 3.1))
+		dir = dir.Magnitude > 0.01 and dir.Unit or Vector3.xAxis
+		local at = base + dir * (capR + 1.15)
+		local h = brimTop + 1 - (UP - 0.5)
+		local t = Instance.new("TrussPart")
+		t.Name = name .. "Vine"
+		t.Size = Vector3.new(2, h, 2)
+		t.CFrame = CFrame.lookAt(Vector3.new(at.X, UP - 0.5 + h / 2, at.Z), Vector3.new(base.X, UP - 0.5 + h / 2, base.Z))
+		t.Anchored = true
+		t.Color = Color3.fromRGB(90, 170, 80)
+		t.Material = Enum.Material.Grass
+		t.Parent = continent
+		for k = 1, math.floor(h / 4) do -- leaves along the vine
+			newPart(decor, name .. "VineLeaf" .. k, Vector3.new(1.4, 0.2, 0.9), t.CFrame * CFrame.new(((k % 2) * 2 - 1) * 1.2, -h / 2 + k * 4, 0) * CFrame.Angles(0, 0, ((k % 2) * 2 - 1) * 0.4),
+				Color3.fromRGB(110, 200, 90), { CanCollide = false, CanQuery = false, CastShadow = false })
+		end
+		return t
+	end
 	local function mushroom(name: string, base: Vector3, height: number, capR: number, color: Color3)
 		local stemR = math.max(1.6, capR * 0.22)
 		local brimTop = UP + height + 2
@@ -986,6 +1007,9 @@ function ContinentBuilder.Build(ctx)
 				stemC:Lerp(Color3.new(1, 1, 1), 0.1), { CanCollide = false, CanQuery = false, CastShadow = false })
 		end
 		roots.Parent = decor
+		if height >= 8 and capR >= 7 then
+			vineLadder(name, base, capR, brimTop, nil) -- giants: climb up the vine
+		end
 		return mushroomCap(name, base, brimTop, capR, color)
 	end
 	local clusters = { A(130, 105, UP), A(205, 128, UP), A(150, 142, UP), A(100, 140, UP), A(240, 100, UP), A(185, 95, UP) }
@@ -996,6 +1020,9 @@ function ContinentBuilder.Build(ctx)
 			local pos = center + polar(9 + i * 1.6 + rng:NextNumber(-1.2, 1.2), a, 0)
 			local last = i == steps
 			mushroom(`Shroom{c}_{i}`, pos, 4 * i - 2, last and 13 or rng:NextNumber(6.8, 8.5), capColors[rng:NextInteger(1, #capColors)])
+			if last then -- the top of each staircase also gets a vine from the ground, on the far side
+				vineLadder(`Shroom{c}_{i}Top`, pos, 13, UP + 4 * i, pos - center)
+			end
 			if last then
 				spawnPoint(Vector3.new(pos.X, UP + 4 * i + 3, pos.Z), "Mushroom")
 				local glow = newPart(decor, `SporeGlow{c}`, Vector3.one * 2, CFrame.new(pos + Vector3.new(0, 4 * i + 5, 0)), Color3.fromRGB(180, 255, 200), {

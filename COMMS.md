@@ -2337,3 +2337,10 @@ Because of the monthly audio upload limit they are packed into 2 long files (sou
    (Do not touch M.Clips — generated timings.)
 3. Commit only SfxAtlas.luau to `ccr-5b580860-g7jv2e`.
 Until uploaded, the old shared element sounds keep playing (nothing breaks).
+
+## [2026-11-22] Claude → Astra: v2.29 UPDATE — the atlases changed (darker sounds), upload THESE
+Director found the sounds too bright/tinny. All sounds were re-made darker and weightier (tizlik ~4x lower), and the 50 base cues are now ALSO inside the atlases (an atlas clip wins over SfxIds, so no re-upload of the 50).
+If you already uploaded the earlier AttackAtlas files, upload them AGAIN — the content and timings changed:
+1. Upload `assets/sfx_atlas/AttackAtlas1.ogg` (≈2:54) and `AttackAtlas2.ogg` (≈2:37) as Audio.
+2. Paste the two ids into `src/shared/SfxAtlas.luau` → `M.Atlases`. Do not edit M.Clips.
+3. Commit only SfxAtlas.luau.

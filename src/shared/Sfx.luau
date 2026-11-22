@@ -251,20 +251,17 @@ end
 -- 2D sound for everyone (big moments: legendary hatch, boss defeat)
 function Sfx.Global(cueName: string, pitchScale: number?)
 	local cue = Sfx.Cues[cueName]
-	if cue then
-		if not holder or not holder.Parent then
-			holder = Instance.new("Folder")
-			holder.Name = "SfxEmitters"
-			holder.Parent = workspace
-		end
-		playLayers(holder, cue, pitchScale, cueName) -- sounds not inside a part play 2D for everyone
-	elseif atlasClip(cueName) then
-		if not holder or not holder.Parent then
-			holder = Instance.new("Folder")
-			holder.Name = "SfxEmitters"
-			holder.Parent = workspace
-		end
-		playAtlas(holder, cueName, pitchScale)
+	if not cue and not atlasClip(cueName) then
+		return
+	end
+	if not holder or not holder.Parent then
+		holder = Instance.new("Folder")
+		holder.Name = "SfxEmitters"
+		holder.Parent = workspace
+	end
+	-- sounds not inside a part play 2D for everyone; the atlas clip wins
+	if not playAtlas(holder, cueName, pitchScale) then
+		playLayers(holder, cue, pitchScale, cueName)
 	end
 end
 

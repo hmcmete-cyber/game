@@ -39,7 +39,7 @@ def snd(name, reverb="room", wet=0.18, width=0.4):
 
 # ---------- extra blocks ----------
 def snap(amp=1.0, f=2600):
-    return H.crack(0.005, f, amp)
+    return H.mix(H.crack(0.006, min(f, 1500), amp * 0.8), H.thump(300, 140, 0.05, amp * 0.5))  # v2.29 woody snap
 
 
 def chomp(n_bites=1, low=1.0):
@@ -57,7 +57,9 @@ def boing(f0=180, d=0.5, depth=0.35, rate=12):
 
 
 def hiss(d=0.6, lo=3000, amp=1.0):
-    return H.filt(H.white(d), "hp", lo) * H.env_adsr(d, 0.02, 0.1, 0.7, d * 0.5) * amp
+    # v2.29: a low, crunchy SIZZLE instead of a bright hiss
+    sizzle = H.grains(d, 500, 200, 700, 3200, 0.004) * 0.8
+    return (H.filt(H.white(d), "bp", [500, 2200]) * 0.35 + sizzle) * H.env_adsr(d, 0.02, 0.1, 0.7, d * 0.5) * amp
 
 
 def slurp(d=0.35, f0=300, f1=900):
@@ -69,19 +71,24 @@ def rumble(d=1.0, amp=1.0, f=140):
 
 
 def ice_crack(amp=1.0):
-    return H.mix(H.crack(0.01, 3000, amp), H.grains(0.35, 500, 40, 2500, 9000, 0.003, amp_decay=0.1) * amp)
+    # v2.29: deep ice CRACK with crunch, not glassy tinkle
+    return H.mix(H.crack(0.01, 1200, amp * 0.7), H.thump(160, 60, 0.2, amp * 0.8), H.grains(0.35, 500, 40, 700, 3800, 0.005, amp_decay=0.1) * amp)
 
 
 def pluck(f=900, d=0.25):
-    return H.modal([f, f * 2.01, f * 3.03], [d * 0.6, d * 0.3, d * 0.15], [1, 0.4, 0.2], d)
+    # v2.29: heavier crystal "chunk" (pitch down + body thump), not a bright ping
+    f = min(f, 1100) * 0.55
+    return H.mix(H.modal([f, f * 2.01, f * 2.9], [d * 0.5, d * 0.25, d * 0.1], [1, 0.3, 0.1], d), H.thump(220, 90, 0.12, 0.6))
 
 
 def magic(notes, d=0.8):
-    return H.mix(H.chime(notes, d, 0.04) * 0.6, H.filt(H.white(d), "hp", 6000) * H.env_adsr(d, 0.05, 0.1, 0.5, d * 0.6) * 0.25)
+    # v2.29: warm low bell + soft swell (no airy shimmer)
+    notes = [f / 2 for f in notes]
+    return H.mix(H.chime(notes, d, 0.05, 0.7) * 0.55, H.sweep_osc(notes[0] / 2, notes[0] / 2, d) * H.env_adsr(d, 0.1, 0.1, 0.6, d * 0.5) * 0.25)
 
 
 def gust(d=0.5, f0=300, f1=2500, amp=1.0):
-    return H.whoosh(d, f0, f1, amp, 1.1)
+    return H.whoosh(d, min(f0, 2200), min(f1, 2600), amp, 1.1)  # v2.29 capped: airy, not hissy
 
 
 # =====================================================================
@@ -89,9 +96,9 @@ def gust(d=0.5, f0=300, f1=2500, amp=1.0):
 # =====================================================================
 # Crystal Stalker
 @snd("ShardVolley")
-def _(): return H.mix(*[H.at(H.mix(gust(0.12, 2000, 6000, 0.5), pluck(2200 + k * 300, 0.3) * 0.6), k * 0.07) for k in range(3)])
+def _(): return H.mix(*[H.at(H.mix(gust(0.14, 500, 1800, 0.5), H.thump(170 - k * 15, 70, 0.18, 1.0, 0.05), H.grains(0.18, 600, 100, 500, 2600, 0.006, amp_decay=0.06) * 0.8), k * 0.09) for k in range(3)])
 @snd("RefractionDash", "hall", 0.25)
-def _(): return H.mix(H.sweep_osc(400, 3200, 0.3, "tri") * H.env_exp(0.3, 0.005, 0.12) * 0.5, gust(0.3, 1000, 7000, 0.7), H.at(magic([1568, 2093, 2637]), 0.15))
+def _(): return H.mix(H.sweep_osc(200, 700, 0.3, "tri") * H.env_exp(0.3, 0.005, 0.12) * 0.5, gust(0.35, 400, 2200, 0.8), H.at(H.thump(140, 60, 0.2, 0.8), 0.25))
 # Glacier Tortoise
 @snd("PermafrostSlam", "hall", 0.25)
 def _(): return H.mix(H.thump(120, 40, 0.5, 1.4, 0.12), ice_crack(1.2), H.at(H.shatter(0.8, 0.9, 1.0) * 0.6, 0.05))
@@ -128,7 +135,7 @@ def _(): return H.mix(H.filt(H.pink(0.8), "lp", 1600) * H.env_exp(0.8, 0.05, 0.2
 def _(): return H.mix(*[H.at(H.bubble(500 + k * 160, 0.12, 2.0) * 0.7, k * 0.12) for k in range(3)], H.at(magic([1046, 1318]) * 0.3, 0.1))
 # Fungal Brute
 @snd("SpineSpray")
-def _(): return H.mix(*[H.at(H.mix(snap(0.6, 3500), gust(0.08, 3000, 8000, 0.3)), k * 0.03) for k in range(10)])
+def _(): return H.mix(*[H.at(H.mix(snap(0.6, 1400), H.thump(260, 120, 0.06, 0.4)), k * 0.035) for k in range(10)], gust(0.4, 300, 1500, 0.4))
 @snd("MyceliumGrip")
 def _(): return H.mix(H.grains(0.7, 400, 100, 300, 2500, 0.01) * 1.2, H.sweep_osc(90, 60, 0.7, "saw") * H.env_adsr(0.7, 0.1, 0.1, 0.7, 0.3) * 0.2)
 # Watching Rubble
@@ -145,7 +152,7 @@ def _(): return H.mix(*[H.at(H.mix(H.grains(0.25, 600, 80, 400, 3000, 0.006), H.
 @snd("SnapLunge")
 def _(): return H.mix(chomp(1, 0.9), H.at(H.zap(0.25, 2500, 300, 120) * 0.7, 0.04))
 @snd("AcidSpit")
-def _(): return H.mix(slurp(0.2, 600, 1500) * 0.6, H.at(H.mix(H.splash(0.4, 0.4) * 0.6, hiss(0.9, 3500, 0.7)), 0.18))
+def _(): return H.mix(slurp(0.2, 300, 900) * 0.7, H.at(H.mix(H.thump(150, 60, 0.2, 0.9), H.splash(0.5, 0.7) * 0.5, hiss(0.8, 0, 0.7), *[H.at(H.bubble(rng.uniform(180, 320), 0.1, 1.6) * 0.4, rng.uniform(0.05, 0.5)) for _ in range(5)]), 0.15))
 # Mossy Golem
 @snd("BoulderToss", "hall", 0.22)
 def _(): return H.mix(gust(0.5, 150, 900, 0.6), H.at(H.rock_crunch(1.1, 1.6), 0.45))
@@ -165,7 +172,7 @@ def _(): return H.mix(*[H.at(gust(0.18, 600, 3000, 0.7), k * 0.13) for k in rang
 @snd("WoolBounce")
 def _(): return H.mix(boing(130, 0.6, 0.4, 7), H.thump(150, 70, 0.25, 0.9), H.filt(H.pink(0.4), "lp", 1200) * H.env_exp(0.4, 0.01, 0.1) * 0.6)
 @snd("StaticFluff")
-def _(): return H.mix(H.grains(0.9, 400, 400, 3000, 12000, 0.0015) * 0.9, H.at(H.zap(0.2, 4000, 1500, 200) * 0.4, 0.3), H.at(H.zap(0.15, 3500, 900, 260) * 0.35, 0.55))
+def _(): return H.mix(H.grains(0.9, 300, 300, 800, 3500, 0.003) * 0.8, H.filt(H.pink(0.9), "lp", 900) * H.env_exp(0.9, 0.02, 0.3) * 0.7, H.at(H.zap(0.2, 1800, 300, 70) * 0.4, 0.3))
 # Snow Owl
 @snd("SnowballBarrage")
 def _(): return H.mix(*[H.at(H.mix(H.filt(H.white(0.12), "bp", [400, 2500]) * H.env_exp(0.12, 0.002, 0.03), H.thump(200, 100, 0.08, 0.4)), k * 0.11) for k in range(5)])
@@ -185,12 +192,12 @@ def _(): return H.mix(H.formant(H.sweep_osc(90, 70, 0.6, "saw"), ((300, 1), (900
 @snd("PincerSnap")
 def _(): return H.mix(H.modal([1800, 3100, 4600], [0.15, 0.1, 0.06], [1, 0.6, 0.3], 0.3) * 0.7, snap(1.2, 3000), H.at(snap(0.8, 3200), 0.06))
 @snd("CrystalSting")
-def _(): return H.mix(gust(0.12, 3000, 9000, 0.5), H.at(pluck(2800, 0.4) * 0.7, 0.1), H.at(ice_crack(0.5), 0.1))
+def _(): return H.mix(gust(0.14, 600, 2000, 0.5), H.at(pluck(1000, 0.4) * 0.8, 0.1), H.at(ice_crack(0.6), 0.1))
 # Lava Salamander
 @snd("FlameDash")
 def _(): return H.mix(gust(0.5, 200, 2500, 1.0), H.fire_roar(0.7, 0.8), H.grains(0.6, 150, 50, 1500, 6000, 0.002) * 0.5)
 @snd("EmberSpit")
-def _(): return H.mix(H.at(H.sweep_filter(H.white(0.1), "bp", 800, 3000, q_bw=0.5) * H.env_exp(0.1, 0.002, 0.03), 0), H.at(H.mix(hiss(0.6, 2500, 0.6), H.thump(180, 80, 0.15, 0.5)), 0.1))
+def _(): return H.mix(H.sweep_filter(H.white(0.12), "bp", 400, 1400, q_bw=0.6) * H.env_exp(0.12, 0.002, 0.04), H.at(H.mix(H.fire_roar(0.6, 0.7), H.thump(160, 60, 0.2, 0.9)), 0.1))
 # Tide Octopus
 @snd("InkCloud")
 def _(): return H.mix(H.filt(H.brown(0.9), "lp", 600) * H.env_exp(0.9, 0.02, 0.3) * 1.2, *[H.at(H.bubble(rng.uniform(150, 350), 0.15, 1.6) * 0.5, rng.uniform(0, 0.6)) for _ in range(6)])
@@ -272,18 +279,18 @@ EL = {
     "Ice": lambda: ice_crack(0.6),
     "Spore": lambda: H.filt(H.pink(0.35), "lp", 1500) * H.env_exp(0.35, 0.01, 0.1) * 0.9,
     "Electric": lambda: H.zap(0.16, 3200, 900, 180) * 0.6,
-    "Crystal": lambda: pluck(2400, 0.4) * 0.6,
+    "Crystal": lambda: pluck(900, 0.4) * 0.7,
     "Fire": lambda: H.fire_roar(0.4, 0.6),
     "Water": lambda: H.mix(H.bubble(420, 0.1, 1.8) * 0.6, H.at(H.bubble(600, 0.08, 1.8) * 0.4, 0.06)),
     "Wind": lambda: gust(0.25, 800, 4000, 0.6),
 }
-PITCH = {"Earth": 0.8, "Ice": 1.15, "Spore": 1.0, "Electric": 1.1, "Crystal": 1.25, "Fire": 0.9, "Water": 1.05, "Wind": 1.2}
+PITCH = {"Earth": 0.75, "Ice": 0.95, "Spore": 0.9, "Electric": 0.9, "Crystal": 1.0, "Fire": 0.85, "Water": 0.9, "Wind": 1.0}
 KIND = {
     "Bite": lambda p: chomp(1, 1.3 * p),
-    "Bolt": lambda p: H.mix(H.sweep_osc(700 * p, 2200 * p, 0.15, "tri") * H.env_exp(0.15, 0.002, 0.06) * 0.5, H.at(snap(0.6, 2500), 0.12)),
+    "Bolt": lambda p: H.mix(H.sweep_osc(300 * p, 800 * p, 0.15, "tri") * H.env_exp(0.15, 0.002, 0.06) * 0.5, H.at(H.thump(200 * p, 80, 0.12, 0.8), 0.12)),
     "Lob": lambda p: H.mix(gust(0.25, 600, 1500, 0.4), H.at(H.thump(200 * p, 90 * p, 0.15, 0.7), 0.25)),
     "Pulse": lambda p: H.mix(H.sweep_osc(180 * p, 360 * p, 0.4) * H.env_adsr(0.4, 0.05, 0.1, 0.7, 0.2) * 0.6, magic([880 * p, 1320 * p], 0.5) * 0.4),
-    "Chain": lambda p: H.mix(*[H.at(H.zap(0.09, 3000 * p, 900, 160) * 0.5, k * 0.06) for k in range(3)]),
+    "Chain": lambda p: H.mix(*[H.at(H.zap(0.1, 1600 * p, 300, 90) * 0.5, k * 0.06) for k in range(3)]),
     "Mend": lambda p: magic([660 * p, 880 * p, 1100 * p], 0.7),
 }
 for el, tex in EL.items():
@@ -304,8 +311,27 @@ def _(): return H.mix(H.filt(H.pink(0.3), "bp", [300, 2500]) * H.env_exp(0.3, 0.
 # =====================================================================
 # pack into atlases
 # =====================================================================
+# v2.29: the 50 base cues go into the atlas too (re-made darker; an atlas
+# clip wins over SfxIds), so fixing them costs no extra uploads
+for _name, (_fn, _r) in H.C.items():
+    A.setdefault(_name, _fn)
+
+UI = {"Buy", "TutorialStep", "CloudDeliver", "CloudCatch", "PetLevelUp", "BossReward", "OrbOffer", "OrbRefuse", "EggTake", "EggDeliver"}
+
+
+def darken(name, st):
+    """v2.29 director: no bright/tinny sounds - roll off the top, add weight"""
+    cut = 8000 if name in UI else 5500
+    out = []
+    for ch in st:
+        y = H.filt(ch, "lp", cut, 2)
+        y = y + 0.35 * H.filt(y, "lp", 220, 2)
+        out.append(y)
+    return np.stack(out)
+
+
 GAP = 0.35
-MAX_LEN = 170.0  # seconds per atlas (well under Roblox's audio length limit)
+MAX_LEN = 175.0  # seconds per atlas (well under Roblox's audio length limit)
 
 
 def encode(path_ogg, st):
@@ -325,7 +351,7 @@ if __name__ == "__main__":
     atlases, clips = [], {}
     cur, cur_len, idx = [], 0.0, 1
     for name, fn in A.items():
-        st = H.master(fn(), target_rms=0.15)
+        st = H.master(darken(name, fn()), target_rms=0.15)
         L = st.shape[1] / H.SR
         if cur_len + L + GAP > MAX_LEN and cur:
             atlases.append(cur)

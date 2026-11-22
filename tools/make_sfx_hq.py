@@ -287,7 +287,7 @@ def explosion(d=2.2, size=1.0, color=1.0, debris=1.0, sub_f=55):
 
 
 def shatter(d=1.0, bright=1.0, n_grains=1.0):
-    tink = grains(d, 900 * n_grains, 20, 3000 * bright, 11000, 0.003, amp_decay=0.25) * 0.8
+    tink = grains(d, 900 * n_grains, 20, 1800 * bright, 7000, 0.004, amp_decay=0.25) * 0.6  # v2.29 less glassy-bright
     partials = modal([2350 * bright, 3870 * bright, 5320 * bright, 6900 * bright, 8800 * bright], [0.25, 0.18, 0.12, 0.09, 0.06], [0.6, 0.5, 0.4, 0.3, 0.2], d, 0.04)
     return mix(crack(0.008, 2500, 1.2), tink, partials * 0.5, filt(white(0.12), "hp", 4000) * env_exp(0.12, 0.001, 0.03) * 0.6)
 
@@ -311,7 +311,7 @@ def fire_roar(d=1.2, amp=1.0):
 
 def splash(d=0.9, size=1.0):
     impact = filt(white(0.25), "bp", [500, 6000]) * env_exp(0.25, 0.002, 0.07 * size)
-    spray = filt(white(d), "hp", 2500) * env_exp(d, 0.01, 0.2 * size) * 0.5
+    spray = filt(white(d), "bp", [900, 4500]) * env_exp(d, 0.01, 0.15 * size) * 0.3  # v2.29 darker spray
     blips = np.zeros(n(d))
     for _ in range(int(14 * size)):
         b = bubble(rng.uniform(300, 1200) / size, rng.uniform(0.04, 0.12))

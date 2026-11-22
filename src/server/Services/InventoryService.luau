@@ -57,6 +57,18 @@ local function data(player: Player)
 	if type(d.Perks) ~= "table" then
 		d.Perks = {}
 	end
+	-- v2.31 gear: everything bought from Tayron is owned for good
+	if type(d.Gear) ~= "table" then
+		d.Gear = {}
+	end
+	if #d.Items > 0 then -- migrate old one-shot items into owned gear
+		for _, it in d.Items do
+			if ShopItems.Types[it.Id] then
+				d.Gear[it.Id] = true
+			end
+		end
+		d.Items = {}
+	end
 	d.Inventory = nil
 	return d
 end
@@ -117,6 +129,11 @@ local function sync(player: Player)
 		table.insert(items, `{it.Id}:{it.Count}`)
 	end
 	player:SetAttribute("Items", table.concat(items, ","))
+	local gear = {}
+	for id in d.Gear do
+		table.insert(gear, id)
+	end
+	player:SetAttribute("Gear", "," .. table.concat(gear, ",") .. ",")
 
 	local perks = {}
 	for _, p in d.Perks do
@@ -281,6 +298,123 @@ local function addItem(d, id: string): boolean
 	return true
 end
 
+------------------------------------------------------------------------
+-- v2.31 GEAR: owned forever, held in your hand as a Tool
+--   simple gear: Cooldown after each use · OP gear: 3 charges refilling
+--   (state lives on the server; the Tool carries Charges/ReadyAt/NextChargeAt
+--    attributes so the client can show the timer)
+------------------------------------------------------------------------
+local ItemIcons = require(ReplicatedStorage.Shared.ItemIcons)
+local Sfx = require(ReplicatedStorage.Shared.Sfx)
+local HitFx = require(ReplicatedStorage.Shared.HitFx)
+local gearState = {} -- [Player] = { [id] = { Charges, NextAt, ReadyAt } }
+
+local function owns(d, id: string): boolean
+	return d ~= nil and d.Gear ~= nil and d.Gear[id] == true
+end
+
+local function stateOf(player: Player, id: string)
+	gearState[player] = gearState[player] or {}
+	local st = gearState[player][id]
+	if not st then
+		st = { Charges = ShopItems.Types[id].MaxCharges or 0, NextAt = 0, ReadyAt = 0 }
+		gearState[player][id] = st
+	end
+	return st
+end
+
+local function rechargeTick(st, item, t: number): boolean
+	local changed = false
+	while item.Op and st.Charges < item.MaxCharges and st.NextAt > 0 and t >= st.NextAt do
+		st.Charges += 1
+		st.NextAt = st.Charges < item.MaxCharges and (st.NextAt + item.Recharge) or 0
+		changed = true
+	end
+	return changed
+end
+
+local function toolsOf(player: Player, id: string): { Tool }
+	local out = {}
+	for _, where in { player:FindFirstChildOfClass("Backpack"), player.Character } do
+		for _, t in where and where:GetChildren() or {} do
+			if t:IsA("Tool") and t:GetAttribute("GearId") == id then
+				table.insert(out, t)
+			end
+		end
+	end
+	return out
+end
+
+local function refreshTool(player: Player, id: string)
+	local st = stateOf(player, id)
+	for _, tool in toolsOf(player, id) do
+		tool:SetAttribute("Charges", st.Charges)
+		tool:SetAttribute("ReadyAt", st.ReadyAt)
+		tool:SetAttribute("NextChargeAt", st.NextAt)
+	end
+end
+
+local function makeTool(id: string): Tool
+	local item = ShopItems.Types[id]
+	local tool = Instance.new("Tool")
+	tool.Name = item.DisplayName or id
+	tool.ToolTip = item.Desc or ""
+	tool.CanBeDropped = false
+	tool.RequiresHandle = true
+	tool:SetAttribute("GearId", id)
+	tool:SetAttribute("MaxCharges", item.MaxCharges or 0)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.5, 0.5, 0.5)
+	handle.Transparency = 1
+	handle.CanCollide, handle.CanQuery, handle.CanTouch, handle.Massless = false, false, false, true
+	handle.CFrame = CFrame.new()
+	handle.Parent = tool
+	-- the shop's 3D logo becomes the gear you hold
+	local ok, model = pcall(function()
+		return ItemIcons.Build(ItemIcons.KindFor(id, item), item.IconColor or Color3.new(1, 1, 1))
+	end)
+	if ok and model then
+		local ext = model:GetExtentsSize().Magnitude
+		if ext > 0 then
+			model:ScaleTo(model:GetScale() * 2 / ext)
+		end
+		model:PivotTo(CFrame.new(0, 0.7, -0.2))
+		for _, part in model:GetDescendants() do
+			if part:IsA("BasePart") then
+				part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.Massless = false, false, false, false, true
+				local w = Instance.new("WeldConstraint")
+				w.Part0, w.Part1 = handle, part
+				w.Parent = part
+			end
+		end
+		model.Parent = tool
+	end
+	return tool
+end
+
+local function giveTool(player: Player, id: string)
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	if not backpack or #toolsOf(player, id) > 0 then
+		return
+	end
+	makeTool(id).Parent = backpack
+	refreshTool(player, id)
+end
+
+local function giveAllTools(player: Player)
+	local d = data(player)
+	if not d then
+		return
+	end
+	for _, id in ShopItems.Order do -- hotbar in shop order
+		if d.Gear[id] and ShopItems.Types[id] then
+			giveTool(player, id)
+		end
+	end
+end
+InventoryService.GiveAllTools = giveAllTools
+
 local function buy(player: Player, id: unknown)
 	local d = data(player)
 	local item = type(id) == "string" and ShopItems.Types[id]
@@ -292,14 +426,17 @@ local function buy(player: Player, id: unknown)
 		Remotes.Hint:FireClient(player, "Locked: offer the required cloud at Tayron's Orb first.", 3)
 		return
 	end
+	if owns(d, id :: string) then
+		Remotes.Hint:FireClient(player, "You already own this gear.", 2)
+		return
+	end
 	if d.Coins < item.Price then
 		Remotes.Hint:FireClient(player, `Need {item.Price} coins`, 2)
 		return
 	end
-	if not addItem(d, id :: string) then
-		Remotes.Hint:FireClient(player, "Bag full!", 2)
-		return
-	end
+	d.Gear[id :: string] = true
+	giveTool(player, id :: string)
+	DataService.SaveSoon(player)
 	d.Coins -= item.Price
 	DataService.Sync(player)
 	do
@@ -450,68 +587,148 @@ local function shield(player: Player, item, duration: number)
 	Remotes.Hint:FireClient(player, `Shield on!`, 2)
 end
 
-local function useItem(player: Player, id: unknown, aim: unknown)
-	local d = data(player)
-	local item = type(id) == "string" and ShopItems.Types[id]
-	if not d or not item or item.ComingSoon then
-		return
+-- feedback: every gear use shows and sounds like something
+local BUFF_COLOR = {
+	Speed = Color3.fromRGB(255, 200, 80), Jump = Color3.fromRGB(150, 255, 150), Resist = Color3.fromRGB(170, 190, 220),
+	KnockResist = Color3.fromRGB(200, 170, 120), Regen = Color3.fromRGB(120, 255, 150), Damage = Color3.fromRGB(255, 90, 80),
+	XP = Color3.fromRGB(140, 200, 255), Coins = Color3.fromRGB(255, 215, 70), Crit = Color3.fromRGB(255, 140, 60),
+	Lifesteal = Color3.fromRGB(220, 40, 70), Haste = Color3.fromRGB(255, 255, 140), Stealth = Color3.fromRGB(120, 110, 160),
+}
+local BLAST_STYLE = { Burn = "Fire", Slow = "Ice", Shock = "Electric", Knock = "Earth", Expose = "Crystal" }
+local BLAST_SFX = { Burn = "Fire", Slow = "Ice", Shock = "Electric", Knock = "Earth", Expose = "Crystal" }
+local function feedback(root: BasePart, color: Color3, cue: string?)
+	FxKit.Burst(root.Position, color, 0.8)
+	if cue then
+		Sfx.At(cue, root.Position)
 	end
-	local slot
-	for i, it in d.Items do
-		if it.Id == id then
-			slot = i
-			break
+end
+
+-- timed buff that never DOWNGRADES a stronger active one (just extends it)
+local function setTimed(player: Player, amountAttr: string, untilAttr: string, amount: number, untilT: number, now: number)
+	local cur = player:GetAttribute(amountAttr) or 0
+	local curUntil = player:GetAttribute(untilAttr) or 0
+	if curUntil > now and cur > amount then
+		player:SetAttribute(untilAttr, math.max(curUntil, untilT))
+	else
+		player:SetAttribute(amountAttr, amount)
+		player:SetAttribute(untilAttr, untilT)
+	end
+end
+
+-- groundsafe point for Dash: stop before walls, never over the void
+local function dashTarget(player: Player, root: BasePart, dir: Vector3, dist: number): Vector3?
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { player.Character, workspace:FindFirstChild("Weather"), workspace:FindFirstChild("FxKit") }
+	local wall = workspace:Raycast(root.Position, dir * dist, params)
+	local reach = wall and math.max(0, (wall.Position - root.Position).Magnitude - 3) or dist
+	for d = reach, 4, -4 do
+		local p = root.Position + dir * d
+		local floor = workspace:Raycast(p + Vector3.new(0, 4, 0), Vector3.new(0, -40, 0), params)
+		if floor and floor.Position.Y > 14 then
+			return floor.Position + Vector3.new(0, 3, 0)
 		end
 	end
-	if not slot then
-		return
-	end
+	return nil
+end
 
+-- throw a bomb: glowing ball lobbed to the aim point, then it blows up there
+local function throwBomb(player: Player, root: BasePart, aim: unknown, item, onLand: (Vector3) -> ())
+	local from = root.Position + Vector3.new(0, 2, 0)
+	local target = typeof(aim) == "Vector3" and aim or (root.Position + root.CFrame.LookVector * 20)
+	local off = target - from
+	if off.Magnitude > 60 then
+		target = from + off.Unit * 60
+	end
+	local ball = Instance.new("Part")
+	ball.Shape = Enum.PartType.Ball
+	ball.Size = Vector3.one * 1.4
+	ball.Material = Enum.Material.Neon
+	ball.Color = item.IconColor or Color3.fromRGB(255, 200, 120)
+	ball.Anchored, ball.CanCollide, ball.CanQuery, ball.CanTouch = true, false, false, false
+	ball.CFrame = CFrame.new(from)
+	ball.Parent = workspace
+	FxKit.Trail(ball, ball.Color, 1.2)
+	Debris:AddItem(ball, 2)
+	task.spawn(function()
+		local t0, T = os.clock(), 0.55
+		while os.clock() - t0 < T do
+			local f = (os.clock() - t0) / T
+			ball.CFrame = CFrame.new(from:Lerp(target, f) + Vector3.new(0, math.sin(f * math.pi) * 10, 0))
+			task.wait()
+		end
+		ball:Destroy()
+		onLand(target)
+	end)
+end
+
+-- apply one gear use; returns false when nothing happened (no cooldown spent)
+local function apply(player: Player, d, item, aim: unknown): boolean
 	local now = workspace:GetServerTimeNow()
 	local duration = (item.Duration or 0) * (player:GetAttribute("ItemTime") or 1)
-	if item.Effect == "Speed" then
-		player:SetAttribute("SpeedMult", item.Amount)
-		player:SetAttribute("SpeedUntil", now + duration)
-	elseif item.Effect == "Jump" then
-		player:SetAttribute("JumpMult", item.Amount)
-		player:SetAttribute("JumpUntil", now + duration)
-	elseif item.Effect == "Nitro" then
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return false
+	end
+	local e = item.Effect
+	if e == "Speed" then
+		setTimed(player, "SpeedMult", "SpeedUntil", item.Amount, now + duration, now)
+		feedback(root, BUFF_COLOR.Speed, "PetPulse")
+	elseif e == "Jump" then
+		setTimed(player, "JumpMult", "JumpUntil", item.Amount, now + duration, now)
+		feedback(root, BUFF_COLOR.Jump, "PetPulse")
+	elseif e == "Nitro" then
 		if now < (player:GetAttribute("NitroUntil") or 0) then
-			return -- already boosting
+			return false -- already boosting
 		end
 		player:SetAttribute("NitroUntil", now + duration)
-	elseif item.Effect == "Flare" then
+		HitFx.Play("PlayerPunch", root.Position - root.CFrame.LookVector * 2, 0.7, -root.CFrame.LookVector)
+		Sfx.At("Wind", root.Position)
+	elseif e == "Flare" then
 		flare(player)
-	elseif item.Effect == "Shield" then
+	elseif e == "Shield" then
 		shield(player, item, duration)
-	-- v2.13 Tayron gadgets ------------------------------------------------
-	elseif item.Effect == "Buff" then
-		-- timed buff, summed with pets/boons (and switched off while carrying) in PetService
-		player:SetAttribute("GB_" .. item.Kind, item.Amount)
-		player:SetAttribute("GBUntil_" .. item.Kind, now + duration)
-	elseif item.Effect == "Heal" then
-		local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		Sfx.At("BaseLock", root.Position)
+	elseif e == "Buff" then
+		-- summed with pets/boons in PetService; a weaker one never replaces a stronger one
+		setTimed(player, "GB_" .. item.Kind, "GBUntil_" .. item.Kind, item.Amount, now + duration, now)
+		feedback(root, BUFF_COLOR[item.Kind] or Color3.fromRGB(200, 220, 255), "PetPulse")
+	elseif e == "Heal" then
+		local hum = player.Character:FindFirstChildOfClass("Humanoid")
 		if not hum or hum.Health <= 0 then
-			return
+			return false
+		end
+		if hum.Health >= hum.MaxHealth - 0.5 then
+			Remotes.Hint:FireClient(player, "Your health is already full.", 2)
+			return false
 		end
 		hum.Health = math.min(hum.MaxHealth, hum.Health + item.Amount)
-	elseif item.Effect == "ShieldNow" then
+		HitFx.Play("PetSporeMend", root.Position - Vector3.new(0, 2.5, 0), 0.9)
+		Sfx.At("PetLevelUp", root.Position)
+	elseif e == "ShieldNow" then
 		player:SetAttribute("ShieldUntil", now + duration)
-	elseif item.Effect == "Cleanse" then
+		local ff = Instance.new("ForceField") -- visible bubble
+		ff.Name = "GearShield"
+		ff.Parent = player.Character
+		Debris:AddItem(ff, duration)
+		Sfx.At("BaseLock", root.Position)
+	elseif e == "Cleanse" then
 		for _, attr in { "MonsterSlowUntil", "RootedUntil", "BurnUntil", "BlindUntil", "ShockedUntil", "LaserSlowUntil" } do
 			player:SetAttribute(attr, 0)
 		end
-	elseif item.Effect == "EggWarm" then
+		feedback(root, Color3.fromRGB(240, 250, 255), "Spore")
+	elseif e == "EggWarm" then
 		if not d.Incubator then
 			Remotes.Hint:FireClient(player, "No egg is incubating.", 2)
-			return
+			return false
 		end
 		d.Incubator.ReadyAt -= item.Minutes * 60
-	elseif item.Effect == "Recall" then
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if not root or player:GetAttribute("Carrying") then
-			Remotes.Hint:FireClient(player, "Can't recall while carrying a cloud.", 2)
-			return
+		feedback(root, Color3.fromRGB(255, 170, 80), "HatchPulse")
+		Remotes.Hint:FireClient(player, `Your egg hatches {item.Minutes} min sooner!`, 3)
+	elseif e == "Recall" then
+		if player:GetAttribute("Carrying") or player:GetAttribute("CarryingEgg") then
+			Remotes.Hint:FireClient(player, "Can't recall while carrying a cloud or an egg.", 2)
+			return false
 		end
 		local roofs = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Rooftops")
 		local nest
@@ -521,40 +738,116 @@ local function useItem(player: Player, id: unknown, aim: unknown)
 			end
 		end
 		if not nest then
-			return
+			return false
 		end
+		FxKit.Pillar(root.Position - Vector3.new(0, 3, 0), Color3.fromRGB(255, 140, 220), 30, 0.8)
 		player.Character:PivotTo(CFrame.new(nest.Position + Vector3.new(0, 5, 4)))
-	elseif item.Effect == "Dash" then
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if not root or not Remotes.Grapple then
-			return
+		FxKit.Pillar(nest.Position, Color3.fromRGB(255, 140, 220), 30, 0.8)
+		Sfx.At("OrbOffer", nest.Position)
+	elseif e == "Dash" then
+		if not Remotes.Grapple then
+			return false
 		end
-		Remotes.Grapple:FireClient(player, root.Position + root.CFrame.LookVector * item.Distance)
-	elseif item.Effect == "Blast" or item.Effect == "Freeze" then
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local dir = root.CFrame.LookVector
+		if typeof(aim) == "Vector3" then
+			local flat = Vector3.new(aim.X - root.Position.X, 0, aim.Z - root.Position.Z)
+			if flat.Magnitude > 1 then
+				dir = flat.Unit
+			end
+		end
+		local to = dashTarget(player, root, Vector3.new(dir.X, 0, dir.Z).Unit, item.Distance)
+		if not to then
+			Remotes.Hint:FireClient(player, "No safe ground to dash to!", 2)
+			return false
+		end
+		HitFx.Play("PlayerPunch", root.Position, 0.8, dir)
+		Sfx.At("Wind", root.Position)
+		Remotes.Grapple:FireClient(player, to)
+	elseif e == "Blast" or e == "Freeze" then
 		local hook = InventoryService.Hooks.MonsterBlast
-		if not root or not hook then
-			return
+		if not hook then
+			return false
 		end
-		hook(player, root.Position, item)
-	elseif item.Effect == "Laser" or item.Effect == "Grapple" then
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		if not root then
-			return
-		end
-		local used = item.Effect == "Laser" and fireLaser(player, root, aim) or (item.Effect == "Grapple" and fireGrapple(player, root, aim))
+		Sfx.At("PetLob", root.Position)
+		throwBomb(player, root, aim, item, function(at)
+			hook(player, at, item)
+			local style = e == "Freeze" and "IceRing" or (item.Radius >= 20 and "Cindermaw") or BLAST_STYLE[item.Hit or ""] or "Fire"
+			HitFx.Play(style, at, math.clamp(item.Radius / 14, 0.7, 1.6))
+			Sfx.At(e == "Freeze" and "DeathIce" or ("Death" .. (BLAST_SFX[item.Hit or ""] or "Fire")), at)
+		end)
+	elseif e == "Laser" or e == "Grapple" then
+		local used = e == "Laser" and fireLaser(player, root, aim) or (e == "Grapple" and fireGrapple(player, root, aim))
 		if not used then
+			return false
+		end
+		Sfx.At(e == "Laser" and "HitLaser" or "Wind", root.Position)
+	end
+	return true
+end
+
+-- gear that only buffs you: not while carrying a cloud (theft balance)
+local BUFF_GEAR = { Speed = true, Jump = true, Nitro = true, Buff = true }
+
+local function useItem(player: Player, id: unknown, aim: unknown)
+	local d = data(player)
+	local item = type(id) == "string" and ShopItems.Types[id]
+	if not d or not item or item.ComingSoon or not owns(d, id :: string) then
+		return
+	end
+	-- you must be HOLDING that gear
+	local held = player.Character and player.Character:FindFirstChildOfClass("Tool")
+	if not held or held:GetAttribute("GearId") ~= id then
+		return
+	end
+	local st = stateOf(player, id :: string)
+	local t = workspace:GetServerTimeNow()
+	rechargeTick(st, item, t)
+	if item.Op then
+		if st.Charges <= 0 then
+			Remotes.Hint:FireClient(player, `Recharging... next charge in {math.ceil(st.NextAt - t)}s`, 2)
 			return
 		end
+	elseif t < st.ReadyAt then
+		Remotes.Hint:FireClient(player, `Ready in {math.ceil(st.ReadyAt - t)}s`, 1.5)
+		return
 	end
-
-	local it = d.Items[slot]
-	it.Count -= 1
-	if it.Count <= 0 then
-		table.remove(d.Items, slot)
+	if BUFF_GEAR[item.Effect] and player:GetAttribute("Carrying") then
+		Remotes.Hint:FireClient(player, "Buff gear doesn't work while you carry a cloud!", 2.5)
+		return
 	end
-	sync(player)
+	if not apply(player, d, item, aim) then
+		return
+	end
+	if item.Op then
+		if st.Charges >= item.MaxCharges then
+			st.NextAt = t + item.Recharge
+		end
+		st.Charges -= 1
+	else
+		st.ReadyAt = t + item.Cooldown
+	end
+	refreshTool(player, id :: string)
 end
+
+-- refill OP charges over time (and tell the Tools)
+task.spawn(function()
+	while true do
+		task.wait(1)
+		local t = workspace:GetServerTimeNow()
+		for player, list in gearState do
+			if not player.Parent then
+				gearState[player] = nil
+			else
+				for gid, st in list do
+					local item = ShopItems.Types[gid]
+					if item and rechargeTick(st, item, t) then
+						refreshTool(player, gid)
+					end
+				end
+			end
+		end
+	end
+end)
 
 ------------------------------------------------------------------------
 -- Death + regen
@@ -566,9 +859,10 @@ function InventoryService.GiveItem(player: Player, id: string): boolean
 	if not d or not ShopItems.Types[id] then
 		return false
 	end
-	local ok = addItem(d, id)
+	d.Gear[id] = true -- v2.31: gear is owned
+	giveTool(player, id)
 	sync(player)
-	return ok
+	return true
 end
 
 function InventoryService.Wipe(player: Player): (number, number)
@@ -576,8 +870,7 @@ function InventoryService.Wipe(player: Player): (number, number)
 	if not d then
 		return 0, 0
 	end
-	local lostItems, lostPerks = #d.Items, #d.Perks
-	d.Items = {}
+	local lostItems, lostPerks = 0, #d.Perks -- v2.31: gear is kept on death
 	d.Perks = {}
 	for _, attr in { "SpeedUntil", "JumpUntil", "NitroUntil", "ShieldUntil" } do
 		player:SetAttribute(attr, 0)
@@ -592,21 +885,22 @@ function InventoryService.GiveRandomItem(player: Player): string?
 	if not d then
 		return nil
 	end
+	-- v2.31: a random gear you don't own yet (simple gear only, no locked ones)
 	local ids = {}
 	for id, item in ShopItems.Types do
-		if not item.ComingSoon then
+		if not item.ComingSoon and not item.Op and not item.Cloud and not d.Gear[id] then
 			table.insert(ids, id)
 		end
 	end
-	table.sort(ids)
-	for _ = 1, 4 do
-		local id = ids[math.random(1, #ids)]
-		if addItem(d, id) then
-			sync(player)
-			return ShopItems.Types[id].DisplayName or id
-		end
+	if #ids == 0 then
+		return nil
 	end
-	return nil
+	table.sort(ids)
+	local id = ids[math.random(1, #ids)]
+	d.Gear[id] = true
+	giveTool(player, id)
+	sync(player)
+	return ShopItems.Types[id].DisplayName or id
 end
 
 -- Chaos perk: every ChaosInterval s a random buff or debuff for ChaosDuration s
@@ -663,6 +957,7 @@ end
 function InventoryService.OnPlayerAdded(player: Player)
 	sync(player)
 	local function onCharacter(char: Model)
+		task.delay(0.5, giveAllTools, player) -- v2.31 owned gear back in your hotbar
 		local hum = char:WaitForChild("Humanoid") :: Humanoid
 		hum.Died:Connect(function()
 			local items, perks = InventoryService.Wipe(player)

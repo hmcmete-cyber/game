@@ -277,13 +277,17 @@ local function render()
 		end
 	elseif currentShop == "Items" then
 		titleLabel.Text = "Tayron's Cloud Shop"
-		subtitleLabel.Text = "Temporary items go to your Inventory - lost if you die."
+		subtitleLabel.Text = "Gear is yours forever: hold it (keys 1-9) and click to use."
 		avatarText.Text = "T"
 		for i, id in ShopItems.Order do
 			local item = ShopItems.Types[id]
 			local locked = item.Cloud ~= nil and not isUnlocked(id)
-			local c = card(i, id, item.IconText, item.IconColor, item.DisplayName, locked and (item.Desc .. "\n" .. lockText(item.Cloud, "Tayron")) or item.Desc)
-			buyButton(c, locked and "Locked" or (item.ComingSoon and "Coming soon" or `Buy - {item.Price} coins`), not item.ComingSoon and not locked,
+			local owned = string.find(player:GetAttribute("Gear") or "", "," .. id .. ",", 1, true) ~= nil
+			-- v2.31 gear: owned forever; simple = cooldown, OP = 3 charges
+			local gearText = item.Op and `GEAR - 3 charges, +1 every {item.Recharge}s` or `GEAR - reuse every {item.Cooldown}s`
+			local desc = item.Desc .. "\n" .. gearText
+			local c = card(i, id, item.IconText, item.IconColor, item.DisplayName, locked and (desc .. "\n" .. lockText(item.Cloud, "Tayron")) or desc)
+			buyButton(c, locked and "Locked" or (owned and "OWNED" or (item.ComingSoon and "Coming soon" or `Buy - {item.Price} coins`)), not item.ComingSoon and not locked and not owned,
 				Color3.fromRGB(120, 220, 160), function()
 					remotes.BuyItem:FireServer(id)
 				end)
@@ -456,6 +460,11 @@ function ShopUi.Start()
 					m:PivotTo(CFrame.Angles(0, t * 0.8 + i, 0))
 				end
 			end
+		end
+	end)
+	Players.LocalPlayer:GetAttributeChangedSignal("Gear"):Connect(function()
+		if window and window.Visible then
+			render()
 		end
 	end)
 	Players.LocalPlayer:GetAttributeChangedSignal("Unlocks"):Connect(function()

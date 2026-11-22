@@ -129,4 +129,53 @@ do
 	end
 end
 
+-- v2.31 GEAR (director: "Tayron sells GEAR you hold and use, not one-shot
+-- items"). Every item is a permanent Tool once bought:
+--   simple gear : reusable, short Cooldown after each use
+--   OP gear     : 3 charges that refill one by one (Recharge seconds each)
+-- Prices are for owning it forever (x5 of the old one-shot price).
+local OP_BASE = { LaserGun = 12, GrapplingHook = 8, ShieldGenerator = 90 }
+local function cooldownFor(item): number
+	local e = item.Effect
+	if e == "EggWarm" then
+		return item.Minutes * 60 * 2
+	elseif e == "Speed" or e == "Jump" or e == "Buff" then
+		return (item.Duration or 10) + 20
+	elseif e == "Nitro" then
+		return 12
+	elseif e == "Flare" then
+		return 30
+	elseif e == "Heal" then
+		return 20
+	elseif e == "ShieldNow" or e == "Shield" then
+		return (item.Duration or 4) * 4
+	elseif e == "Cleanse" then
+		return 15
+	elseif e == "Recall" then
+		return 60
+	elseif e == "Dash" then
+		return 5
+	elseif e == "Blast" then
+		return 8
+	elseif e == "Freeze" then
+		return 15
+	end
+	return 10
+end
+for id, item in ShopItems.Types do
+	item.OneShotPrice = item.Price
+	item.Price = math.floor((item.Price or 0) * 5 / 10 + 0.5) * 10
+	if OP_BASE[id] or (item.Tier or 0) >= 3 then
+		item.Op = true
+		item.MaxCharges = 3
+		item.Recharge = OP_BASE[id] or (item.Effect == "EggWarm" and item.Minutes * 60 * 2) or ((item.Tier or 3) >= 4 and 120 or 60)
+	else
+		item.Cooldown = cooldownFor(item)
+	end
+	-- bombs are thrown where you aim
+	if item.Effect == "Blast" or item.Effect == "Freeze" or item.Effect == "Dash" then
+		item.Aim = true
+	end
+end
+
 return ShopItems

@@ -2350,3 +2350,11 @@ Every attack sound got a cinematic pass (riser, sub drop, element-tuned stinger,
 1. Upload `assets/sfx_atlas/AttackAtlas1.ogg` (≈2:59) and `AttackAtlas2.ogg` (≈2:56) as Audio.
 2. Paste the two ids into `src/shared/SfxAtlas.luau` → `M.Atlases`. Do not edit M.Clips.
 3. Commit only SfxAtlas.luau to `ccr-5b580860-g7jv2e`.
+
+## [2026-11-22] Claude → Astra: v2.31 Tayron items are now GEAR (Roblox Tools)
+Director: items should be held-in-hand gear, not one-shot consumables.
+- Buying = owning forever (d.Gear, saved, kept on death). Owned gear is a Tool in the Backpack (default Roblox hotbar 1-9), held in hand (the shop 3D logo is the model), click to use. Old d.Items are migrated into owned gear.
+- Simple gear: Cooldown after each use. OP gear (LaserGun, GrapplingHook, ShieldGenerator, every Tier 3-4 gadget): 3 charges refilling one by one (Recharge). Timings in ShopItems (v2.31 block). Prices x5 (owning forever).
+- Buff gear (Speed/Jump/Nitro/Buff) refuses while carrying a cloud (hint, no cooldown spent).
+- Fixes: Recall blocked while carrying an EGG; weaker buff never replaces a stronger active one; Heal refused at full HP; Dash checks walls + ground (no void dashes); bombs are THROWN to the aim point and explode with a HitFx effect; every gear use has VFX + sound; Bubble Shield/Fortress Dome show a ForceField.
+- Client: old 1-7 item panel hidden; gear status label above the hotbar (READY / cooldown / charges); shop shows OWNED.

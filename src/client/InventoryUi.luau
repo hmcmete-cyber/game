@@ -150,6 +150,7 @@ local function build()
 	items.Position = UDim2.new(0, 16, 1, -16)
 	items.Size = UDim2.fromOffset(Config.ItemSlots * 66, 84)
 	items.BackgroundTransparency = 1
+	items.Visible = false -- v2.31: shop items are GEAR now (Roblox hotbar 1-9, hold + click)
 	items.Parent = gui
 	label(items, {
 		Name = "Title",
@@ -296,18 +297,84 @@ function InventoryUi.Start()
 		if processed then
 			return
 		end
-		for i, key in ITEM_KEYS do
-			if input.KeyCode == key and itemSlots[i] then
-				local id = itemSlots[i].Button:GetAttribute("ItemId")
-				if id then
-					useItem(id)
-				end
-			end
-		end
 		for i, key in PERK_KEYS do
 			if input.KeyCode == key then
 				remotes.PerkAbility:FireServer(i)
 				PlayerAnimator.Play("Ability")
+			end
+		end
+	end)
+
+	-- v2.31 GEAR: clicking with a held gear uses it (aimed ones use your mouse)
+	local hookedTools = {}
+	local function hookTool(t: Instance)
+		if not t:IsA("Tool") or hookedTools[t] or not t:GetAttribute("GearId") then
+			return
+		end
+		hookedTools[t] = true
+		t.Activated:Connect(function()
+			useItem(t:GetAttribute("GearId"))
+		end)
+		t.AncestryChanged:Connect(function()
+			if not t.Parent then
+				hookedTools[t] = nil
+			end
+		end)
+	end
+	local function watch(container: Instance?)
+		if not container then
+			return
+		end
+		for _, t in container:GetChildren() do
+			hookTool(t)
+		end
+		container.ChildAdded:Connect(hookTool)
+	end
+	watch(player:FindFirstChildOfClass("Backpack") or player:WaitForChild("Backpack", 10))
+	watch(player.Character)
+	player.CharacterAdded:Connect(function(char)
+		watch(char)
+		watch(player:WaitForChild("Backpack", 10))
+	end)
+	-- gear timer above the hotbar: READY / cooldown / charges
+	local gearLabel = Instance.new("TextLabel")
+	gearLabel.Name = "GearStatus"
+	gearLabel.AnchorPoint = Vector2.new(0.5, 1)
+	gearLabel.Position = UDim2.new(0.5, 0, 1, -86)
+	gearLabel.Size = UDim2.fromOffset(320, 26)
+	gearLabel.BackgroundColor3 = Color3.fromRGB(20, 22, 35)
+	gearLabel.BackgroundTransparency = 0.35
+	gearLabel.TextColor3 = Color3.new(1, 1, 1)
+	gearLabel.Font = Enum.Font.GothamBold
+	gearLabel.TextScaled = true
+	gearLabel.Visible = false
+	Instance.new("UICorner", gearLabel).CornerRadius = UDim.new(0, 10)
+	gearLabel.Parent = player:WaitForChild("PlayerGui"):WaitForChild("InventoryUI")
+	RunService.RenderStepped:Connect(function()
+		local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+		local id = tool and tool:GetAttribute("GearId")
+		if not id then
+			gearLabel.Visible = false
+			return
+		end
+		gearLabel.Visible = true
+		local now = workspace:GetServerTimeNow()
+		local maxC = tool:GetAttribute("MaxCharges") or 0
+		if maxC > 0 then
+			local c = tool:GetAttribute("Charges") or maxC
+			local pips = string.rep("●", c) .. string.rep("○", maxC - c)
+			local nextAt = tool:GetAttribute("NextChargeAt") or 0
+			local extra = (c < maxC and nextAt > now) and `  +1 in {math.ceil(nextAt - now)}s` or ""
+			gearLabel.Text = `{tool.Name}  {pips}{extra}`
+			gearLabel.TextColor3 = c > 0 and Color3.fromRGB(150, 255, 190) or Color3.fromRGB(255, 170, 120)
+		else
+			local ready = tool:GetAttribute("ReadyAt") or 0
+			if now < ready then
+				gearLabel.Text = `{tool.Name}  {math.ceil(ready - now)}s`
+				gearLabel.TextColor3 = Color3.fromRGB(255, 200, 120)
+			else
+				gearLabel.Text = `{tool.Name}  READY - click`
+				gearLabel.TextColor3 = Color3.fromRGB(150, 255, 190)
 			end
 		end
 	end)

@@ -274,6 +274,7 @@ end
 function FxKit.Explosion(pos: Vector3, color: Color3, s: number?)
 	local sc = s or 1
 	local a = anchor(CFrame.new(pos), 3.5)
+	a:SetAttribute("Shake", sc) -- clients nearby shake + flash (Vfx)
 	spikes(a, color, sc)
 	core(a, color, sc * 1.2)
 	flare(a, color, sc * 1.3)

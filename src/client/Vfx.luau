@@ -285,6 +285,33 @@ function Vfx.Start()
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	remotes:WaitForChild("Delivered").OnClientEvent:Connect(onDelivered)
 	remotes:WaitForChild("Knock").OnClientEvent:Connect(onKnock)
+	-- v2.22: big FxKit explosions shake the camera + tint flash, by distance
+	task.spawn(function()
+		local fxk = workspace:WaitForChild("FxKit", 120)
+		if not fxk then
+			return
+		end
+		fxk.ChildAdded:Connect(function(a)
+			task.defer(function()
+				local sc = a:GetAttribute("Shake")
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if not sc or not root or not a:IsA("BasePart") then
+					return
+				end
+				local d = (a.Position - root.Position).Magnitude
+				local k = math.clamp(sc * (1 - d / (40 + sc * 30)), 0, 1.6)
+				if k > 0.05 then
+					local still = os.clock() < shakeUntil and shakeStrength or 0
+					shakeUntil = os.clock() + 0.35
+					shakeStrength = math.max(still, 0.35 * k)
+					if k > 0.5 then
+						flash.BackgroundTransparency = 1 - 0.25 * math.min(k, 1.6)
+						TweenService:Create(flash, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+					end
+				end
+			end)
+		end)
+	end)
 
 	local baseFov = camera.FieldOfView
 	local wasRiding = false

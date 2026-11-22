@@ -97,9 +97,10 @@ function LightingService.Apply()
 
 	-- Bloom only on really bright pixels (neon, sun) — no more washed-out screen
 	local bloom = getOrCreate(Lighting, "BloomEffect", "PS_Bloom")
-	bloom.Intensity = 0.35
-	bloom.Size = 24
-	bloom.Threshold = 2
+	-- v2.22: stronger glow on HDR VFX (FxKit particles use Brightness 2.5-4)
+	bloom.Intensity = 0.8
+	bloom.Size = 30
+	bloom.Threshold = 1.6
 
 	local sunRays = getOrCreate(Lighting, "SunRaysEffect", "PS_SunRays")
 	sunRays.Intensity = 0.05

@@ -110,6 +110,65 @@ end
 local carried = {} -- [Player] = { Key, Model, Conns }
 local spawnPickup -- forward
 
+-- v2.22: a dropped egg always lands ON solid ground: straight below if
+-- there is land, otherwise on the nearest land (it never hangs in the air
+-- or falls into the void when its carrier dies / is flung off the edge)
+local function groundSpot(at: Vector3): Vector3?
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local ignore = { dropsFolder }
+	for _, n in { "Monsters", "Weather", "FxKit", "Pets", "SfxEmitters" } do
+		local f = workspace:FindFirstChild(n)
+		if f then
+			table.insert(ignore, f)
+		end
+	end
+	local map = workspace:FindFirstChild("Map")
+	local abyss = map and map:FindFirstChild("Abyss")
+	if abyss then
+		table.insert(ignore, abyss)
+	end
+	for _, p in Players:GetPlayers() do
+		if p.Character then
+			table.insert(ignore, p.Character)
+		end
+	end
+	params.FilterDescendantsInstances = ignore
+	params.RespectCanCollide = true
+	local function down(x: number, z: number, top: number): Vector3?
+		local hit = workspace:Raycast(Vector3.new(x, top, z), Vector3.new(0, -top + 12, 0), params)
+		if hit and hit.Position.Y > 14 and hit.Normal.Y > 0.5 then
+			return hit.Position
+		end
+		return nil
+	end
+	local top = math.max(at.Y + 4, 120) + 200
+	local here = down(at.X, at.Z, at.Y + 4) or down(at.X, at.Z, top)
+	if here then
+		return here
+	end
+	for r = 10, 600, 10 do
+		local n = math.clamp(math.floor(r / 4), 8, 48)
+		local best, bestD
+		for k = 0, n - 1 do
+			local a = k / n * math.pi * 2
+			local p = down(at.X + math.cos(a) * r, at.Z + math.sin(a) * r, top)
+			if p then
+				local d = (Vector3.new(p.X, 0, p.Z) - Vector3.new(at.X, 0, at.Z)).Magnitude
+				if not bestD or d < bestD then
+					best, bestD = p, d
+				end
+			end
+		end
+		if best then
+			-- step a little further onto the land so it isn't on the very edge
+			local inward = (Vector3.new(best.X, 0, best.Z) - Vector3.new(at.X, 0, at.Z))
+			return down(best.X + inward.Unit.X * 6, best.Z + inward.Unit.Z * 6, top) or best
+		end
+	end
+	return nil
+end
+
 local function dropCarried(player: Player, at: Vector3?)
 	local c = carried[player]
 	if not c then
@@ -124,6 +183,7 @@ local function dropCarried(player: Player, at: Vector3?)
 	end
 	player:SetAttribute("CarryingEgg", nil)
 	if at then
+		at = groundSpot(at) or at
 		spawnPickup(c.Key, at, nil, 120)
 		hint(player, "You dropped the egg! Anyone can grab it now.", 4)
 	end
@@ -191,7 +251,7 @@ spawnPickup = function(eggKey: string, pos: Vector3, owner: Player?, life: numbe
 	label.TextScaled = true
 	label.TextColor3 = Color3.fromRGB(255, 230, 140)
 	label.TextStrokeTransparency = 0.3
-	label.Text = owner and `{e.Name} · {owner.DisplayName}` or `{e.Name} · free!`
+	label.Text = owner and `{e.Name} · {owner.DisplayName}` or e.Name
 	label.Parent = gui
 	gui.Parent = root
 	local prompt = Instance.new("ProximityPrompt")

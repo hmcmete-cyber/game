@@ -27,7 +27,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Weather = require(ReplicatedStorage.Shared.WeatherTypes)
-local CloudVisuals = require(script.Parent:WaitForChild("CloudVisuals"))
+local CloudVisuals = require(ReplicatedStorage.Shared.CloudVisuals) -- v2.35 shared (Cloudex 3D logos)
 local BaseLock = require(script.Parent:WaitForChild("BaseLockService"))
 local InventoryService = require(script.Parent:WaitForChild("InventoryService"))
 

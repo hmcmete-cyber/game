@@ -12,6 +12,67 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Weather = require(ReplicatedStorage.Shared.WeatherTypes)
+local CloudVisuals = require(ReplicatedStorage.Shared.CloudVisuals)
+local CollectionService = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
+local spinning = {} -- turning 3D cloud logos (cleared on re-render)
+
+-- glass panel like the shop (white, see-through, soft gradient)
+local function glass(f: GuiObject, transparency: number)
+	f.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	f.BackgroundTransparency = transparency
+	local st = Instance.new("UIStroke")
+	st.Color = Color3.new(1, 1, 1)
+	st.Transparency = 0.45
+	st.Thickness = 1.5
+	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	st.Parent = f
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(190, 175, 235))
+	g.Parent = f
+end
+
+-- the real cloud model in a ViewportFrame, turning slowly
+local function cloudLogo(parent: GuiObject, key: string, shiny: boolean)
+	local ok, center = pcall(CloudVisuals.Make, key, shiny, 0.32)
+	if not ok or not center then
+		return false
+	end
+	local model = Instance.new("Model")
+	for _, d in center:GetDescendants() do
+		for _, tag in CollectionService:GetTags(d) do
+			CollectionService:RemoveTag(d, tag) -- keep world systems away from this copy
+		end
+		if d:IsA("ParticleEmitter") or d:IsA("Light") or d:IsA("Sound") then
+			d:Destroy()
+		end
+	end
+	for _, tag in CollectionService:GetTags(center) do
+		CollectionService:RemoveTag(center, tag)
+	end
+	center.Anchored = true
+	center.Parent = model
+	model.PrimaryPart = center
+	local cf, size = model:GetBoundingBox()
+	model:PivotTo(CFrame.new(-cf.Position + center.Position) * center.CFrame.Rotation)
+	local vp = Instance.new("ViewportFrame")
+	vp.Size = UDim2.fromScale(1, 1)
+	vp.BackgroundTransparency = 1
+	vp.Ambient = Color3.fromRGB(200, 200, 215)
+	vp.LightColor = Color3.new(1, 1, 1)
+	vp.LightDirection = Vector3.new(-1, -1.4, -1)
+	model.Parent = vp
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 35
+	local dist = math.max(size.X, size.Y, size.Z) * 1.9
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, dist * 0.25, -dist), Vector3.zero)
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	vp.Parent = parent
+	table.insert(spinning, { model, center.Position - cf.Position })
+	return true
+end
 
 local CloudexUi = {}
 
@@ -60,6 +121,7 @@ local function text(parent: Instance, props): TextLabel
 	t.Font = Enum.Font.GothamBold
 	t.TextScaled = true
 	t.TextColor3 = Color3.new(1, 1, 1)
+	t.TextStrokeTransparency = 0.55
 	for k, v in props do
 		(t :: any)[k] = v
 	end
@@ -76,6 +138,7 @@ local function render()
 			c:Destroy()
 		end
 	end
+	table.clear(spinning)
 	local have = found()
 	local types = sortedTypes()
 	local n = 0
@@ -90,8 +153,7 @@ local function render()
 		local card = Instance.new("Frame")
 		card.Name = key
 		card.LayoutOrder = i
-		card.BackgroundColor3 = count and Color3.fromRGB(28, 34, 58) or Color3.fromRGB(22, 24, 34)
-		card.BackgroundTransparency = 0.15
+		glass(card, count and 0.72 or 0.86)
 		corner(card, 12)
 		local stroke = Instance.new("UIStroke")
 		stroke.Color = count and rar.Color or Color3.fromRGB(70, 72, 90)
@@ -112,11 +174,16 @@ local function render()
 		cs.Parent = chip
 		chip.Parent = card
 		local icon = Weather.Icon[key]
+		if count and window.Visible and cloudLogo(chip, key, shiny) then
+			chip.BackgroundTransparency = 1
+			cs.Transparency = 1
+		else
 		text(chip, {
 			Size = UDim2.fromScale(0.7, 0.7), Position = UDim2.fromScale(0.15, 0.15), Font = Enum.Font.GothamBlack,
 			Text = count and (icon and icon[1] or "?") or "?",
 			TextColor3 = count and ((def.Color.R + def.Color.G + def.Color.B) > 1.8 and Color3.fromRGB(40, 40, 60) or Color3.new(1, 1, 1)) or Color3.fromRGB(150, 150, 170),
 		})
+		end
 		if shiny then
 			text(card, { Size = UDim2.fromScale(0.28, 0.22), Position = UDim2.fromScale(0.7, 0.02), Text = "★", TextColor3 = Weather.ShinyColor })
 		end
@@ -173,6 +240,8 @@ local function toggle(open: boolean?)
 	window.Visible = open
 	if open then
 		render()
+	else
+		table.clear(spinning)
 	end
 end
 
@@ -210,10 +279,9 @@ function CloudexUi.Start()
 	window.AnchorPoint = Vector2.new(0.5, 0.5)
 	window.Position = UDim2.fromScale(0.5, 0.5)
 	window.Size = UDim2.fromScale(0.9, 0.84)
-	window.BackgroundColor3 = Color3.fromRGB(14, 18, 34)
-	window.BackgroundTransparency = 0.08
 	window.Visible = false
-	corner(window, 20)
+	glass(window, 0.7)
+	corner(window, 22)
 	local lim = Instance.new("UISizeConstraint")
 	lim.MaxSize = Vector2.new(860, 600)
 	lim.Parent = window
@@ -262,6 +330,17 @@ function CloudexUi.Start()
 	})
 	corner(toast, 12)
 
+	RunService.RenderStepped:Connect(function()
+		if window.Visible then
+			local t = os.clock()
+			for i, e in spinning do
+				local m, off = e[1], e[2]
+				if m.Parent then
+					m:PivotTo(CFrame.Angles(0, t * 0.7 + i, 0) * CFrame.new(off))
+				end
+			end
+		end
+	end)
 	player:GetAttributeChangedSignal("Cloudex"):Connect(onChanged)
 	onChanged()
 	UserInputService.InputBegan:Connect(function(input, processed)

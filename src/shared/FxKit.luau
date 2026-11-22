@@ -47,14 +47,28 @@ local BUILTIN = {
 	Implode = P .. "explosion01_implosion_main.dds",
 	Embers = P .. "fire_sparks_main.dds",
 }
+-- v2.25 second sheet: until uploaded, each new texture borrows an old one
+local FALLBACK = {
+	Snowflake = "Flare", Leaf = "Shard", Feather = "Shard", Bubble = "Ring", Star = "Flare", Rune = "Ring",
+	Crescent = "Swirl", Claw = "Streak", Splash = "Spikes", Ink = "Spikes", Spore = "Glow", Rock = "Shard",
+	Petal = "Shard", Wave = "Ring", FireFlip = "Flame", ExplosionFlip = "Spikes", SmokeFlip = "Smoke", ElectricFlip = "Crackle",
+}
+local function hasOwn(name: string): boolean
+	local own = Ids[name]
+	return own ~= nil and own ~= ""
+end
 local function tex(name: string): string
 	local own = Ids[name]
 	if own and own ~= "" then
 		return own
 	end
+	if FALLBACK[name] then
+		return tex(FALLBACK[name])
+	end
 	return BUILTIN[name] or ""
 end
 FxKit.Texture = tex
+FxKit.HasOwn = hasOwn
 
 local folder
 local function holder(): Instance

@@ -16,4 +16,9 @@ return {
 	Smoke = "rbxassetid://106388195654282",
 	Shard = "rbxassetid://130473994971416",
 	BeamSoft = "rbxassetid://87558026840941",
+	-- v2.25 second sheet (assets/vfx): paste the IMAGE ids here
+	Snowflake = "", Leaf = "", Feather = "", Bubble = "", Star = "", Rune = "",
+	Crescent = "", Claw = "", Splash = "", Ink = "", Spore = "", Rock = "", Petal = "", Wave = "",
+	-- animated 4x4 flipbooks (1024x1024)
+	FireFlip = "", ExplosionFlip = "", SmokeFlip = "", ElectricFlip = "",
 }

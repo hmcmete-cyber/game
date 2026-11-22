@@ -2308,3 +2308,12 @@ WARNING: the website gives a DECAL id, which does NOT work in ParticleEmitter/Be
 - Ability threads carry the caster's type (MonsterService.runAction → Abilities.SetStyle), so melee, bursts and projectiles use the caster's own recipe; deaths and boss deaths too.
 - QA: in Studio, L / Shift+L picks a style (label at top), K plays it on the nearest test dummy.
 - No new uploads needed (uses the 11 FxIds textures).
+
+## [2026-11-22] Claude → Astra: v2.25 SECOND VFX SHEET — 18 more textures to upload
+Same steps as the first sheet (Studio → Asset Manager → Bulk Import → right-click → Copy Asset ID → paste the IMAGE id).
+Files in `assets/vfx/`, keys already waiting (empty "") in `src/shared/FxIds.luau`:
+- Shapes (256/512 px): Snowflake, Leaf, Feather, Bubble, Star, Rune, Crescent, Claw, Splash, Ink, Spore, Rock, Petal, Wave
+- Animated flipbooks (1024×1024, 4×4 frames): FireFlip, ExplosionFlip, SmokeFlip, ElectricFlip
+  (upload them as normal images; the game sets FlipbookLayout Grid4x4 itself — do NOT resize them)
+Commit only FxIds.luau to `ccr-5b580860-g7jv2e`. Until an id is filled, the game borrows an old texture (and flipbooks stay static), so nothing breaks.
+Used by: snow/feathers (Snow Owl, Frost bosses), leaves (Bramble, Storm Snapper, earth pets), bubbles (frog, shark, tide), stars + rune circles (Prism, Mycelium), claws (bites), ink (octopus, Tidebreaker), rocks (golems), fire/explosion/smoke/electric flipbooks (all fire + storm characters).

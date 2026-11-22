@@ -64,6 +64,18 @@ local function blob(pos: Vector3, size: Vector3, toSize: Vector3, color: Color3,
 	return p
 end
 
+-- v2.25 second-sheet layers (shapes + flipbooks; fall back until uploaded)
+local function fireball(c: Vector3, col: Color3, deep: Color3, s: number, n: number?)
+	X.Tex(c, "ExplosionFlip", col, s, n or 5, { Size = 11, Size1 = 13, Speed = 5, Life = 0.9, Glow = 0.85, Bright = 4, Color2 = deep, Rot = 30 })
+	X.Tex(c, "FireFlip", col, s, (n or 5) + 4, { Size = 6, Speed = 14, Life = 0.8, Glow = 0.9, Bright = 4, Grav = -14, Color2 = deep })
+end
+local function smokeFlip(c: Vector3, col: Color3, s: number, n: number?)
+	X.Tex(c, "SmokeFlip", col, s, n or 8, { Size = 8, Size1 = 12, Speed = 8, Life = 1.6, Glow = 0, Grav = -6, Rot = 40, Color2 = col:Lerp(Color3.new(0, 0, 0), 0.5) })
+end
+local function crackle(c: Vector3, col: Color3, s: number, n: number?)
+	X.Tex(c, "ElectricFlip", col, s, n or 8, { Size = 7, Speed = 10, Life = 0.6, Glow = 1, Bright = 5, Loop = true, Rot = 300 })
+end
+
 ------------------------------------------------------------------------
 -- signatures: fn(c = hit centre, g = ground below, s = scale, d = direction?)
 ------------------------------------------------------------------------
@@ -76,6 +88,7 @@ end
 -- Crystal Stalker: refraction lances — a fan of cyan crystal spears and a
 -- full rainbow split of light, with a prism ring facing the strike
 def("Prismaw", function(c, g, s, d)
+	X.Tex(c, "Star", RGB(200, 240, 255), s, 18, { Size = 2.2, Speed = 30, Life = 1.2, Glow = 1, Bright = 4, Rot = 200, Color2 = RGB(220, 160, 255) })
 	local fwd = X.Horizontal(d)
 	X.Implode(c, RGB(120, 230, 255), s)
 	after(0.14, function()
@@ -92,6 +105,7 @@ end)
 -- Crystal Whirlwind: violet shards orbit in a spinning ring, then the
 -- whirl flings them outward while a crystal tornado rises
 def("Shardstorm", function(c, g, s, d)
+	X.Tex(c, "Star", RGB(210, 170, 255), s, 14, { Size = 1.8, Speed = 26, Life = 1.1, Glow = 1, Bright = 4, Rot = 300 })
 	local shards = {}
 	for i = 1, 10 do
 		shards[i] = X.Part(Vector3.new(0.9 * s, 0.9 * s, 3 * s), CFrame.new(c), i % 2 == 0 and RGB(190, 140, 255) or RGB(240, 220, 255), GLASS, 0.05, 1.5)
@@ -121,6 +135,7 @@ end)
 -- Crystal Scuttler: pink crystal pincers burst from the ground on both
 -- sides and clamp shut on the target
 def("Geoscuttle", function(c, g, s, d)
+	X.Tex(c, "Claw", RGB(255, 140, 220), s, 2, { Size = 9, Speed = 0.1, Life = 0.5, Glow = 1, Bright = 5, Rot = 0 })
 	local fwd = X.Horizontal(d)
 	local side = fwd:Cross(Vector3.yAxis).Unit
 	for sgn = -1, 1, 2 do
@@ -151,6 +166,7 @@ end)
 -- Glacier Tortoise: a frost dome bursts outward, a ring of great ice spikes
 -- erupts and the ground freezes over with cracks
 def("Frostback", function(c, g, s, d)
+	X.Tex(c + Vector3.new(0, 3 * s, 0), "Snowflake", W, s, 16, { Size = 2.4, Speed = 18, Life = 2, Glow = 0.7, Grav = 4, Rot = 90 })
 	X.Flash(c, RGB(170, 230, 255), s, 1)
 	X.Dome(c, 2 * s, 13 * s, RGB(150, 220, 255), 0.8, FF, 0.1, 1)
 	X.Pillars(g, 9, 7 * s, 8 * s, 2 * s, RGB(170, 225, 255), ICE, 1.1)
@@ -162,6 +178,8 @@ end)
 -- Snow Owl: a giant spinning snowflake blooms, feathers flutter down and
 -- icy wind arcs whirl around it
 def("Snowpeck", function(c, g, s, d)
+	X.Tex(c, "Feather", W, s, 18, { Size = 2.6, Speed = 22, Life = 2.2, Glow = 0.3, Grav = 3, Rot = 160, Drag = 3 })
+	X.Tex(c, "Snowflake", RGB(220, 245, 255), s, 12, { Size = 1.8, Speed = 26, Life = 1.8, Glow = 0.8, Grav = 2, Rot = 120 })
 	X.Snowflake(c + Vector3.new(0, 1 * s, 0), RGB(200, 240, 255), 11 * s, 1.2)
 	X.Flash(c, RGB(220, 245, 255), 0.8 * s, 2)
 	for k = 1, 4 do
@@ -173,6 +191,7 @@ end)
 -- Watching Rubble: a black void sphere swallows the light, then the eye
 -- blinks open — purple shock, rocks blasted out
 def("Rubbleye", function(c, g, s, d)
+	X.Tex(c, "Rock", RGB(110, 100, 125), s, 14, { Size = 1.6, Speed = 30, Life = 1.4, Glow = 0, Grav = 40, Rot = 300 })
 	local void = X.Dome(c, 6 * s, 0.6 * s, RGB(15, 5, 25), 0.35, PLASTIC, 0.05, 0.05)
 	X.Implode(c, RGB(170, 90, 255), s)
 	X.Ring(facing(c, Vector3.yAxis), 9 * s, 1, 0.7 * s, 0.7 * s, RGB(170, 90, 255), 0.35, { Spin = -4 })
@@ -191,6 +210,7 @@ end)
 -- Storm Wraith: lightning rains from the sky, a crackling violet dome and a
 -- web of bolts across the ground
 def("Voltwraith", function(c, g, s, d)
+	crackle(c, RGB(190, 160, 255), s, 12)
 	skyBolts(g, 5, RGB(170, 140, 255), s)
 	after(0.2, function()
 		X.Flash(c, RGB(170, 140, 255), s, 2)
@@ -207,6 +227,8 @@ end)
 -- Storm Snapper: giant green jaws snap, thorny vines spike up and green
 -- lightning crackles from the bite
 def("Gulpvine", function(c, g, s, d)
+	crackle(c, RGB(170, 255, 170), s, 8)
+	X.Tex(c, "Leaf", RGB(120, 220, 90), s, 16, { Size = 1.8, Speed = 24, Life = 1.8, Glow = 0.2, Grav = 6, Rot = 200, Drag = 3 })
 	local fwd = X.Horizontal(d)
 	jaws(c, fwd, 7 * s, 2 * s, RGB(120, 255, 120), RGB(230, 255, 150))
 	after(0.3, function()
@@ -220,6 +242,8 @@ end)
 -- Storm Frog: three booming sound-wave rings roll forward, bubbles burst
 -- and little bolts jump between them
 def("Croakle", function(c, g, s, d)
+	X.Tex(c, "Bubble", RGB(170, 235, 255), s, 22, { Size = 1.6, Size1 = 2.4, Speed = 14, Life = 1.8, Glow = 0.5, Grav = -6, Rot = 20 })
+	crackle(c, RGB(160, 225, 255), s, 5)
 	local fwd = X.Horizontal(d)
 	for k = 0, 2 do
 		after(k * 0.11, function()
@@ -233,6 +257,8 @@ def("Croakle", function(c, g, s, d)
 end)
 -- Fanged Glutton: rows of fangs CHOMP shut, then acid sprays and hisses
 def("Gnashgut", function(c, g, s, d)
+	X.Tex(c, "Claw", RGB(230, 255, 200), s, 2, { Size = 10, Speed = 0.1, Life = 0.45, Glow = 1, Bright = 5, Rot = 0 })
+	X.Tex(g + Vector3.new(0, 1, 0), "Bubble", RGB(180, 255, 90), s, 18, { Size = 1.4, Speed = 8, Life = 1.6, Glow = 0.6, Grav = -6, Rot = 10 })
 	local fwd = X.Horizontal(d)
 	local side = fwd:Cross(Vector3.yAxis).Unit
 	for row = -1, 1, 2 do
@@ -259,6 +285,8 @@ end)
 -- Magma Tyrant: the ground splits with glowing magma cracks, a lava column
 -- erupts and molten meteors rain down
 def("Cindermaw", function(c, g, s, d)
+	fireball(c, RGB(255, 130, 40), RGB(140, 20, 0), 1.2 * s, 6)
+	smokeFlip(c + Vector3.new(0, 5 * s, 0), RGB(70, 45, 40), s, 8)
 	X.Fissures(g, 7, 15 * s, RGB(255, 120, 30), s, 1.6)
 	after(0.12, function()
 		X.Column(g, 34 * s, 6 * s, RGB(255, 110, 30), 0.9)
@@ -274,6 +302,8 @@ end)
 -- Ember Blob: the fuse pops — a fat orange fireball dome, then a little
 -- mushroom cloud of smoke with embers
 def("Smoldlet", function(c, g, s, d)
+	fireball(c, RGB(255, 170, 50), RGB(150, 40, 0), s, 5)
+	smokeFlip(c + Vector3.new(0, 4 * s, 0), RGB(85, 70, 65), s, 10)
 	X.Implode(c, RGB(255, 170, 60), s * 0.8)
 	after(0.14, function()
 		X.Dome(c, 1 * s, 9 * s, RGB(255, 150, 40), 0.4, NEON, 0, 1)
@@ -288,6 +318,7 @@ end)
 -- Lava Salamander: a flaming dash — a chain of fire blasts runs forward
 -- along a burning trail and ends in a fire twister
 def("Scorchtail", function(c, g, s, d)
+	fireball(c, RGB(255, 80, 30), RGB(120, 0, 0), 0.8 * s, 3)
 	local fwd = X.Horizontal(d)
 	local start = g - fwd * 6 * s
 	for k = 0, 5 do
@@ -312,6 +343,7 @@ end)
 -- Toadstool Strider: a pink mushroom-shaped spore cloud blooms (stem +
 -- cap) with polka-dot motes drifting out
 def("Capstride", function(c, g, s, d)
+	X.Tex(g + Vector3.new(0, 8 * s, 0), "Spore", RGB(255, 160, 200), s, 14, { Size = 3, Size1 = 4, Speed = 12, Life = 2, Glow = 0.4, Grav = -2, Rot = 60 })
 	X.Column(g, 9 * s, 3 * s, RGB(255, 220, 230), 0.8)
 	blob(g + Vector3.new(0, 9 * s, 0), Vector3.new(4, 1.5, 4) * s, Vector3.new(18, 6, 18) * s, RGB(255, 90, 140), NEON, 0.1, 1.2)
 	blob(g + Vector3.new(0, 9.5 * s, 0), Vector3.new(3, 1.2, 3) * s, Vector3.new(14, 5, 14) * s, RGB(255, 200, 220), FF, 0, 1.2)
@@ -323,6 +355,7 @@ end)
 -- Fungal Brute: spine spray — a hedgehog burst of lime spines and green
 -- spore puffs
 def("Sporeback", function(c, g, s, d)
+	X.Tex(c, "Spore", RGB(200, 255, 120), s, 12, { Size = 2.6, Size1 = 3.5, Speed = 16, Life = 1.8, Glow = 0.4, Grav = -2, Rot = 60 })
 	X.Flash(c, RGB(190, 255, 110), 0.9 * s, 1)
 	X.Spikes(c, 46, 14 * s, 0.45 * s, RGB(200, 255, 110), RGB(50, 110, 20), X.Sphere(0.9), { Glow = 0.6, Grow = 0.06 })
 	X.Crystals(c, 8, 7 * s, 0.6 * s, RGB(160, 230, 80), RGB(240, 255, 200), NEON, X.Sphere(0.6))
@@ -333,6 +366,8 @@ end)
 -- Spore Moth: glowing dust spirals up in a triple helix, two shimmering
 -- wings flare open
 def("Glowmoth", function(c, g, s, d)
+	X.Tex(c, "Petal", RGB(140, 255, 230), s, 20, { Size = 1.6, Speed = 18, Life = 2, Glow = 0.8, Bright = 3, Grav = 2, Rot = 200, Drag = 3 })
+	X.Tex(c, "Spore", RGB(160, 255, 235), s, 8, { Size = 2, Speed = 10, Life = 2, Glow = 0.8, Grav = -3 })
 	X.Helix(g, 14 * s, 4 * s, RGB(120, 255, 230), 3, 6, 1.3, s)
 	local a = L.Anchor(CFrame.new(c), 2)
 	for k = -1, 1, 2 do
@@ -347,6 +382,7 @@ def("Glowmoth", function(c, g, s, d)
 	X.Shake(c, 0.6 * s)
 end)
 def("Shroomling", function(c, g, s, d)
+	X.Tex(c, "Spore", RGB(255, 170, 210), s, 6, { Size = 2, Speed = 10, Life = 1.4, Glow = 0.4, Grav = -2 })
 	blob(c, Vector3.new(2, 1.5, 2) * s, Vector3.new(9, 5, 9) * s, RGB(255, 150, 200), NEON, 0.15, 0.7)
 	X.Motes(c, RGB(255, 200, 230), s, 20, 12, 2, 1.5)
 end)
@@ -355,6 +391,7 @@ end)
 -- Bramble Brute: a ring of thorny brambles bursts from the ground with
 -- flying leaves
 def("Bristlehulk", function(c, g, s, d)
+	X.Tex(c, "Leaf", RGB(130, 210, 70), s, 26, { Size = 2, Speed = 28, Life = 2, Glow = 0.2, Grav = 8, Rot = 260, Drag = 3, Color2 = RGB(200, 180, 60) })
 	X.Pillars(g, 12, 5 * s, 5 * s, 0.9 * s, RGB(110, 80, 45), WOOD, 0.9)
 	X.Spikes(g + Vector3.new(0, 0.5, 0), 30, 9 * s, 0.6 * s, RGB(140, 220, 70), RGB(70, 50, 20), X.Sphere(1.1), { Glow = 0.35 })
 	X.Flash(c, RGB(190, 255, 120), 0.8 * s, 1)
@@ -365,6 +402,8 @@ end)
 -- Mossy Golem: an earthquake — mossy fissures, a rolling ring of rock and a
 -- big dust wave
 def("Mossgrave", function(c, g, s, d)
+	X.Tex(c, "Rock", RGB(120, 130, 95), s, 18, { Size = 2, Speed = 34, Life = 1.5, Glow = 0, Grav = 50, Rot = 300 })
+	X.Tex(g, "Wave", RGB(180, 160, 120), s, 1, { Size = 26, Size1 = 30, Life = 0.7, Glow = 0.2, Flat = true, Rot = 0 })
 	X.Fissures(g, 6, 13 * s, RGB(170, 255, 110), s, 1.4)
 	X.Ring(groundCF(g), 1, 14 * s, 2.2 * s, 1.6 * s, RGB(105, 120, 85), 0.8, { Mat = SLATE, Color2 = RGB(80, 110, 60), Segs = 22 })
 	X.Rocks(c, 12, 2 * s, RGB(110, 125, 90), SLATE, 34 * s, X.Sphere(0.8))
@@ -375,6 +414,8 @@ def("Mossgrave", function(c, g, s, d)
 end)
 -- Cloud Ram: a fluffy thunder-wool puff with yellow static zaps
 def("Puffhorn", function(c, g, s, d)
+	smokeFlip(c, RGB(250, 250, 255), 1.2 * s, 8)
+	crackle(c, RGB(255, 240, 110), s, 6)
 	blob(c, Vector3.new(4, 3, 4) * s, Vector3.new(16, 11, 16) * s, RGB(250, 250, 255), PLASTIC, 0.05, 0.9)
 	X.Smoke(c, RGB(245, 245, 255), 1.3 * s, 14, 2)
 	bolts(c, 6, 10 * s, RGB(255, 240, 90), 0.35 * s, X.Sphere(0.2))
@@ -387,6 +428,8 @@ end)
 -- Sky Shark: an X-shaped bite of two water crescents, a splash crown and
 -- falling droplets
 def("Skyfin", function(c, g, s, d)
+	X.Tex(g + Vector3.new(0, 2 * s, 0), "Splash", RGB(150, 215, 255), s, 3, { Size = 12, Speed = 0.1, Life = 0.6, Glow = 0.6, Rot = 0, Squash = 0 })
+	X.Tex(c, "Bubble", RGB(170, 230, 255), s, 16, { Size = 1.4, Speed = 14, Life = 1.6, Glow = 0.5, Grav = -5, Rot = 20 })
 	local fwd = X.Horizontal(d)
 	local side = fwd:Cross(Vector3.yAxis).Unit
 	X.Arc(c, fwd, (Vector3.yAxis + side).Unit, 7 * s, 2 * s, RGB(80, 190, 255), 0.5, -2.2, { Sweep = math.pi, Tip = W })
@@ -401,6 +444,8 @@ def("Skyfin", function(c, g, s, d)
 end)
 -- Tide Octopus: eight ink tentacles whip out from a dark splat
 def("Octoblob", function(c, g, s, d)
+	X.Tex(g, "Ink", RGB(25, 10, 40), s, 1, { Size = 20, Size1 = 22, Life = 3, Glow = 0, Flat = true, Rot = 0 })
+	X.Tex(c, "Ink", RGB(60, 20, 90), s, 8, { Size = 3, Speed = 20, Life = 1, Glow = 0, Grav = 30, Rot = 100 })
 	X.Tentacles(c, 8, 12 * s, 1.4 * s, RGB(150, 70, 230), RGB(40, 10, 60), 1.1)
 	X.Flash(c, RGB(170, 90, 255), 0.9 * s, 1)
 	X.Splat(c, RGB(90, 30, 140), RGB(10, 0, 20), s)
@@ -411,6 +456,8 @@ end)
 
 -- ===== BOSSES (everything bigger, several stages) =====
 def("MesaColossus", function(c, g, s, d)
+	X.Tex(c, "Rock", RGB(210, 165, 110), 1.5 * s, 24, { Size = 2.4, Speed = 40, Life = 1.6, Glow = 0, Grav = 50, Rot = 300 })
+	X.Tex(g, "Wave", RGB(240, 210, 150), s, 1, { Size = 50, Size1 = 60, Life = 0.9, Glow = 0.3, Flat = true, Rot = 0 })
 	X.Fissures(g, 9, 22 * s, RGB(255, 200, 90), s * 1.3, 2)
 	after(0.15, function()
 		X.Pillars(g, 14, 10 * s, 14 * s, 3 * s, RGB(215, 165, 105), SAND, 1.4)
@@ -423,6 +470,7 @@ def("MesaColossus", function(c, g, s, d)
 	end)
 end, true)
 def("FrostpeakWarden", function(c, g, s, d)
+	X.Tex(c + Vector3.new(0, 6 * s, 0), "Snowflake", W, 1.5 * s, 30, { Size = 3, Speed = 26, Life = 2.6, Glow = 0.8, Grav = 5, Rot = 90 })
 	X.Snowflake(c + Vector3.new(0, 4 * s, 0), RGB(190, 235, 255), 22 * s, 1.5)
 	X.Dome(c, 3 * s, 22 * s, RGB(160, 220, 255), 1, FF, 0.05, 1)
 	X.Pillars(g, 14, 12 * s, 14 * s, 3 * s, RGB(175, 225, 255), ICE, 1.5)
@@ -432,6 +480,8 @@ def("FrostpeakWarden", function(c, g, s, d)
 	X.Shake(c, 2 * s)
 end, true)
 def("MyceliumMonarch", function(c, g, s, d)
+	X.Tex(g, "Rune", RGB(255, 140, 230), s, 1, { Size = 30, Size1 = 32, Life = 2.2, Glow = 1, Bright = 4, Flat = true, Rot = 30 })
+	X.Tex(g + Vector3.new(0, 16 * s, 0), "Spore", RGB(255, 150, 220), 1.5 * s, 20, { Size = 3, Speed = 18, Life = 2.4, Glow = 0.5, Grav = -2 })
 	X.Rune(g, 14 * s, RGB(255, 120, 220), 6, 1.8)
 	X.Helix(g, 24 * s, 7 * s, RGB(255, 140, 230), 4, 8, 1.6, 1.3 * s)
 	after(0.3, function()
@@ -443,6 +493,8 @@ def("MyceliumMonarch", function(c, g, s, d)
 	end)
 end, true)
 def("BogstormCroaker", function(c, g, s, d)
+	crackle(c, RGB(170, 220, 255), 1.5 * s, 16)
+	X.Tex(g + Vector3.new(0, 1, 0), "Bubble", RGB(160, 220, 255), 1.4 * s, 26, { Size = 2, Speed = 12, Life = 2, Glow = 0.5, Grav = -6 })
 	skyBolts(g, 9, RGB(150, 210, 255), 1.3 * s)
 	for k = 0, 3 do
 		after(k * 0.1, function()
@@ -457,6 +509,8 @@ def("BogstormCroaker", function(c, g, s, d)
 	end)
 end, true)
 def("PrismSovereign", function(c, g, s, d)
+	X.Tex(g, "Rune", RGB(160, 200, 255), s, 1, { Size = 34, Size1 = 36, Life = 2.2, Glow = 1, Bright = 4, Flat = true, Rot = 30 })
+	X.Tex(c, "Star", W, 1.5 * s, 30, { Size = 2.4, Speed = 40, Life = 1.5, Glow = 1, Bright = 5, Rot = 300, Color2 = RGB(190, 150, 255) })
 	X.Rune(g, 16 * s, RGB(150, 200, 255), 5, 1.8)
 	-- crystal cage: spears from a ring converge on the centre, then burst
 	for k = 1, 12 do
@@ -479,6 +533,8 @@ def("PrismSovereign", function(c, g, s, d)
 	end)
 end, true)
 def("CalderaTitan", function(c, g, s, d)
+	fireball(c, RGB(255, 120, 30), RGB(120, 10, 0), 2 * s, 8)
+	smokeFlip(c + Vector3.new(0, 12 * s, 0), RGB(60, 40, 35), 1.8 * s, 12)
 	X.Fissures(g, 10, 24 * s, RGB(255, 110, 20), 1.4 * s, 2.2)
 	after(0.15, function()
 		X.Column(g, 70 * s, 10 * s, RGB(255, 100, 20), 1.3)
@@ -492,6 +548,8 @@ def("CalderaTitan", function(c, g, s, d)
 	end)
 end, true)
 def("Tidebreaker", function(c, g, s, d)
+	X.Tex(g + Vector3.new(0, 3 * s, 0), "Splash", RGB(160, 220, 255), 1.8 * s, 4, { Size = 14, Speed = 0.1, Life = 0.7, Glow = 0.6, Rot = 0 })
+	X.Tex(g, "Ink", RGB(15, 25, 60), s, 1, { Size = 30, Life = 3, Glow = 0, Flat = true, Rot = 0 })
 	X.Ring(groundCF(g), 3, 24 * s, 2.5 * s, 7 * s, RGB(70, 170, 255), 1.1, { Mat = GLASS, Alpha = 0.15, Color2 = RGB(150, 220, 255), Segs = 34 })
 	X.Tentacles(c, 8, 18 * s, 2 * s, RGB(80, 170, 255), RGB(20, 60, 140), 1.3)
 	after(0.2, function()
@@ -505,6 +563,7 @@ end, true)
 
 -- ===== PLAYER (cloud wind) =====
 def("PlayerPunch", function(c, g, s, d)
+	X.Tex(c, "Crescent", RGB(210, 240, 255), s, 2, { Size = 6, Speed = 0.1, Life = 0.35, Glow = 1, Bright = 4, Rot = 0 })
 	local fwd = d or X.Horizontal(nil)
 	for k = 1, 3 do
 		X.Arc(c, fwd, Vector3.new(math.cos(k * 2.1), math.sin(k * 2.1), 0), (3 + k) * s, 1.3 * s, RGB(190, 230, 255), 0.35, 3, { Tip = W, Sweep = math.pi * 0.6 })
@@ -513,6 +572,7 @@ def("PlayerPunch", function(c, g, s, d)
 	X.Sparks(c, RGB(200, 235, 255), s, 18, 60, 10)
 end)
 def("PlayerSlam", function(c, g, s, d)
+	X.Tex(g, "Wave", W, s, 1, { Size = 24, Size1 = 30, Life = 0.6, Glow = 0.6, Flat = true, Rot = 0 })
 	X.Ring(groundCF(g), 1, 13 * s, 1.6 * s, 0.8 * s, W, 0.55, { Color2 = RGB(190, 230, 255) })
 	blob(g + Vector3.new(0, 1.5 * s, 0), Vector3.new(4, 1.5, 4) * s, Vector3.new(16, 4, 16) * s, W, PLASTIC, 0.1, 0.6)
 	X.Dust(g, RGB(240, 245, 255), s, 30)
@@ -522,6 +582,7 @@ def("PlayerSlam", function(c, g, s, d)
 	X.Shake(c, s)
 end)
 def("PlayerPuff", function(c, g, s, d)
+	smokeFlip(c, W, 0.8 * s, 6)
 	blob(c, Vector3.new(2, 2, 2) * s, Vector3.new(9, 8, 9) * s, W, PLASTIC, 0.05, 0.6)
 	X.Smoke(c, RGB(245, 248, 255), s, 10, 3)
 	X.Motes(c, RGB(210, 235, 255), s, 18, 18, 0, 1)
@@ -548,18 +609,19 @@ local PAL = {
 	Water = { RGB(70, 180, 255), RGB(10, 60, 150) }, Wind = { RGB(200, 240, 255), RGB(90, 160, 200) },
 }
 local ACCENT = {
-	Earth = function(c, g, s) X.Rocks(c, 5, 1 * s, RGB(150, 120, 90), SLATE, 22 * s, X.Sphere(0.8)) end,
+	Earth = function(c, g, s) X.Rocks(c, 5, 1 * s, RGB(150, 120, 90), SLATE, 22 * s, X.Sphere(0.8)) X.Tex(c, "Leaf", RGB(150, 210, 90), s, 8, { Size = 1.4, Speed = 16, Life = 1.6, Grav = 6, Drag = 3 }) end,
 	Ice = function(c, g, s) X.Crystals(c, 6, 5 * s, 0.6 * s, RGB(180, 230, 255), W, ICE, X.Sphere(0.4)) end,
-	Spore = function(c, g, s) X.Smoke(c, RGB(240, 160, 230), s, 6, 4) X.Motes(c, W, s, 14, 10, -3, 1.6) end,
-	Electric = function(c, g, s) bolts(c, 3, 7 * s, RGB(180, 210, 255), 0.25 * s, X.Sphere(0.2)) end,
+	Spore = function(c, g, s) X.Tex(c, "Spore", RGB(240, 160, 230), s, 6, { Size = 2, Speed = 10, Life = 1.6, Glow = 0.4, Grav = -2 }) X.Motes(c, W, s, 14, 10, -3, 1.6) end,
+	Electric = function(c, g, s) bolts(c, 3, 7 * s, RGB(180, 210, 255), 0.25 * s, X.Sphere(0.2)) crackle(c, RGB(180, 210, 255), 0.6 * s, 4) end,
 	Crystal = function(c, g, s) X.Crystals(c, 6, 5 * s, 0.6 * s, RGB(190, 160, 255), W, GLASS, X.Sphere(0.3)) end,
-	Fire = function(c, g, s) X.Motes(c, RGB(255, 160, 60), s, 20, 16, -8, 1.5) end,
-	Water = function(c, g, s) X.Motes(c, RGB(160, 220, 255), s, 22, 20, 70, 1) end,
+	Fire = function(c, g, s) X.Motes(c, RGB(255, 160, 60), s, 20, 16, -8, 1.5) fireball(c, RGB(255, 140, 50), RGB(140, 20, 0), 0.5 * s, 2) end,
+	Water = function(c, g, s) X.Motes(c, RGB(160, 220, 255), s, 22, 20, 70, 1) X.Tex(c, "Bubble", RGB(170, 230, 255), s, 8, { Size = 1.2, Speed = 10, Life = 1.4, Grav = -5 }) end,
 	Wind = function(c, g, s) X.Arc(c, Vector3.yAxis, Vector3.xAxis, 5 * s, 1 * s, W, 0.5, 4) end,
 }
 local KIND = {
 	Bite = function(c, g, s, d, m, k)
 		jaws(c, X.Horizontal(d), 4 * s, 1.2 * s, m, W)
+		X.Tex(c, "Claw", m:Lerp(W, 0.4), s, 1, { Size = 6, Speed = 0.1, Life = 0.4, Glow = 1, Bright = 5, Rot = 0 })
 		after(0.25, function()
 			X.Flash(c, m, 0.6 * s, 1)
 		end)

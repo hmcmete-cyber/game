@@ -526,6 +526,46 @@ function X.Implode(pos: Vector3, color: Color3, s: number)
 	}), 26)
 	X.Ring(CFrame.new(pos), 6 * s, 0.5, 0.5 * s, 0.5 * s, color, 0.14, { Segs = 20, Alpha = 0.2 })
 end
+-- v2.25 textured particle burst (second sheet shapes + flipbooks)
+-- o: Size, Size1, Speed, Life, Grav, Spread, Flat, Glow, Rot, Squash, Dir, Loop, Shape
+function X.Tex(pos: Vector3, name: string, color: Color3, s: number, n: number, o)
+	o = o or {}
+	local a = anchor(CFrame.new(pos), (o.Life or 1.2) + 1, o.Shape and Vector3.one * (o.Box or 4) * s or nil)
+	local props = {
+		Texture = tex(name), Color = o.Color2 and ColorSequence.new(color, o.Color2) or ColorSequence.new(color),
+		LightEmission = o.Glow or 0.5, LightInfluence = (o.Glow or 0.5) > 0.4 and 0 or 0.5, Brightness = o.Bright or 2.5,
+		Size = ns({ { 0, (o.Size or 1.5) * s * 0.5 }, { 0.15, (o.Size or 1.5) * s }, { 1, (o.Size1 or (o.Size or 1.5) * 0.8) * s } }),
+		Transparency = ns({ { 0, 0 }, { 0.7, 0.15 }, { 1, 1 } }),
+		Lifetime = NumberRange.new((o.Life or 1.2) * 0.7, o.Life or 1.2),
+		Speed = NumberRange.new((o.Speed or 15) * 0.4 * s, (o.Speed or 15) * s),
+		Drag = o.Drag or 2, Acceleration = Vector3.new(0, -(o.Grav or 0), 0),
+		SpreadAngle = o.Spread or Vector2.new(180, 180), RotSpeed = NumberRange.new(-(o.Rot or 120), o.Rot or 120),
+		Rotation = NumberRange.new(0, 360), EmissionDirection = o.Dir or Enum.NormalId.Top,
+	}
+	if o.Flat then
+		props.Orientation = Enum.ParticleOrientation.VelocityPerpendicular
+		props.EmissionDirection = Enum.NormalId.Top
+		props.SpreadAngle = Vector2.new(0, 0)
+		props.Speed = NumberRange.new(0.01)
+	end
+	if o.Squash then
+		props.Squash = ns({ { 0, o.Squash }, { 1, o.Squash } })
+	end
+	if o.Shape then
+		props.Shape = o.Shape
+		props.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+	end
+	-- animated sheets only once the real flipbook texture is uploaded
+	if string.sub(name, -4) == "Flip" and FxKit.HasOwn(name) then
+		props.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4
+		props.FlipbookMode = o.Loop and Enum.ParticleFlipbookMode.Loop or Enum.ParticleFlipbookMode.OneShot
+		props.FlipbookStartRandom = o.Loop == true
+		props.Rotation = NumberRange.new(-15, 15)
+		props.RotSpeed = NumberRange.new(-20, 20)
+	end
+	emitNow(emitter(a, props), n)
+end
+
 function X.Shake(pos: Vector3, amount: number)
 	local a = anchor(CFrame.new(pos), 1)
 	a:SetAttribute("Shake", amount)

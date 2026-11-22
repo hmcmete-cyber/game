@@ -54,6 +54,43 @@ function ProcAnim.Compile(seq: KeyframeSequence)
 	return { Length = math.max(length, 0.05), Loop = seq.Loop, Priority = seq.Priority.Value, Joints = joints, Name = seq.Name }
 end
 
+-- plain-text form (JSON) so clips reach every client for sure (a StringValue
+-- always replicates; runtime KeyframeSequences might not)
+local HttpService = game:GetService("HttpService")
+local function r4(x: number): number
+	return math.floor(x * 10000 + 0.5) / 10000
+end
+function ProcAnim.Serialize(clip): string
+	local j = {}
+	for name, data in clip.Joints do
+		local cfs = {}
+		for _, cf in data.CF do
+			for _, v in { cf:GetComponents() } do
+				table.insert(cfs, r4(v))
+			end
+		end
+		j[name] = { T = data.T, C = cfs, L = data.Linear }
+	end
+	return HttpService:JSONEncode({ Len = clip.Length, Loop = clip.Loop, Pri = clip.Priority, Name = clip.Name, J = j })
+end
+function ProcAnim.Deserialize(text: string)
+	local ok, d = pcall(function()
+		return HttpService:JSONDecode(text)
+	end)
+	if not ok or type(d) ~= "table" then
+		return nil
+	end
+	local joints = {}
+	for name, data in d.J or {} do
+		local cfs = {}
+		for i = 1, #data.C, 12 do
+			table.insert(cfs, CFrame.new(table.unpack(data.C, i, i + 11)))
+		end
+		joints[name] = { T = data.T, CF = cfs, Linear = data.L == true }
+	end
+	return { Length = d.Len or 1, Loop = d.Loop == true, Priority = d.Pri or 0, Joints = joints, Name = d.Name }
+end
+
 local function smooth(f: number): number
 	return f * f * (3 - 2 * f) -- cubic in-out
 end
@@ -81,9 +118,11 @@ end
 local active = {} -- [Model] = { tracks }
 local motorsCache = setmetatable({}, { __mode = "k" }) -- [Model] = { [partName] = Motor6D }
 
+local motorsAt = setmetatable({}, { __mode = "k" })
 local function motorsOf(model: Model)
 	local m = motorsCache[model]
-	if not m then
+	-- rebuild every second: StreamingEnabled can re-create a model's parts
+	if not m or os.clock() - (motorsAt[model] or 0) > 1 then
 		m = {}
 		for _, d in model:GetDescendants() do
 			if d:IsA("Motor6D") and d.Part1 then
@@ -91,6 +130,7 @@ local function motorsOf(model: Model)
 			end
 		end
 		motorsCache[model] = m
+		motorsAt[model] = os.clock()
 	end
 	return m
 end

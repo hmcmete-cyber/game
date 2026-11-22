@@ -451,15 +451,25 @@ function MonsterAnims.PublishSeqs(typeName: string, model: Model)
 			seqFolder.Parent = game:GetService("ReplicatedStorage")
 		end
 	end
+	local ProcAnim = require(game:GetService("ReplicatedStorage").Shared.ProcAnim)
+	local made = 0
 	for _, name in NAMES do
 		local key = typeName .. "_" .. name
 		if not seqFolder:FindFirstChild(key) then
 			local ok, seq = pcall(sequence, model, name, gaitOf(typeName))
 			if ok and seq then
-				seq.Name = key
-				seq.Parent = seqFolder
+				-- clients get the clip as JSON text in a StringValue (always replicates)
+				local sv = Instance.new("StringValue")
+				sv.Name = key
+				sv.Value = ProcAnim.Serialize(ProcAnim.Compile(seq))
+				sv.Parent = seqFolder
+				seq:Destroy()
+				made += 1
 			end
 		end
+	end
+	if made > 0 then
+		print(`[Monsters] {typeName}: {made} clips published for live-server animation`)
 	end
 end
 

@@ -14,14 +14,24 @@ local MonsterAnimator = {}
 
 local clipCache = {} -- ["Type_Clip"] = compiled clip | false
 local states = {} -- [Model] = state
+local animated = 0
 local RANGE = 260 -- only animate monsters near the camera
 
 local function clip(typeName: string, name: string)
 	local key = typeName .. "_" .. name
 	if clipCache[key] == nil then
 		local folder = ReplicatedStorage:FindFirstChild("MonsterAnimSeqs")
-		local seq = folder and folder:FindFirstChild(key)
-		clipCache[key] = seq and ProcAnim.Compile(seq) or false
+		local obj = folder and folder:FindFirstChild(key)
+		local c = nil
+		if obj and obj:IsA("StringValue") then
+			c = ProcAnim.Deserialize(obj.Value)
+		elseif obj and obj:IsA("KeyframeSequence") then
+			c = ProcAnim.Compile(obj)
+		end
+		if not c then
+			return nil -- not replicated yet: try again later (no caching a miss)
+		end
+		clipCache[key] = c
 	end
 	return clipCache[key] or nil
 end
@@ -69,6 +79,10 @@ local function setup(model: Model)
 		end
 	end)
 	states[model] = st
+	animated += 1
+	if animated == 1 or animated % 20 == 0 then
+		print(`[MonsterAnim] animating {animated} monster(s) (latest: {typeName})`)
+	end
 end
 
 function MonsterAnimator.Start()

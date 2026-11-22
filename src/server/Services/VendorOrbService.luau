@@ -16,6 +16,10 @@ local Catalog = require(ReplicatedStorage.Shared.VendorCatalog)
 local Sfx = require(ReplicatedStorage.Shared.Sfx)
 
 local VendorOrbService = {}
+local Config = require(ReplicatedStorage.Shared.Config)
+local function shown(vendor: string): string -- v2.33: Tayron is called Zeus in game
+	return (Config.VendorDisplay and Config.VendorDisplay[vendor]) or vendor
+end
 
 local DataService, WeatherService, Remotes
 
@@ -113,7 +117,7 @@ local function buildOrb(parent: Instance, name: string, at: Vector3, color: Colo
 	title.TextScaled = true
 	title.TextColor3 = color
 	title.TextStrokeTransparency = 0.3
-	title.Text = vendor .. "'s Orb"
+	title.Text = shown(vendor) .. "'s Orb"
 	title.Parent = gui
 	local sub = Instance.new("TextLabel")
 	sub.Name = "Sub"
@@ -130,7 +134,7 @@ local function buildOrb(parent: Instance, name: string, at: Vector3, color: Colo
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "OrbPrompt"
 	prompt.ActionText = "Offer Cloud"
-	prompt.ObjectText = vendor .. "'s Orb"
+	prompt.ObjectText = shown(vendor) .. "'s Orb"
 	prompt.HoldDuration = 0.8
 	prompt.MaxActivationDistance = 12
 	prompt.RequiresLineOfSight = false
@@ -152,7 +156,7 @@ end
 local function offer(player: Player, vendor: string, orb: BasePart)
 	local carrying = player:GetAttribute("Carrying")
 	if not carrying then
-		hint(player, `Bring a cloud here to unlock {vendor}'s items. Open the shop to see which clouds are needed.`, 5)
+		hint(player, `Bring a cloud here to unlock {shown(vendor)}'s items. Open the shop to see which clouds are needed.`, 5)
 		return
 	end
 	if player:GetAttribute("CarryingStolen") then
@@ -167,7 +171,7 @@ local function offer(player: Player, vendor: string, orb: BasePart)
 	end
 	if not want or want.Vendor ~= vendor then
 		local other = want and want.Vendor or nil
-		hint(player, other and `This cloud unlocks something at {other}'s Orb instead.` or "This Orb does not want that cloud.", 4)
+		hint(player, other and `This cloud unlocks something at {shown(other)}'s Orb instead.` or "This Orb does not want that cloud.", 4)
 		return
 	end
 	if u[want.Id] then
@@ -186,7 +190,7 @@ local function offer(player: Player, vendor: string, orb: BasePart)
 	syncAttr(player)
 	DataService.SaveSoon(player)
 	local entry = Catalog.Boons[want.Id] or Catalog.Gadgets[want.Id]
-	hint(player, `Unlocked {entry.DisplayName} at {vendor}!`, 5)
+	hint(player, `Unlocked {entry.DisplayName} at {shown(vendor)}!`, 5)
 	-- absorb flash
 	local flash = orb:Clone()
 	flash:ClearAllChildren()

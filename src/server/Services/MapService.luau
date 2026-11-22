@@ -139,8 +139,10 @@ end
 -- Regular hexagon from 3 rotated rectangles (R x 2·apothem)
 local function hexagon(parent: Instance, name: string, cf: CFrame, radius: number, thickness: number, color: Color3, props)
 	local apothem = radius * math.sqrt(3) / 2
+	-- v2.33: the 3 overlapping slabs sat at EXACTLY the same height -> their top
+	-- faces z-fought (flickering, criss-crossed studs). Step each one 0.04 down.
 	for k = 0, 2 do
-		newPart(parent, name .. (k + 1), Vector3.new(radius, thickness, apothem * 2), cf * CFrame.Angles(0, k * math.pi / 3, 0), color, props)
+		newPart(parent, name .. (k + 1), Vector3.new(radius, thickness, apothem * 2), cf * CFrame.new(0, -k * 0.04, 0) * CFrame.Angles(0, k * math.pi / 3, 0), color, props)
 	end
 end
 
@@ -265,7 +267,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.17"
+local MAP_VERSION = "2.18" -- v2.33 hub/base hexagons without z-fighting
 local BASE_RING = 240 -- v2.13: distance of the 12 bases from the hub centre
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
@@ -358,8 +360,9 @@ local function buildPlaceholder(): Instance
 	------------------------------------------------------------------
 	local hubCF = CFrame.new(0, Y, 0)
 	hexagon(route, "HubDeck", hubCF * CFrame.new(0, -1, 0), hubR, 2, hubColor, { Material = Enum.Material.Marble })
-	hexagon(decor, "HubGlass", hubCF * CFrame.new(0, 0.06, 0), hubR * 0.55, 0.12, Color3.fromRGB(170, 210, 255), {
-		Material = Enum.Material.Glass, Transparency = 0.3, CanCollide = false, CanQuery = false,
+	-- v2.33: one round glass disc (3 overlapping transparent slabs stacked into dark triangles)
+	newPart(decor, "HubGlass", Vector3.new(0.12, hubR * 1.0, hubR * 1.0), hubCF * CFrame.new(0, 0.08, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(170, 210, 255), {
+		Shape = Enum.PartType.Cylinder, Material = Enum.Material.Glass, Transparency = 0.3, CanCollide = false, CanQuery = false,
 	})
 	hexagon(decor, "HubRock", hubCF * CFrame.new(0, -6, 0), hubR * 0.85, 8, Color3.fromRGB(125, 105, 90), { Material = Enum.Material.Ground })
 	hexagon(decor, "HubRockLow", hubCF * CFrame.new(0, -13, 0), hubR * 0.5, 8, Color3.fromRGB(95, 80, 72), { Material = Enum.Material.Slate })
@@ -386,14 +389,14 @@ local function buildPlaceholder(): Instance
 		local a = math.rad(i * 60 + 30)
 		local sp = Instance.new("SpawnLocation")
 		sp.Name = "SpawnLocation" .. i
-		sp.Size = Vector3.new(6, 1, 6)
-		sp.CFrame = CFrame.lookAt(Vector3.new(math.cos(a) * 26, Y + 0.5, math.sin(a) * 26), Vector3.new(0, Y + 0.5, 0))
+		sp.Size = Vector3.new(6, 0.3, 6) -- v2.33 thin pad, not a glowing block
+		sp.CFrame = CFrame.lookAt(Vector3.new(math.cos(a) * 26, Y + 0.15, math.sin(a) * 26), Vector3.new(0, Y + 0.15, 0))
 		sp.Anchored = true
 		sp.Neutral = true
 		sp.Duration = 0
 		sp.Material = Enum.Material.Neon
 		sp.Color = Color3.fromRGB(190, 230, 255)
-		sp.Transparency = 0.3
+		sp.Transparency = 0.55
 		sp.Parent = m
 	end
 	local hubZone = newPart(zones, "Hub", Vector3.new(130, 40, 130), CFrame.new(0, Y + 10, 0), hubColor, {

@@ -33,7 +33,7 @@ local QA_USER_IDS = { [2459147914] = true } -- Cubickzz
 local dropsFolder
 
 local function qaAllowed(player: Player): boolean
-	return QA_USER_IDS[player.UserId] == true and (RunService:IsStudio() or game.PrivateServerId ~= "")
+	return QA_USER_IDS[player.UserId] == true and (require(game:GetService("ReplicatedStorage").Shared.Config).QaEverywhere or RunService:IsStudio() or game.PrivateServerId ~= "")
 end
 
 local function data(player: Player)
@@ -403,7 +403,7 @@ local function hatch(player: Player, forceTop: boolean?)
 	end
 	if #(d.Pets or {}) >= PetDefs.StorageLimit then
 		-- v2.21: storage full - the egg waits until a pet is sold
-		hint(player, `Pet storage full ({PetDefs.StorageLimit})! Sell a pet at Aurelius or Tayron to hatch this egg.`, 6)
+		hint(player, `Pet storage full ({PetDefs.StorageLimit})! Sell a pet at Aurelius or Zeus to hatch this egg.`, 6)
 		return
 	end
 	hatching[player] = true

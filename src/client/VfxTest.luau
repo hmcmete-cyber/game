@@ -14,7 +14,7 @@ local QA_USER = 2459147914
 
 function VfxTest.Start()
 	local player = Players.LocalPlayer
-	if player.UserId ~= QA_USER or not (RunService:IsStudio() or game.PrivateServerId ~= "") then
+	if player.UserId ~= QA_USER or not (require(game:GetService("ReplicatedStorage").Shared.Config).QaEverywhere or RunService:IsStudio() or game.PrivateServerId ~= "") then
 		return
 	end
 	local FxKit = require(ReplicatedStorage.Shared.FxKit)

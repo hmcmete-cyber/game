@@ -464,7 +464,7 @@ local function buy(player: Player, id: unknown)
 	end
 	-- v2.13: gadgets are locked until their cloud is offered at Tayron's Orb
 	if item.Cloud and not (d.Unlocks and d.Unlocks[id]) then
-		Remotes.Hint:FireClient(player, "Locked: offer the required cloud at Tayron's Orb first.", 3)
+		Remotes.Hint:FireClient(player, "Locked: offer the required cloud at Zeus's Orb first.", 3)
 		return
 	end
 	if owns(d, id :: string) then

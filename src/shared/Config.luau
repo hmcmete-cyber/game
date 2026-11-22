@@ -3,6 +3,13 @@
 
 local Config = {
 	GameName = "Steal a Cloud",
+	-- v2.33 director: the QA account (UserId 2459147914) gets its QA tools in
+	-- EVERY server (public ones too) until told otherwise. false = Studio +
+	-- private servers only. Other players never get them (checked on the server).
+	QaEverywhere = true,
+	-- v2.33 names players SEE for the vendors (internal keys stay "Tayron" /
+	-- "Aurelius": map markers, orbs and unlock data use them)
+	VendorDisplay = { Tayron = "Zeus", Aurelius = "Aurelius" },
 	StartingCoins = 0,
 
 	-- Movement

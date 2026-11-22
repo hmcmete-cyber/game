@@ -61,7 +61,7 @@ local function hexagon(parent: Instance, name: string, center: CFrame, radius: n
 	local first
 	for k = 0, 2 do
 		local p = part(parent, name .. (k + 1), Vector3.new(radius, thickness, apothem * 2),
-			center * CFrame.Angles(0, k * math.pi / 3, 0), color, props)
+			center * CFrame.new(0, -k * 0.04, 0) * CFrame.Angles(0, k * math.pi / 3, 0), color, props) -- v2.33 no z-fighting
 		first = first or p
 	end
 	return first
@@ -153,7 +153,9 @@ function BaseBuilder.Build(parent: Instance, name: string, top: Vector3, accent:
 		Material = Enum.Material.Metal,
 		Reflectance = 0.15,
 	})
-	hexagon(base, "Glass", topCF * CFrame.new(0, 0.06, 0), R * 0.72, 0.12, accent, {
+	-- v2.33: one round glass disc (3 overlapping transparent slabs stacked into dark triangles)
+	part(base, "Glass1", Vector3.new(0.12, R * 1.3, R * 1.3), topCF * CFrame.new(0, 0.08, 0) * CFrame.Angles(0, 0, math.pi / 2), accent, {
+		Shape = Enum.PartType.Cylinder,
 		Material = Enum.Material.Glass,
 		Transparency = 0.35,
 		CanCollide = false,

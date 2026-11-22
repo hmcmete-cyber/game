@@ -15,7 +15,7 @@ local RANGE = 60 -- studs
 local DAMAGE = 1e6
 
 local function allowed(player: Player): boolean
-	return QA_USER_IDS[player.UserId] == true and (RunService:IsStudio() or game.PrivateServerId ~= "")
+	return QA_USER_IDS[player.UserId] == true and (require(game:GetService("ReplicatedStorage").Shared.Config).QaEverywhere or RunService:IsStudio() or game.PrivateServerId ~= "")
 end
 
 local function makeTool(monsterService): Tool

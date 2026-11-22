@@ -255,7 +255,7 @@ local function render()
 		sellToggleText.Text = currentShop == "SellPets" and "Back" or "Sell Pets"
 	end
 	if currentShop == "SellPets" then
-		local who = vendorShop == "Items" and "Tayron" or "Aurelius"
+		local who = vendorShop == "Items" and "Zeus" or "Aurelius"
 		titleLabel.Text = `Sell Pets to {who}`
 		subtitleLabel.Text = `Pet storage {#petList} / {petLimit}. Higher level + rarer = more coins.`
 		avatarText.Text = "$"
@@ -276,7 +276,7 @@ local function render()
 			c.Name = "CardEmpty"
 		end
 	elseif currentShop == "Items" then
-		titleLabel.Text = "Tayron's Cloud Shop"
+		titleLabel.Text = "Zeus's Gear Shop"
 		subtitleLabel.Text = "Gear is yours forever: hold it (keys 1-9) and click to use."
 		avatarText.Text = "T"
 		for i, id in ShopItems.Order do
@@ -286,7 +286,7 @@ local function render()
 			-- v2.31 gear: owned forever; simple = cooldown, OP = 3 charges
 			local gearText = item.Op and `GEAR - 3 charges, +1 every {item.Recharge}s` or `GEAR - reuse every {item.Cooldown}s`
 			local desc = item.Desc .. "\n" .. gearText
-			local c = card(i, id, item.IconText, item.IconColor, item.DisplayName, locked and (desc .. "\n" .. lockText(item.Cloud, "Tayron")) or desc)
+			local c = card(i, id, item.IconText, item.IconColor, item.DisplayName, locked and (desc .. "\n" .. lockText(item.Cloud, "Zeus")) or desc)
 			buyButton(c, locked and "Locked" or (owned and "OWNED" or (item.ComingSoon and "Coming soon" or `Buy - {item.Price} coins`)), not item.ComingSoon and not locked and not owned,
 				Color3.fromRGB(120, 220, 160), function()
 					remotes.BuyItem:FireServer(id)

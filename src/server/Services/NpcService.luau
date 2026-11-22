@@ -12,6 +12,8 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 
+local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+
 local NpcService = {}
 
 local SKIN = Color3.fromRGB(234, 184, 146)
@@ -155,7 +157,7 @@ local function decorate(model: Model, look)
 		name.BackgroundTransparency = 1
 		name.Font = Enum.Font.FredokaOne
 		name.TextScaled = true
-		name.Text = model.Name
+		name.Text = (Config.VendorDisplay and Config.VendorDisplay[model.Name]) or model.Name
 		name.TextColor3 = Color3.new(1, 1, 1)
 		name.Parent = plate
 		local role = Instance.new("TextLabel")
@@ -210,7 +212,7 @@ function NpcService.Spawn(spot: BasePart, who: string, openShop: RemoteEvent)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "ShopPrompt"
 	prompt.ActionText = look.Shop == "Items" and "Shop" or "Upgrades"
-	prompt.ObjectText = `{who} - {look.Title}`
+	prompt.ObjectText = `{(Config.VendorDisplay and Config.VendorDisplay[who]) or who} - {look.Title}`
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = 10

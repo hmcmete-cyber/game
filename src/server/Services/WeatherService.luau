@@ -1402,7 +1402,7 @@ function WeatherService.Start(mapService, dataService, remotes)
 			for player, c in carriers do
 				local root = getRoot(player)
 				local qa = player.UserId == 2459147914 and (player:GetAttribute("QaSpeed") or 1) > 1
-					and (RunService:IsStudio() or game.PrivateServerId ~= "")
+					and (require(game:GetService("ReplicatedStorage").Shared.Config).QaEverywhere or RunService:IsStudio() or game.PrivateServerId ~= "")
 				if root and not qa then
 					local v = root.AssemblyLinearVelocity
 					local flat = Vector2.new(v.X, v.Z).Magnitude

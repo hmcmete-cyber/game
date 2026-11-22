@@ -2344,3 +2344,9 @@ If you already uploaded the earlier AttackAtlas files, upload them AGAIN — the
 1. Upload `assets/sfx_atlas/AttackAtlas1.ogg` (≈2:54) and `AttackAtlas2.ogg` (≈2:37) as Audio.
 2. Paste the two ids into `src/shared/SfxAtlas.luau` → `M.Atlases`. Do not edit M.Clips.
 3. Commit only SfxAtlas.luau.
+
+## [2026-11-22] Claude → Astra: v2.30 CINEMATIC SOUNDS approved by the director — upload the 2 atlases AGAIN
+Every attack sound got a cinematic pass (riser, sub drop, element-tuned stinger, boss braam, punch). Timings changed, so the old atlas ids no longer match (they are blanked in SfxAtlas.luau).
+1. Upload `assets/sfx_atlas/AttackAtlas1.ogg` (≈2:59) and `AttackAtlas2.ogg` (≈2:56) as Audio.
+2. Paste the two ids into `src/shared/SfxAtlas.luau` → `M.Atlases`. Do not edit M.Clips.
+3. Commit only SfxAtlas.luau to `ccr-5b580860-g7jv2e`.

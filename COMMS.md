@@ -2268,3 +2268,36 @@ Director: VFX looked flat/cheap; wants pro Roblox-VFX-pack quality (glowing core
 - Wired into: monster abilities (bursts, rings, projectiles, telegraph charge-up, melee slash, player hit pop), every monster death + boss death (explosion + light pillar), boss arrival (pillar + vortex + explosion), egg hatch (crack flashes, burst / Epic+ vortex), pet attacks (slash, trails, lightning chains, explosions), player Gust Punch / Air Slam / Puff Shot, laser, flare, cloud catch/delivery bursts, client VFX.
 - **UPLOAD PLEASE:** `assets/vfx/*.png` (11 images: Glow, Flare, Streak, Spikes, Ring, Swirl, Crackle, Flame, Smoke, Shard, BeamSoft — white on transparent, tinted in game). Upload as Images/Decals and paste the IMAGE ids into `src/shared/FxIds.luau` (`Glow = "rbxassetid://..."`). Until then FxKit falls back to Roblox built-in particle textures (works, but the star flare / streak / spikes look much better with ours).
 - Regenerate with `python3 tools/make_vfx.py`.
+
+## [2026-11-22] Claude → Astra: HOW TO UPLOAD THE 11 VFX TEXTURES (step by step)
+Files: `assets/vfx/` on branch `ccr-5b580860-g7jv2e`:
+Glow.png, Flare.png, Streak.png, Spikes.png, Ring.png, Swirl.png, Crackle.png, Flame.png, Smoke.png, Shard.png, BeamSoft.png
+(white on transparent PNG, 256x256; the game tints them).
+
+**A) Roblox Studio (recommended, gives IMAGE ids directly)**
+1. Open the game in Studio (must be logged in as the game's owner / group).
+2. View -> Asset Manager -> click the "Bulk Import" button (cloud with an up-arrow).
+3. Select all 11 PNGs from `assets/vfx` -> Open. Wait until all show in Asset Manager -> Images.
+4. For each image: right-click -> "Copy Asset ID" (gives `rbxassetid://NNN`).
+5. Paste into `src/shared/FxIds.luau`, key = file name without .png:
+```lua
+return {
+	Glow = "rbxassetid://NNN",
+	Flare = "rbxassetid://NNN",
+	Streak = "rbxassetid://NNN",
+	Spikes = "rbxassetid://NNN",
+	Ring = "rbxassetid://NNN",
+	Swirl = "rbxassetid://NNN",
+	Crackle = "rbxassetid://NNN",
+	Flame = "rbxassetid://NNN",
+	Smoke = "rbxassetid://NNN",
+	Shard = "rbxassetid://NNN",
+	BeamSoft = "rbxassetid://NNN",
+}
+```
+6. Commit + push to `ccr-5b580860-g7jv2e` (only that file). Rojo syncs it; nothing else to change — FxKit picks the ids up automatically.
+
+**B) Website alternative (create.roblox.com -> Creations -> Decals -> Upload)**
+WARNING: the website gives a DECAL id, which does NOT work in ParticleEmitter/Beam. To get the IMAGE id: in Studio, Toolbox -> My Decals (or Inventory) -> insert the decal into Workspace -> select it -> copy its `Texture` property (that `rbxassetid://` is the image id) -> delete the decal. Use those ids in FxIds.luau.
+
+**Check:** Play in Studio, use "QA OP Smasher (test only)": the explosion should show a sharp 4-point star flare, thin stretched sparks and dark spikes. If an id is wrong, Output shows "Failed to load ... rbxassetid://..." — tell Claude which one.

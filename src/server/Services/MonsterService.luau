@@ -151,6 +151,10 @@ local function play(info, name: string)
 	local t = info.Tracks[name]
 	if t then
 		t:Play(0.1)
+	elseif info.Model:GetAttribute("ProcAnim") and name ~= "Idle" and name ~= "Walk" then
+		-- v2.32: clients play this one-shot clip procedurally
+		info.Model:SetAttribute("AnimClip", name)
+		info.Model:SetAttribute("AnimAt", workspace:GetServerTimeNow())
 	end
 end
 

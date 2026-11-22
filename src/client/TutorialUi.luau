@@ -254,12 +254,21 @@ local function build()
 	local skip = Instance.new("TextButton")
 	skip.AnchorPoint = Vector2.new(1, 0)
 	skip.Position = UDim2.new(1, 8, 0, -8)
-	skip.Size = UDim2.fromOffset(36, 36)
-	skip.BackgroundColor3 = Color3.fromRGB(200, 70, 70)
-	skip.Font = Enum.Font.FredokaOne
+	skip.Size = UDim2.fromOffset(44, 44)
+	skip.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+	-- v2.32: "✕" didn't render in this font (empty red dot) -> a plain bold X
+	skip.Font = Enum.Font.GothamBlack
 	skip.TextScaled = true
 	skip.TextColor3 = Color3.new(1, 1, 1)
-	skip.Text = "✕"
+	skip.Text = "X"
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop, pad.PaddingBottom, pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 7), UDim.new(0, 7), UDim.new(0, 7), UDim.new(0, 7)
+	pad.Parent = skip
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.new(1, 1, 1)
+	stroke.Thickness = 2
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = skip
 	Instance.new("UICorner", skip).CornerRadius = UDim.new(1, 0)
 	skip.Parent = panel
 	-- a little pointing hand that bounces toward the ▶ button

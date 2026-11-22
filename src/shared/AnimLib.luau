@@ -85,9 +85,16 @@ function AnimLib.Id(name: string): string?
 	return cache[name] or nil
 end
 
-function AnimLib.Load(animator: Animator, name: string): AnimationTrack?
+function AnimLib.Load(animator: Animator, name: string): any
 	local id = AnimLib.Id(name)
 	if not id then
+		-- v2.32 live servers: play the same clip procedurally (ProcAnim)
+		local model = animator.Parent and animator.Parent.Parent
+		local ok, seq = pcall(AnimLib.Sequence, name)
+		if model and model:IsA("Model") and ok and seq then
+			local ProcAnim = require(script.Parent:WaitForChild("ProcAnim"))
+			return ProcAnim.Track(model, ProcAnim.Compile(seq))
+		end
 		return nil
 	end
 	local anim = Instance.new("Animation")

@@ -34,19 +34,19 @@ local rgb = Color3.fromRGB
 
 -- Keyframes by ClockTime (0-24). Blended linearly, wrapping at midnight.
 local KEYS = {
-	{ T = 0, Bright = 0.6, Exposure = -0.25, Ambient = rgb(40, 45, 75), Outdoor = rgb(60, 65, 105),
+	{ T = 0, Bright = 0.53, Exposure = -0.45, Ambient = rgb(40, 45, 75), Outdoor = rgb(60, 65, 105),
 		Haze = rgb(60, 70, 120), Decay = rgb(30, 30, 70), Tint = rgb(205, 215, 255), Clouds = rgb(90, 95, 140) },
-	{ T = 5.5, Bright = 0.9, Exposure = -0.2, Ambient = rgb(70, 60, 90), Outdoor = rgb(110, 90, 130),
+	{ T = 5.5, Bright = 0.79, Exposure = -0.4, Ambient = rgb(70, 60, 90), Outdoor = rgb(110, 90, 130),
 		Haze = rgb(160, 120, 170), Decay = rgb(90, 70, 130), Tint = rgb(240, 220, 245), Clouds = rgb(200, 160, 200) },
-	{ T = 7, Bright = 1.8, Exposure = -0.1, Ambient = rgb(120, 105, 115), Outdoor = rgb(170, 145, 150),
+	{ T = 7, Bright = 1.58, Exposure = -0.3, Ambient = rgb(120, 105, 115), Outdoor = rgb(170, 145, 150),
 		Haze = rgb(255, 200, 180), Decay = rgb(170, 130, 170), Tint = rgb(255, 238, 225), Clouds = rgb(255, 220, 215) },
-	{ T = 12, Bright = 2.1, Exposure = -0.1, Ambient = rgb(120, 125, 140), Outdoor = rgb(150, 160, 180),
+	{ T = 12, Bright = 1.85, Exposure = -0.3, Ambient = rgb(120, 125, 140), Outdoor = rgb(150, 160, 180),
 		Haze = rgb(200, 220, 245), Decay = rgb(130, 160, 210), Tint = rgb(250, 250, 255), Clouds = rgb(250, 252, 255) },
-	{ T = 17, Bright = 1.9, Exposure = -0.1, Ambient = rgb(125, 115, 125), Outdoor = rgb(165, 145, 155),
+	{ T = 17, Bright = 1.67, Exposure = -0.3, Ambient = rgb(125, 115, 125), Outdoor = rgb(165, 145, 155),
 		Haze = rgb(255, 210, 200), Decay = rgb(170, 140, 200), Tint = rgb(255, 242, 235), Clouds = rgb(255, 230, 230) },
-	{ T = 19, Bright = 1.1, Exposure = -0.15, Ambient = rgb(95, 75, 105), Outdoor = rgb(140, 100, 135),
+	{ T = 19, Bright = 0.97, Exposure = -0.35, Ambient = rgb(95, 75, 105), Outdoor = rgb(140, 100, 135),
 		Haze = rgb(240, 140, 150), Decay = rgb(110, 80, 150), Tint = rgb(255, 225, 225), Clouds = rgb(240, 160, 170) },
-	{ T = 20.5, Bright = 0.7, Exposure = -0.25, Ambient = rgb(50, 50, 85), Outdoor = rgb(70, 70, 115),
+	{ T = 20.5, Bright = 0.62, Exposure = -0.45, Ambient = rgb(50, 50, 85), Outdoor = rgb(70, 70, 115),
 		Haze = rgb(80, 80, 140), Decay = rgb(40, 40, 90), Tint = rgb(210, 215, 255), Clouds = rgb(100, 100, 150) },
 }
 
@@ -98,9 +98,9 @@ function LightingService.Apply()
 	-- Bloom only on really bright pixels (neon, sun) — no more washed-out screen
 	local bloom = getOrCreate(Lighting, "BloomEffect", "PS_Bloom")
 	-- v2.22: stronger glow on HDR VFX (FxKit particles use Brightness 2.5-4)
-	bloom.Intensity = 0.8
-	bloom.Size = 30
-	bloom.Threshold = 1.6
+	bloom.Intensity = 0.55 -- v2.32 director: a bit less bright overall
+	bloom.Size = 28
+	bloom.Threshold = 1.8
 
 	local sunRays = getOrCreate(Lighting, "SunRaysEffect", "PS_SunRays")
 	sunRays.Intensity = 0.05

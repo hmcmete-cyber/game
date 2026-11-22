@@ -130,6 +130,14 @@ local function add(model: Instance)
 	end)
 	state.Idle = ok1 and idleTrack or nil
 	state.Wave = ok2 and waveTrack or nil
+	-- v2.32 live servers: generated clips can't be registered -> play them
+	-- procedurally (ProcAnim) so Tayron and Aurelius still breathe and wave
+	if not state.Idle or not state.Wave then
+		local ProcAnim = require(ReplicatedStorage.Shared.ProcAnim)
+		ProcAnim.Own(model)
+		state.Idle = state.Idle or AnimLib.Load(animator, "NpcIdle")
+		state.Wave = state.Wave or AnimLib.Load(animator, "NpcWave")
+	end
 	if state.Idle then
 		state.Idle.Looped = true
 		state.Idle:Play(0.3)

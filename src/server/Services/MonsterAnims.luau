@@ -414,6 +414,13 @@ function MonsterAnims.Ids(typeName: string, model: Model): { [string]: string | 
 	end
 	local published = require(game:GetService("ReplicatedStorage").Shared.MonsterAnimIds)
 	local ids = {}
+	-- Studio test of the live-server path: set workspace attribute ForceProcAnim = true
+	if workspace:GetAttribute("ForceProcAnim") then
+		for _, name in NAMES do
+			ids[name] = false
+		end
+		return ids
+	end
 	for _, name in NAMES do
 		local pub = published[typeName .. "_" .. name]
 		if pub and pub ~= "" then
@@ -430,6 +437,32 @@ function MonsterAnims.Ids(typeName: string, model: Model): { [string]: string | 
 end
 
 -- Loads all six tracks on a monster's Animator
+-- v2.32 live servers: generated clips can't be registered outside Studio.
+-- Publish the KeyframeSequences in ReplicatedStorage.MonsterAnimSeqs instead;
+-- clients play them procedurally (client MonsterAnimator + Shared/ProcAnim)
+-- following the model's AnimClip / AnimAt attributes.
+local seqFolder
+function MonsterAnims.PublishSeqs(typeName: string, model: Model)
+	if not seqFolder then
+		seqFolder = game:GetService("ReplicatedStorage"):FindFirstChild("MonsterAnimSeqs")
+		if not seqFolder then
+			seqFolder = Instance.new("Folder")
+			seqFolder.Name = "MonsterAnimSeqs"
+			seqFolder.Parent = game:GetService("ReplicatedStorage")
+		end
+	end
+	for _, name in NAMES do
+		local key = typeName .. "_" .. name
+		if not seqFolder:FindFirstChild(key) then
+			local ok, seq = pcall(sequence, model, name, gaitOf(typeName))
+			if ok and seq then
+				seq.Name = key
+				seq.Parent = seqFolder
+			end
+		end
+	end
+end
+
 function MonsterAnims.Load(typeName: string, model: Model): { [string]: AnimationTrack }
 	local hum = model:FindFirstChildOfClass("Humanoid")
 	local animator = hum and hum:FindFirstChildOfClass("Animator")
@@ -448,6 +481,11 @@ function MonsterAnims.Load(typeName: string, model: Model): { [string]: Animatio
 				tracks[name] = track
 			end
 		end
+	end
+	if next(tracks) == nil then
+		-- no real tracks (published game): clients animate it procedurally
+		MonsterAnims.PublishSeqs(typeName, model)
+		model:SetAttribute("ProcAnim", true)
 	end
 	return tracks
 end

@@ -598,7 +598,18 @@ local function runAction(info, fn, ...)
 	info.Hum:MoveTo(info.Root.Position)
 	local args = table.pack(...)
 	task.spawn(function()
-		Abilities.SetStyle(info.Type) -- v2.23: this thread's hits use this character's VFX
+		-- v2.26: this thread's hits use this ability's own VFX (melee: the character's)
+		local a = args[2]
+		local abilityId = type(a) == "table" and a.Id or nil
+		Abilities.SetStyle(info.Type, abilityId)
+		local HitFx = require(game:GetService("ReplicatedStorage").Shared.HitFx)
+		if abilityId and HitFx.CastFx[abilityId] then
+			task.delay(0.35, function()
+				if info.Alive then
+					HitFx.Play(abilityId, info.Root.Position, info.Def.Boss and 1.2 or 1)
+				end
+			end)
+		end
 		local ok, err = pcall(fn, table.unpack(args, 1, args.n))
 		if not ok then
 			warn(`[Monsters] {info.Type} ability failed: {err}`)

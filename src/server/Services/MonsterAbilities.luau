@@ -45,16 +45,25 @@ local task = setmetatable({
 		return realTask.defer(inherit(f), ...)
 	end,
 }, { __index = realTask })
-function Abilities.SetStyle(typeName: string?)
-	Style[coroutine.running()] = typeName
+-- v2.26: an ability thread uses that ABILITY's own effect (HitFx defines one
+-- per special attack); melee threads use the character's signature
+function Abilities.SetStyle(typeName: string?, abilityId: string?)
+	Style[coroutine.running()] = (abilityId and HitFx.Styles[abilityId]) and abilityId or typeName
 end
+local lastFx = {} -- [style] = { t, pos } (one effect per impact, not per tick)
 local function styledHit(st: string?, pos: Vector3, color: Color3, count: number, dir: Vector3?)
-	local sc = math.clamp(count / 18, 0.5, 2.2)
-	local r = st and HitFx.Styles[st]
-	if r and r.Boss then
-		sc *= 0.8 -- boss recipes are already huge
+	local style = st or HitFx.StyleForColor(color)
+	local last = lastFx[style]
+	if last and os.clock() - last[1] < 0.3 and (last[2] - pos).Magnitude < 14 then
+		return
 	end
-	HitFx.Play(st or HitFx.StyleForColor(color), pos, sc, dir)
+	lastFx[style] = { os.clock(), pos }
+	local sc = math.clamp(count / 16, 0.6, 2)
+	local r = HitFx.Styles[style]
+	if r and r.Boss then
+		sc = math.clamp(sc, 0.9, 1.3) -- boss effects are already huge
+	end
+	HitFx.Play(style, pos, sc, dir)
 end
 
 local Remotes
@@ -88,6 +97,11 @@ function Abilities.Hurt(p: Player, dmg: number)
 		if root and os.clock() - (p:GetAttribute("HurtSfxAt") or 0) > 0.25 then
 			p:SetAttribute("HurtSfxAt", os.clock())
 			Sfx.At("PlayerHurt", root.Position)
+			-- v2.26: the attack that hurt you shows its own effect on you
+			local st = curStyle()
+			if st then
+				styledHit(st, root.Position, Color3.fromRGB(255, 120, 90), 14, nil)
+			end
 			require(game:GetService("ReplicatedStorage").Shared.FxKit).Impact(root.Position, Color3.fromRGB(255, 70, 60), 0.7) -- v2.22 hit pop
 		end
 	end
@@ -198,6 +212,10 @@ end
 
 local function ring(pos: Vector3, radius: number, color: Color3)
 	FxKit.Shockwave(pos + Vector3.new(0, 0.3, 0), radius, color) -- v2.22 pro ring
+	local st = curStyle()
+	if st then
+		styledHit(st, pos + Vector3.new(0, 2, 0), color, math.clamp(radius * 1.2, 10, 30)) -- v2.26 the ability's own impact
+	end
 	local r = fx(Vector3.new(0.3, 2, 2), CFrame.new(pos + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.pi / 2), color, {
 		Shape = Enum.PartType.Cylinder, Transparency = 0.7, -- faint underlay
 	}, 0.6)
@@ -1420,11 +1438,11 @@ function Abilities.Melee(ctx, melee)
 	ctx.Play("Ability1")
 	task.wait(0.2)
 	if ctx.Alive() and (ctx.TargetRoot.Position - ctx.Root.Position).Magnitude <= melee.Range + 1 then
-		hurt(ctx.Target, melee.Damage)
 		local tp = ctx.TargetRoot.Position
 		local dir = (tp - ctx.Root.Position)
 		dir = dir.Magnitude > 0.1 and dir.Unit or nil
-		styledHit(curStyle(), tp, Color3.fromRGB(255, 120, 90), 14, dir) -- v2.23 own melee hit
+		styledHit(curStyle(), tp, Color3.fromRGB(255, 120, 90), 13, dir) -- the character's signature melee hit (directional, before hurt's)
+		hurt(ctx.Target, melee.Damage)
 		if melee.Trip then
 			slipNow(ctx.Target)
 		end

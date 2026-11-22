@@ -28,6 +28,15 @@ function VfxTest.Start()
 			table.insert(list, n)
 		end
 	end
+	-- v2.26: every special attack (in roster order)
+	for _, n in MonsterDefs.Order do
+		local def = MonsterDefs.Types[n]
+		for _, a in def and def.Abilities or {} do
+			if HitFx.Styles[a.Id] then
+				table.insert(list, n .. ":" .. a.Id)
+			end
+		end
+	end
 	for _, n in { "Shroomling", "PlayerPunch", "PlayerSlam", "PlayerPuff" } do
 		table.insert(list, n)
 	end
@@ -105,6 +114,10 @@ function VfxTest.Start()
 			return
 		end
 		local style = list[idx]
+		local colon = string.find(style, ":", 1, true)
+		if colon then
+			style = string.sub(style, colon + 1) -- "Monster:Ability" -> ability effect
+		end
 		if style == "Red" then
 			FxKit.RedExplosion(pos, 1)
 		else

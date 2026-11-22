@@ -285,6 +285,7 @@ function Vfx.Start()
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	remotes:WaitForChild("Delivered").OnClientEvent:Connect(onDelivered)
 	remotes:WaitForChild("Knock").OnClientEvent:Connect(onKnock)
+	require(ReplicatedStorage.Shared.HitFx).Listen() -- v2.23 signature hit VFX from the server
 	-- v2.22: big FxKit explosions shake the camera + tint flash, by distance
 	task.spawn(function()
 		local fxk = workspace:WaitForChild("FxKit", 120)

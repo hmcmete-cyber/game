@@ -15,6 +15,48 @@ local TweenService = game:GetService("TweenService")
 
 local Abilities = {}
 
+-- v2.23 signature hit VFX: every ability thread knows WHICH character casts
+-- it (set by MonsterService.runAction), and threads it spawns inherit that,
+-- so bursts/impacts play that character's own HitFx recipe.
+local HitFx = require(game:GetService("ReplicatedStorage").Shared.HitFx)
+local realTask = task
+local Style = setmetatable({}, { __mode = "k" })
+local function curStyle(): string?
+	return Style[coroutine.running()]
+end
+local function inherit(f)
+	if type(f) ~= "function" then
+		return f
+	end
+	local st = curStyle()
+	return function(...)
+		Style[coroutine.running()] = st
+		return f(...)
+	end
+end
+local task = setmetatable({
+	spawn = function(f, ...)
+		return realTask.spawn(inherit(f), ...)
+	end,
+	delay = function(t, f, ...)
+		return realTask.delay(t, inherit(f), ...)
+	end,
+	defer = function(f, ...)
+		return realTask.defer(inherit(f), ...)
+	end,
+}, { __index = realTask })
+function Abilities.SetStyle(typeName: string?)
+	Style[coroutine.running()] = typeName
+end
+local function styledHit(st: string?, pos: Vector3, color: Color3, count: number, dir: Vector3?)
+	local sc = math.clamp(count / 18, 0.5, 2.2)
+	local r = st and HitFx.Styles[st]
+	if r and r.Boss then
+		sc *= 1.35
+	end
+	HitFx.Play(st or HitFx.StyleForColor(color), pos, sc, dir)
+end
+
 local Remotes
 function Abilities.Init(remotes)
 	Remotes = remotes
@@ -167,18 +209,18 @@ end
 -- v2.22: layered pro burst (core, star flare, stretched sparks, glitter, ring);
 -- big counts become a full explosion with dark spikes, embers and smoke
 local function burst(pos: Vector3, color: Color3, count: number)
-	local sc = math.clamp(count / 14, 0.5, 3)
-	if count >= 24 then
-		FxKit.Explosion(pos, color, sc * 0.8)
-	else
-		FxKit.Burst(pos, color, sc)
+	if count < 8 then
+		FxKit.Impact(pos, color, 0.6) -- small hit sparks
+		return
 	end
+	styledHit(curStyle(), pos, color, count) -- v2.23: the caster's own effect
 end
 
 -- straight projectile; onHit(player) once; stops at first player or range
 local function projectile(from: Vector3, dir: Vector3, speed: number, range: number, radius: number, color: Color3, size: Vector3, onHit)
 	local p = fx(size, CFrame.lookAt(from, from + dir), color, nil, range / speed + 0.5)
 	FxKit.Trail(p, color) -- v2.22 glowing trail + halo
+	local st = curStyle()
 	local travelled = 0
 	local conn
 	conn = RunService.Heartbeat:Connect(function(dt)
@@ -194,7 +236,7 @@ local function projectile(from: Vector3, dir: Vector3, speed: number, range: num
 			conn:Disconnect()
 			if hits[1] then
 				onHit(hits[1][1], hits[1][2])
-				burst(p.Position, color, 10)
+				styledHit(st, p.Position, color, 12, dir)
 			end
 			p:Destroy()
 		end
@@ -1379,8 +1421,10 @@ function Abilities.Melee(ctx, melee)
 	task.wait(0.2)
 	if ctx.Alive() and (ctx.TargetRoot.Position - ctx.Root.Position).Magnitude <= melee.Range + 1 then
 		hurt(ctx.Target, melee.Damage)
-		FxKit.Slash(CFrame.lookAt(ctx.Root.Position:Lerp(ctx.TargetRoot.Position, 0.6), ctx.TargetRoot.Position), FxKit.ElementColor[Sfx.ElementOf(ctx.Model and ctx.Model.Name or "")] or Color3.fromRGB(255, 90, 80), 1)
-		FxKit.Impact(ctx.TargetRoot.Position, Color3.fromRGB(255, 120, 90), 0.7)
+		local tp = ctx.TargetRoot.Position
+		local dir = (tp - ctx.Root.Position)
+		dir = dir.Magnitude > 0.1 and dir.Unit or nil
+		styledHit(curStyle(), tp, Color3.fromRGB(255, 120, 90), 14, dir) -- v2.23 own melee hit
 		if melee.Trip then
 			slipNow(ctx.Target)
 		end

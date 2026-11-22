@@ -598,6 +598,7 @@ local function runAction(info, fn, ...)
 	info.Hum:MoveTo(info.Root.Position)
 	local args = table.pack(...)
 	task.spawn(function()
+		Abilities.SetStyle(info.Type) -- v2.23: this thread's hits use this character's VFX
 		local ok, err = pcall(fn, table.unpack(args, 1, args.n))
 		if not ok then
 			warn(`[Monsters] {info.Type} ability failed: {err}`)

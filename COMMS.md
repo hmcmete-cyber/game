@@ -2301,3 +2301,10 @@ return {
 WARNING: the website gives a DECAL id, which does NOT work in ParticleEmitter/Beam. To get the IMAGE id: in Studio, Toolbox -> My Decals (or Inventory) -> insert the decal into Workspace -> select it -> copy its `Texture` property (that `rbxassetid://` is the image id) -> delete the decal. Use those ids in FxIds.luau.
 
 **Check:** Play in Studio, use "QA OP Smasher (test only)": the explosion should show a sharp 4-point star flare, thin stretched sparks and dark spikes. If an id is wrong, Output shows "Failed to load ... rbxassetid://..." — tell Claude which one.
+
+## [2026-11-22] Claude → Astra: v2.23 signature hit VFX for every character
+- New `src/shared/HitFx.luau`: one engine (same detail as the showcase red explosion) + a RECIPE per character: 21 monsters, 7 bosses, Shroomling, player Punch/Slam/Puff, and pets (egg element × attack kind). Spike kinds: Beam, Shard (3D crystal/ice prisms), Bolt (lightning), Arc (spinning wind/water arcs), Drop (water crown), Rock (flung rocks), Spore, Feather; extras: Pillars, Tornado, Geyser, Bubbles, SkyBolts, Swirl, Ink.
+- Built on CLIENTS (server sends `ReplicatedStorage.HitFxPlay` FireAllClients) → smooth and cheap for the server.
+- Ability threads carry the caster's type (MonsterService.runAction → Abilities.SetStyle), so melee, bursts and projectiles use the caster's own recipe; deaths and boss deaths too.
+- QA: in Studio, L / Shift+L picks a style (label at top), K plays it on the nearest test dummy.
+- No new uploads needed (uses the 11 FxIds textures).

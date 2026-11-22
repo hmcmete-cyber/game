@@ -69,6 +69,7 @@ CombatService.Hit = hit
 
 local FxKit = require(game:GetService("ReplicatedStorage").Shared.FxKit)
 local WIND = Color3.fromRGB(190, 230, 255)
+local HitFx = require(game:GetService("ReplicatedStorage").Shared.HitFx)
 
 local function puffFx(pos: Vector3)
 	local p = Instance.new("Part")
@@ -105,7 +106,7 @@ local function attack(player: Player, kind: unknown, aim: unknown)
 		local look = root.CFrame.LookVector
 		-- v2.22: gust slash + wind pop in front of the fist
 		FxKit.Slash(CFrame.lookAt(root.Position + look * 3, root.Position + look * 8), WIND, 0.9)
-		FxKit.Impact(root.Position + look * 5, WIND, 0.6)
+		HitFx.Play("PlayerPunch", root.Position + look * 5, 0.6, look)
 		for _, m in targets() do
 			local c = centre(m)
 			if c then
@@ -129,7 +130,7 @@ local function attack(player: Player, kind: unknown, aim: unknown)
 				task.wait()
 			end
 			local pos = root.Position
-			FxKit.Explosion(pos - Vector3.new(0, 2, 0), WIND, 1.1) -- v2.22
+			HitFx.Play("PlayerSlam", pos - Vector3.new(0, 2, 0), 1.1) -- v2.23
 			FxKit.Shockwave(pos - Vector3.new(0, 2.5, 0), spec.Radius * 1.3, WIND)
 			for _, m in targets() do
 				local c = centre(m)
@@ -167,7 +168,7 @@ local function attack(player: Player, kind: unknown, aim: unknown)
 					local size = m:GetExtentsSize()
 					if (c - ball.Position).Magnitude <= math.max(size.X, size.Y, size.Z) / 2 + 1.5 then
 						hit(player, m, spec.Damage, dir, "Puff")
-						FxKit.Burst(ball.Position, WIND, 0.8)
+						HitFx.Play("PlayerPuff", ball.Position, 0.8, dir)
 						conn:Disconnect()
 						ball:Destroy()
 						return

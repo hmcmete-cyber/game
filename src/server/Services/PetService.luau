@@ -264,6 +264,7 @@ local function fxPart(size: Vector3, cf: CFrame, color: Color3, shape: Enum.Part
 end
 
 local FxKit = require(ReplicatedStorage.Shared.FxKit)
+local HitFx = require(ReplicatedStorage.Shared.HitFx)
 
 local EFFECT_COLOR = {
 	Slow = Color3.fromRGB(150, 220, 255), Burn = Color3.fromRGB(255, 130, 50), Shock = Color3.fromRGB(230, 245, 255),
@@ -370,6 +371,10 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 	local dmg = rar.Damage * PetDefs.LevelDamage[lp.Level or 1]
 	local kind = def.Attack.Kind
 	local lvl = (lp.Level or 1) - 1 -- bigger forms = bigger effects
+	local style = HitFx.PetStyle(def.Egg, kind) -- v2.23 element of its egg + attack kind
+	local hdir = (tPos - from.Position)
+	hdir = hdir.Magnitude > 0.1 and hdir.Unit or nil
+	local psc = (0.55 + lvl * 0.3) * (0.8 + rar.Power * 0.12)
 	-- tell the clients which attack animation to play (PetAnimator)
 	local special = kind == "Pulse" or kind == "Chain" or kind == "Lob"
 	lp.Model:SetAttribute("AnimKind", special and "Special" or "Attack")
@@ -385,7 +390,7 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 			end
 			strike(player, lp, target, dmg)
 			FxKit.Slash(CFrame.lookAt(tPos:Lerp(from.Position, 0.3), tPos), color, 0.8 + lvl * 0.25)
-			FxKit.Impact(tPos, color, 0.7 + lvl * 0.3)
+			HitFx.Play(style, tPos, psc, hdir)
 			task.wait(0.15)
 		elseif kind == "Bolt" or kind == "Mend" then
 			local shot = fxPart(Vector3.new(0.6, 0.6, 1.6), CFrame.lookAt(from.Position, tPos), color, nil, 0.6)
@@ -393,7 +398,7 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 			TweenService:Create(shot, TweenInfo.new(0.25), { CFrame = CFrame.lookAt(tPos, tPos + (tPos - from.Position)) }):Play()
 			task.wait(0.25)
 			strike(player, lp, target, dmg)
-			FxKit.Burst(tPos, color, 0.5 + lvl * 0.25)
+			HitFx.Play(style, tPos, psc, hdir)
 		elseif kind == "Lob" then
 			local ball = fxPart(Vector3.one * 1.2, from, color, Enum.PartType.Ball, 1)
 			FxKit.Trail(ball, color, 1.2)
@@ -404,14 +409,14 @@ local function attack(player: Player, root: BasePart, lp, target: Model)
 				task.wait()
 			end
 			ball:Destroy()
-			FxKit.Explosion(tPos, color, 0.6 + lvl * 0.3)
+			HitFx.Play(style, tPos, psc * 1.25)
 			for _, m in monstersNear(tPos, 8) do
 				strike(player, lp, m, dmg * 0.8)
 			end
 		elseif kind == "Pulse" then
 			FxKit.Charge(from.Position, color, 0.6, 0.25)
 			FxKit.Shockwave(tPos, 11, color)
-			FxKit.Burst(tPos, color, 0.8 + lvl * 0.3)
+			HitFx.Play(style, tPos, psc * 1.1)
 			for _, m in monstersNear(tPos, 11) do
 				strike(player, lp, m, dmg * 0.75)
 			end

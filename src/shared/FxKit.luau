@@ -394,7 +394,7 @@ function FxKit.Tornado(pos: Vector3, color: Color3, s: number?, t: number?)
 end
 
 -- crackling bolt from a to b
-function FxKit.Lightning(a: Vector3, b: Vector3, color: Color3, w: number?)
+function FxKit.Lightning(a: Vector3, b: Vector3, color: Color3, w: number?, noEnd: boolean?)
 	local width = w or 0.35
 	local dist = (b - a).Magnitude
 	local n = math.clamp(math.floor(dist / 3), 3, 18)
@@ -420,7 +420,9 @@ function FxKit.Lightning(a: Vector3, b: Vector3, color: Color3, w: number?)
 		Debris:AddItem(seg, 0.3)
 		prev = nextP
 	end
-	FxKit.Impact(b, color, 0.8)
+	if not noEnd then
+		FxKit.Impact(b, color, 0.8)
+	end
 end
 
 function FxKit.Pillar(pos: Vector3, color: Color3, h: number?, t: number?)
@@ -712,6 +714,12 @@ FxKit.ElementColor = {
 	Crystal = Color3.fromRGB(150, 200, 255), Ice = Color3.fromRGB(170, 235, 255), Electric = Color3.fromRGB(140, 170, 255),
 	Fire = Color3.fromRGB(255, 120, 40), Spore = Color3.fromRGB(230, 120, 255), Water = Color3.fromRGB(70, 170, 255),
 	Wind = Color3.fromRGB(200, 255, 230), Earth = Color3.fromRGB(255, 190, 90), Slash = Color3.fromRGB(255, 80, 80),
+}
+
+-- building blocks for HitFx (signature hit effects)
+FxKit.Lib = {
+	Anchor = anchor, Emitter = emitter, EmitNow = emitNow, Light = light, Spike = spike, Ground = groundBelow,
+	Tex = tex, NS = ns, Hot = hot, Set = set, Holder = holder,
 }
 
 return FxKit

@@ -252,6 +252,7 @@ end
 
 -- one-shot particle burst
 local FxKit = require(game:GetService("ReplicatedStorage").Shared.FxKit)
+local HitFx = require(game:GetService("ReplicatedStorage").Shared.HitFx)
 
 -- v2.22: richer particles - white-hot start for glowing colours, size pops
 -- up then shrinks, fades late, brighter glow; untextured ones get a soft glow
@@ -796,8 +797,8 @@ function MonsterDeaths.Play(info, onDone: () -> ())
 				Sfx.At("BossCollapse", pos)
 				collapse(model, pos, color)
 				Sfx.Global("BossDefeat")
-				-- v2.22 cinematic layer: huge explosion + light pillar
-				FxKit.Explosion(pos + Vector3.new(0, 8, 0), color, 3)
+				-- v2.23 cinematic layer: the boss's own signature explosion + light pillar
+				HitFx.Play(typeName, pos + Vector3.new(0, 8, 0), 3.2)
 				FxKit.Pillar(pos, color, 90, 1.6)
 				local f = B[typeName]
 				if f then
@@ -814,7 +815,7 @@ function MonsterDeaths.Play(info, onDone: () -> ())
 				Sfx.At("Death" .. element, pos, Sfx.PitchFor(typeName))
 				-- v2.22: every death pops a layered element explosion
 				local size = model:GetExtentsSize().Magnitude
-				FxKit.Explosion(pos + Vector3.new(0, math.min(size * 0.3, 8), 0), FxKit.ElementColor[element] or Color3.fromRGB(255, 220, 140), math.clamp(size / 12, 0.6, 2))
+				HitFx.Play(typeName, pos + Vector3.new(0, math.min(size * 0.3, 8), 0), math.clamp(size / 10, 0.8, 2.4)) -- v2.23 own death burst
 				local f = D[typeName]
 				local tail
 				if f then

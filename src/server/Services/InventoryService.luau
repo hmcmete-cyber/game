@@ -13,6 +13,7 @@
 --   PerkSpeed, PerkJump, NoSlip, IceGrip, WindImmune, ElectricImmune, LightningImmune
 --   SpeedUntil/SpeedMult, JumpUntil/JumpMult, NitroUntil (server time)
 
+local FxKit = require(game:GetService("ReplicatedStorage").Shared.FxKit)
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -361,7 +362,6 @@ local function aimRay(player: Player, root: BasePart, aim: unknown, range: numbe
 	return workspace:Raycast(root.Position, dir.Unit * range, params), dir.Unit
 end
 
-local FxKit = require(game:GetService("ReplicatedStorage").Shared.FxKit)
 local function beam(from: Vector3, to: Vector3, color: Color3, width: number, life: number)
 	-- v2.22: muzzle flash + impact burst around the laser line
 	FxKit.Impact(from, color, 0.5)

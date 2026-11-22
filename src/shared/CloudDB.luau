@@ -1,4 +1,4 @@
--- CLOUD DATABASE — every cloud in the game (106). Add a line to add a cloud.
+-- CLOUD DATABASE — every cloud in the game (156). Add a line to add a cloud.
 --
 -- C(key, displayName, rarity, options)
 --   key        saved in player data: NEVER rename a key once players have it
@@ -285,5 +285,110 @@ C("Midas", "Midas Cloud", "Mythic", { Category = "Economic", Biomes = ALL, Time 
 	Bonus = { XP = 1000, ItemChance = 1 }, Perk = { Name = "Golden Touch", Desc = "x2.5 coins", CoinMult = 2.5 } })
 C("Pandemonium", "Pandemonium", "Mythic", { Category = "Chaos", Biomes = ALL, Time = "Any", Visual = "Cosmic", Tint = rgb(255, 60, 180), Glow = rgb(120, 255, 255),
 	Perk = { Name = "Total Chaos", Desc = "Chaos buffs (mostly good), Quake, +50% speed & jump", Chaos = true, Ability = "Quake", Speed = 1.5, Jump = 1.5 } })
+
+------------------------------------------------------------------------
+-- v2.35 FIFTY NEW CLOUDS (director: unique designs). New signature
+-- features in CloudVisuals: ears, antlers, umbrella, lantern, gears, ...
+------------------------------------------------------------------------
+C("Bunnypuff", "Bunny Puff", "Common", { Biomes = { "Plateau" }, Time = "Day", Visual = "Cumulus", Tint = rgb(255, 240, 245),
+	Perk = { Name = "Hoppity", Desc = "+14% jump", Jump = 1.14 } })
+C("Kitten", "Kitten Cloud", "Common", { Biomes = { "Coast" }, Time = "Any", Visual = "Cumulus", Tint = rgb(250, 225, 200),
+	Perk = { Name = "Nine Lives", Desc = "8% less damage", DamageResist = 0.08 } })
+C("Acorn", "Acorn Puff", "Common", { Biomes = { "Plateau" }, Time = "Any", Visual = "Tornado", Tint = rgb(205, 160, 110),
+	Perk = { Name = "Squirrel Feet", Desc = "+7% speed", Speed = 1.07 } })
+C("Beanie", "Beanie Cloud", "Common", { Biomes = { "Mountains" }, Time = "Day", Visual = "Snow", Tint = rgb(235, 240, 255),
+	Perk = { Name = "Whirly", Desc = "8% less gravity", Gravity = 0.08 } })
+C("Drizzlebrella", "Brolly Cloud", "Common", { Biomes = { "Marsh" }, Time = "Day", Visual = "Rain", Tint = rgb(170, 190, 220),
+	Perk = { Name = "Dry Head", Desc = "Acid rain can't hurt you", PoisonImmune = true } })
+C("Lanternfly", "Lantern Fly", "Common", { Biomes = { "Mushroom" }, Time = "Night", Visual = "Aurora", Tint = rgb(255, 215, 150), Glow = rgb(255, 200, 100),
+	Perk = { Name = "Night Light", Desc = "+6% coins", CoinMult = 1.06 } })
+C("Ribbonette", "Ribbon Puff", "Common", { Biomes = { "Coast" }, Time = "Day", Visual = "Cumulus", Tint = rgb(255, 210, 230),
+	Perk = { Name = "Gift Wrap", Desc = "+1 HP/s", Regen = 1 } })
+C("Professor", "Professor Puff", "Common", { Biomes = { "Canyon" }, Time = "Any", Visual = "Chrono", Tint = rgb(240, 230, 200),
+	Perk = { Name = "Studious", Desc = "Items last 15% longer", ItemTime = 1.15 } })
+C("Snugscarf", "Snug Cloud", "Common", { Biomes = { "Mountains" }, Time = "Night", Visual = "Snow", Tint = rgb(245, 248, 255),
+	Perk = { Name = "Cozy", Desc = "No slipping on ice", IceGrip = true } })
+C("Melody", "Melody Cloud", "Common", { Biomes = { "Plateau" }, Time = "Any", Visual = "Aurora", Tint = rgb(215, 235, 255),
+	Perk = { Name = "Rhythm", Desc = "+6% speed", Speed = 1.06 } })
+C("Pricklepuff", "Prickle Puff", "Common", { Biomes = { "Canyon" }, Time = "Day", Visual = "Cumulus", Tint = rgb(240, 225, 195),
+	Perk = { Name = "Spiny", Desc = "10% less knockback", BlastResist = true } })
+C("Bubbleglass", "Snorkel Cloud", "Common", { Biomes = { "Coast" }, Time = "Any", Visual = "Rain", Tint = rgb(170, 225, 240),
+	Perk = { Name = "Diver", Desc = "+10% jump", Jump = 1.1 } })
+C("Jinglebell", "Jingle Cloud", "Common", { Biomes = { "Mountains" }, Time = "Any", Visual = "Snow", Tint = rgb(255, 250, 240),
+	Perk = { Name = "Jingle", Desc = "+5% coins", CoinMult = 1.05 } })
+C("Kiteling", "Kite Cloud", "Common", { Biomes = { "Plateau" }, Time = "Day", Visual = "Cumulus", Tint = rgb(230, 245, 255),
+	Perk = { Name = "Updraft", Desc = "Wind can't push you", WindImmune = true } })
+C("Stagmist", "Stag Mist", "Rare", { Biomes = { "Mountains" }, Time = "Any", Visual = "Cumulus", Tint = rgb(220, 215, 200),
+	Perk = { Name = "Stag Leap", Desc = "+18% jump", Jump = 1.18 } })
+C("Sweetcane", "Candy Cane Cloud", "Rare", { Biomes = { "Mountains" }, Time = "Night", Visual = "Cumulus", Tint = rgb(255, 235, 240),
+	Perk = { Name = "Sugar Rush", Desc = "+12% speed", Speed = 1.12 } })
+C("Jackolantern", "Jack-o-Cloud", "Rare", { Biomes = { "Mushroom" }, Time = "Night", Visual = "Storm", Tint = rgb(90, 70, 90), Glow = rgb(255, 150, 40),
+	Perk = { Name = "Spooky", Desc = "+10% coins at night", CoinMult = 1.1 } })
+C("Squidpuff", "Squid Puff", "Rare", { Biomes = { "Coast" }, Time = "Any", Visual = "Rain", Tint = rgb(200, 170, 230),
+	Perk = { Name = "Ink Jet", Desc = "+10% speed", Speed = 1.1 } })
+C("Lovecloud", "Heartbeat Cloud", "Rare", { Biomes = { "Plateau" }, Time = "Day", Visual = "Aurora", Tint = rgb(255, 200, 220), Glow = rgb(255, 120, 160),
+	Perk = { Name = "Warm Heart", Desc = "+2 HP/s", Regen = 2 } })
+C("Wingflutter", "Flutter Cloud", "Rare", { Biomes = { "Mushroom" }, Time = "Day", Visual = "Aurora", Tint = rgb(220, 240, 255), Glow = rgb(160, 220, 255),
+	Perk = { Name = "Flutter", Desc = "12% less gravity", Gravity = 0.12 } })
+C("Cogwork", "Cogwork Cloud", "Rare", { Biomes = { "Canyon" }, Time = "Any", Visual = "Chrono", Tint = rgb(210, 195, 160),
+	Perk = { Name = "Tinker", Desc = "Items last 20% longer", ItemTime = 1.2 } })
+C("Brainstorm", "Brainstorm", "Rare", { Biomes = { "Marsh" }, Time = "Any", Visual = "Storm", Tint = rgb(110, 115, 150), Glow = rgb(255, 245, 160),
+	Perk = { Name = "Bright Idea", Desc = "Shock immune", ElectricImmune = true } })
+C("Thornback", "Thornback Cloud", "Rare", { Biomes = { "Volcanic" }, Time = "Any", Visual = "Storm", Tint = rgb(95, 85, 105), Glow = rgb(255, 120, 60),
+	Perk = { Name = "Thorny", Desc = "12% less damage", DamageResist = 0.12 } })
+C("Maplefall", "Maplefall", "Rare", { Biomes = { "Plateau" }, Time = "Any", Visual = "Tornado", Tint = rgb(230, 150, 80),
+	Perk = { Name = "Autumn Wind", Desc = "+10% speed, wind-proof", Speed = 1.1, WindImmune = true } })
+C("Sunbrella", "Sunbrella", "Rare", { Biomes = { "Canyon" }, Time = "Day", Visual = "Solar", Tint = rgb(255, 230, 160),
+	Perk = { Name = "Shade", Desc = "Burn immune", FireImmune = true } })
+C("Choirpuff", "Choir Cloud", "Rare", { Biomes = { "Coast" }, Time = "Night", Visual = "Aurora", Tint = rgb(200, 220, 255), Glow = rgb(200, 220, 255),
+	Perk = { Name = "Hymn", Desc = "+2 HP/s", Regen = 2 } })
+C("Lampwick", "Lampwick Cloud", "Rare", { Biomes = { "Marsh" }, Time = "Night", Visual = "Phoenix", Tint = rgb(255, 190, 120), Glow = rgb(255, 200, 90),
+	Perk = { Name = "Wick", Desc = "+8% coins", CoinMult = 1.08 } })
+C("Kittycomet", "Comet Kitty", "Rare", { Biomes = { "Canyon" }, Time = "Night", Visual = "Cosmic", Tint = rgb(120, 90, 200), Glow = rgb(255, 240, 180),
+	Perk = { Name = "Star Paws", Desc = "+12% jump", Jump = 1.12 } })
+C("Reindeer", "Reindeer Storm", "Epic", { Biomes = { "Mountains" }, Time = "Night", Visual = "Snow", Tint = rgb(235, 240, 250), Glow = rgb(255, 90, 90),
+	Perk = { Name = "Sleigh Ride", Desc = "+18% speed on any ground", Speed = 1.18, IceGrip = true } })
+C("Krakenling", "Krakenling", "Epic", { Biomes = { "Coast" }, Time = "Night", Visual = "Storm", Tint = rgb(70, 60, 110), Glow = rgb(160, 90, 255),
+	Perk = { Name = "Deep Grip", Desc = "20% less damage", DamageResist = 0.2 } })
+C("Clockwork", "Clockwork Titan", "Epic", { Biomes = { "Canyon" }, Time = "Any", Visual = "Chrono", Tint = rgb(200, 180, 130), Glow = rgb(255, 220, 140),
+	Perk = { Name = "Overclock", Desc = "Items last 35% longer", ItemTime = 1.35 } })
+C("Sugarplum", "Sugarplum", "Epic", { Biomes = { "Mushroom" }, Time = "Any", Visual = "Aurora", Tint = rgb(255, 190, 230), Glow = rgb(255, 150, 210),
+	Perk = { Name = "Sweet Tooth", Desc = "+15% coins", CoinMult = 1.15 } })
+C("Gourdlord", "Gourd Lord", "Epic", { Biomes = { "Mushroom" }, Time = "Night", Visual = "Void", Tint = rgb(60, 40, 70), Glow = rgb(255, 140, 40),
+	Perk = { Name = "Harvest", Desc = "+3 HP/s", Regen = 3 } })
+C("Monarchwing", "Monarch Wing", "Epic", { Biomes = { "Plateau" }, Time = "Day", Visual = "Phoenix", Tint = rgb(255, 170, 90), Glow = rgb(255, 200, 120),
+	Perk = { Name = "Migration", Desc = "18% less gravity", Gravity = 0.18 } })
+C("Thunderbunny", "Thunder Bunny", "Epic", { Biomes = { "Marsh" }, Time = "Any", Visual = "Storm", Tint = rgb(90, 95, 130), Glow = rgb(255, 255, 150),
+	Perk = { Name = "Zap Hop", Desc = "+25% jump, shock immune", Jump = 1.25, ElectricImmune = true } })
+C("Inventor", "Inventor Cloud", "Epic", { Biomes = { "Canyon" }, Time = "Day", Visual = "Solar", Tint = rgb(255, 225, 150), Glow = rgb(255, 245, 170),
+	Perk = { Name = "Eureka", Desc = "Blink ability", Ability = "Blink" } })
+C("Orchestra", "Orchestra", "Epic", { Biomes = { "Coast" }, Time = "Any", Visual = "Aurora", Tint = rgb(180, 210, 255), Glow = rgb(220, 240, 255),
+	Perk = { Name = "Crescendo", Desc = "Dazzle ability", Ability = "Dazzle" } })
+C("Cactusking", "Cactus King", "Epic", { Biomes = { "Canyon" }, Time = "Day", Visual = "Solar", Tint = rgb(240, 210, 140),
+	Perk = { Name = "Desert Lord", Desc = "Burn immune, +12% speed", FireImmune = true, Speed = 1.12 } })
+C("Stormkite", "Storm Kite", "Epic", { Biomes = { "Plateau" }, Time = "Any", Visual = "Storm", Tint = rgb(100, 110, 140), Glow = rgb(200, 230, 255),
+	Perk = { Name = "Gale Rider", Desc = "Lightning can't hit you", LightningImmune = true } })
+C("Elderstag", "Elder Stag", "Legendary", { Biomes = { "Mountains" }, Time = "Night", Visual = "Aurora", Tint = rgb(210, 255, 230), Glow = rgb(140, 255, 200),
+	Perk = { Name = "Forest King", Desc = "+25% speed, +3 HP/s", Speed = 1.25, Regen = 3 } })
+C("Abyssquid", "Abyss Squid", "Legendary", { Biomes = { "Coast" }, Time = "Night", Visual = "Void", Tint = rgb(30, 20, 60), Glow = rgb(120, 80, 255),
+	Perk = { Name = "Abyssal", Desc = "30% less damage, blast resist", DamageResist = 0.3, BlastResist = true } })
+C("Grandclock", "Grand Clockwork", "Legendary", { Biomes = { "Canyon" }, Time = "Any", Visual = "Chrono", Tint = rgb(230, 200, 130), Glow = rgb(255, 230, 150),
+	Perk = { Name = "Time Lord", Desc = "Items last 60% longer", ItemTime = 1.6 } })
+C("Heartqueen", "Queen of Hearts", "Legendary", { Biomes = { "Plateau" }, Time = "Day", Visual = "Phoenix", Tint = rgb(255, 120, 150), Glow = rgb(255, 180, 200),
+	Perk = { Name = "Royal Love", Desc = "+5 HP/s", Regen = 5 } })
+C("Pumpkinking", "Pumpkin King", "Legendary", { Biomes = { "Mushroom" }, Time = "Night", Visual = "Mythic", Tint = rgb(50, 30, 60), Glow = rgb(255, 140, 40),
+	Perk = { Name = "Halloween", Desc = "+30% coins", CoinMult = 1.3 } })
+C("Skybutterfly", "Sky Butterfly", "Legendary", { Biomes = { "Mushroom" }, Time = "Day", Visual = "Aurora", Tint = rgb(200, 240, 255), Glow = rgb(255, 190, 240),
+	Perk = { Name = "Featherlight", Desc = "30% less gravity, +20% jump", Gravity = 0.3, Jump = 1.2 } })
+C("Maestro", "Maestro", "Legendary", { Biomes = { "Coast" }, Time = "Any", Visual = "Solar", Tint = rgb(255, 235, 190), Glow = rgb(255, 250, 200),
+	Perk = { Name = "Encore", Desc = "Blink ability, +20% speed", Ability = "Blink", Speed = 1.2 } })
+C("Krakenking", "Kraken King", "Mythic", { Biomes = { "Coast" }, Time = "Night", Visual = "Mythic", Tint = rgb(25, 15, 50), Glow = rgb(150, 90, 255),
+	Perk = { Name = "Sea Sovereign", Desc = "40% less damage, Quake ability", DamageResist = 0.4, Ability = "Quake" } })
+C("Cosmicstag", "Cosmic Stag", "Mythic", { Biomes = { "Mountains" }, Time = "Night", Visual = "Cosmic", Tint = rgb(80, 50, 160), Glow = rgb(200, 170, 255),
+	Perk = { Name = "Starborne", Desc = "+40% speed & jump", Speed = 1.4, Jump = 1.4 } })
+C("Machina", "Deus Machina", "Mythic", { Biomes = { "Canyon" }, Time = "Any", Visual = "Chrono", Tint = rgb(240, 215, 140), Glow = rgb(255, 240, 170),
+	Perk = { Name = "Perpetual", Desc = "Items last 2x, x1.5 coins", ItemTime = 2, CoinMult = 1.5 } })
+C("Lovebird", "Eternal Lovebird", "Mythic", { Biomes = { "Plateau" }, Time = "Day", Visual = "Phoenix", Tint = rgb(255, 140, 170), Glow = rgb(255, 200, 220),
+	Perk = { Name = "True Love", Desc = "+8 HP/s, 25% less damage", Regen = 8, DamageResist = 0.25 } })
 
 return list

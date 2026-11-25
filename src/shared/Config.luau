@@ -3,7 +3,7 @@
 
 local Config = {
 	GameName = "Steal a Cloud",
-	Version = "2.41", -- shown in the server log (F9) so you can see which build a server runs
+	Version = "2.42", -- shown in the server log (F9) so you can see which build a server runs
 	-- v2.33 director: the QA account (UserId 2459147914) gets its QA tools in
 	-- EVERY server (public ones too) until told otherwise. false = Studio +
 	-- private servers only. Other players never get them (checked on the server).

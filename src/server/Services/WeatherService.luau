@@ -24,6 +24,7 @@ local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Weather = require(ReplicatedStorage.Shared.WeatherTypes)
@@ -893,11 +894,46 @@ local function setupStorm()
 	end)
 end
 
+-- v2.42 (director): every wild cloud is born in the glowing Sky Heart crystal
+-- above the updraft and flies out to its spot in a high arc
+local heartCrystal: BasePart? = nil
+local function birthPos(): Vector3
+	if not (heartCrystal and heartCrystal.Parent) then
+		local model = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("HeartCrystal", true)
+		heartCrystal = model and (model:IsA("Model") and model.PrimaryPart or model) :: BasePart?
+	end
+	return heartCrystal and heartCrystal.Position or stormPos
+end
+
+local function flyArc(sphere: BasePart, from: Vector3, to: Vector3, onDone: () -> ())
+	local dist = (to - from).Magnitude
+	local dur = math.clamp(dist / 130, 1.2, 5)
+	local mid = (from + to) / 2 + Vector3.new(0, math.min(dist * 0.25, 90), 0)
+	local t0 = os.clock()
+	local conn
+	conn = RunService.Heartbeat:Connect(function()
+		if not sphere.Parent then
+			conn:Disconnect()
+			return
+		end
+		local a = math.min((os.clock() - t0) / dur, 1)
+		local e = 1 - (1 - a) ^ 2 -- ease out
+		local p = from:Lerp(mid, e):Lerp(mid:Lerp(to, e), e)
+		sphere.CFrame = CFrame.new(p) * CFrame.Angles(0, e * math.pi * 2, 0)
+		if a >= 1 then
+			conn:Disconnect()
+			sphere.CFrame = CFrame.new(to)
+			onDone()
+		end
+	end)
+end
+
 local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean, fromPos: Vector3?)
 	local def = Weather.Types[typeName]
 	local sphere = makeSphere(typeName, shiny, 1)
 	local base = spawnPart.Position + Vector3.new(0, 1.5, 0)
-	moveAssembly(sphere, CFrame.new(fromPos or stormPos)) -- born inside the storm (or a meteor)
+	local start = fromPos or birthPos() -- born in the Sky Heart crystal (or a meteor)
+	moveAssembly(sphere, CFrame.new(start))
 	addLabel(sphere, shiny and `* SHINY {def.DisplayName} *` or def.DisplayName, shiny and Weather.ShinyColor or Color3.new(1, 1, 1))
 	local prompt = makePrompt(sphere, "CatchPrompt", "Catch", def.DisplayName,
 		typeName == "Mythic" and Config.MythicCatchHold or Config.CatchHold)
@@ -920,11 +956,11 @@ local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean, 
 	wild[sphere] = info
 	occupied[spawnPart] = sphere
 
-	-- Fly from the storm down to its spot
-	local tween = TweenService:Create(sphere, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		CFrame = CFrame.new(base),
-	})
-	tween.Completed:Connect(function()
+	if not fromPos then
+		burstAt(start, shiny and Weather.ShinyColor or def.Color, 8)
+	end
+	-- fly from the crystal out to its spot
+	flyArc(sphere, start, base, function()
 		if wild[sphere] then
 			info.Ready = true
 			prompt:SetAttribute("Ready", true)
@@ -937,7 +973,6 @@ local function spawnWild(spawnPart: BasePart, typeName: string, shiny: boolean, 
 			CollectionService:AddTag(sphere, "FloatingIsland")
 		end
 	end)
-	tween:Play()
 end
 
 local function countWild()

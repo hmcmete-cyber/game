@@ -20,7 +20,7 @@
 --   CrateArena/CrateSpawns/CrateN (Part)
 --   Abyss/* (Parts: touching them kills — the Death Cloud floor)
 --   Continent/* floor parts carry ZoneName/ZoneColor/Biome/Warning attributes (HUD)
---   Expansion/ExpansionPadN — empty pads next to each base for future buildings
+--   Expansion/ — pet huts behind each base + the shared nursery
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -267,7 +267,7 @@ end
 
 -- Bump when the generated layout changes: older generated maps are rebuilt
 -- automatically. A hand-made map keeps itself by setting attribute Custom = true.
-local MAP_VERSION = "2.22" -- v2.39 Hephaestus + nursery on the hub hexagon; wider updraft
+local MAP_VERSION = "2.23" -- v2.39 Hephaestus + nursery on the hub hexagon; wider updraft
 local BASE_RING = 240 -- v2.13: distance of the 12 bases from the hub centre
 local DEATH_Y = 10 -- top of the death cloud floor (v1.6: -20 -> 0, v2.0: -> 10)
 
@@ -454,14 +454,7 @@ local function buildPlaceholder(): Instance
 			end
 			newPart(decor, "BridgeRail" .. i .. "_" .. side, Vector3.new(0.4, 0.4, bridgeLen - 2), bridge.CFrame * CFrame.new(side * 3.2, 2.7, 0), Color3.fromHSV((i - 1) / 12, 0.45, 1), {})
 		end
-		-- expansion pad (empty) + short connector
-		local padPos = center + side * 44 + Vector3.new(0, -0.5, 0)
-		local pad = newPart(expansion, "ExpansionPad" .. i, Vector3.new(20, 1, 20), CFrame.lookAt(padPos, padPos + dir), Color3.fromRGB(220, 225, 235), {
-			Material = Enum.Material.Concrete,
-		})
-		pad:SetAttribute("ExpansionSlot", i)
-		local linkPos = center + side * 27 + Vector3.new(0, -0.5, 0)
-		newPart(expansion, "ExpansionLink" .. i, Vector3.new(16, 1, 6), CFrame.lookAt(linkPos, linkPos + dir), hubColor, { Material = Enum.Material.Marble })
+		-- v2.42 (director): the empty expansion pad beside each base is gone
 		-- v2.12: pet hut on this pad. The egg nursery gets its own pad on the far
 		-- side of the base (straight across from the bridge): the pad mirrored
 		-- across the base would overlap the neighbouring base's pet hut (bases
@@ -527,9 +520,82 @@ local function buildPlaceholder(): Instance
 	updraft:SetAttribute("BottomY", Y)
 	updraft:SetAttribute("DownSpeed", 70)
 	zoneSign(signs, "UpdraftDownSign", Vector3.new(0, UP + 14, 0), "DOWN", Color3.fromRGB(255, 200, 120))
-	newPart(decor, "UpdraftPad", Vector3.new(0.6, 34, 34), CFrame.new(0, Y + 0.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(150, 220, 255), {
-		Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, CanCollide = false,
+	newPart(decor, "UpdraftPad", Vector3.new(0.6, 34, 34), CFrame.new(0, Y + 0.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(225, 240, 255), {
+		Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, CanCollide = false, Transparency = 0.35,
 	})
+	-- v2.42 (director): the tube is a CLOUD now - a twisting cloud vortex
+	-- (3 tinted helix strands + wispy rings, widening upward like a funnel),
+	-- unlike any wild cloud. The force-field column itself is invisible; the
+	-- client spins the vortex (Client/VortexFx). Not in AirColumns (the
+	-- updraft overlap test only looks there) and CanQuery off anyway.
+	updraft.Transparency = 1
+	do
+		local vortex = Instance.new("Model")
+		vortex.Name = "UpdraftVortex"
+		vortex.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+		local y0, y1 = Y + 14, UP - 16
+		local TINTS = { Color3.fromRGB(255, 255, 255), Color3.fromRGB(220, 205, 255), Color3.fromRGB(190, 230, 255) }
+		local puffProps = {
+			Shape = Enum.PartType.Ball, Material = Enum.Material.SmoothPlastic, CanCollide = false, CanQuery = false, CanTouch = false,
+			CastShadow = false, Transparency = 0.2,
+		}
+		local n = 0
+		for strand = 1, 3 do
+			local h = y0
+			while h <= y1 do
+				local f = (h - y0) / (y1 - y0) -- 0 bottom .. 1 top
+				local r = 16 + f * 6
+				local a = strand / 3 * math.pi * 2 + f * math.pi * 5 -- 2.5 turns
+				local size = 5 + f * 4 + rng:NextNumber(-0.6, 0.6)
+				n += 1
+				local p = newPart(vortex, "Puff" .. n, Vector3.one * size, CFrame.new(math.cos(a) * r, h, math.sin(a) * r), TINTS[strand], puffProps)
+				p:SetAttribute("Strand", strand)
+				-- a smaller trailing puff on the outside makes each strand fluffy
+				if n % 2 == 0 then
+					n += 1
+					local p2 = newPart(vortex, "Puff" .. n, Vector3.one * size * 0.6, CFrame.new(math.cos(a - 0.18) * (r + 2.2), h - 1.5, math.sin(a - 0.18) * (r + 2.2)), TINTS[strand]:Lerp(Color3.new(1, 1, 1), 0.5), puffProps)
+					p2:SetAttribute("Strand", strand)
+				end
+				h += 6
+			end
+		end
+		-- wispy rings every ~30 studs, turning the other way
+		for k = 0, 4 do
+			local h = y0 + 12 + k * ((y1 - y0 - 24) / 4)
+			local f = (h - y0) / (y1 - y0)
+			for j = 0, 11 do
+				local a = j / 12 * math.pi * 2
+				local r = 18 + f * 6
+				n += 1
+				local w = newPart(vortex, "Wisp" .. n, Vector3.new(6, 2.2, 3.2), CFrame.new(math.cos(a) * r, h, math.sin(a) * r) * CFrame.Angles(0, -a, 0),
+					Color3.fromRGB(245, 250, 255), {
+						Material = Enum.Material.SmoothPlastic, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.45,
+					})
+				w:SetAttribute("Strand", 0)
+			end
+		end
+		-- soft inner glow + sparkles rising through the middle
+		local core = newPart(vortex, "Glow", Vector3.new(2, 2, 2), CFrame.new(0, (y0 + y1) / 2, 0), Color3.fromRGB(200, 235, 255), {
+			Transparency = 1, CanCollide = false, CanQuery = false, CanTouch = false,
+		})
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		sparkle.Color = ColorSequence.new(Color3.fromRGB(220, 240, 255), Color3.fromRGB(230, 210, 255))
+		sparkle.LightEmission = 0.8
+		sparkle.Size = NumberSequence.new(0.8, 0)
+		sparkle.Lifetime = NumberRange.new(2, 3)
+		sparkle.Rate = 30
+		sparkle.Speed = NumberRange.new(40, 60)
+		sparkle.EmissionDirection = Enum.NormalId.Top
+		sparkle.SpreadAngle = Vector2.new(20, 20)
+		sparkle.Parent = core
+		local light = Instance.new("PointLight")
+		light.Range = 40
+		light.Brightness = 1.2
+		light.Color = Color3.fromRGB(200, 225, 255)
+		light.Parent = core
+		vortex.Parent = decor
+	end
 	zoneSign(signs, "UpdraftSign", Vector3.new(0, Y + 12, 0), "UP!", Color3.fromRGB(190, 235, 255))
 
 	------------------------------------------------------------------
@@ -856,6 +922,7 @@ function MapService.AssignRooftop(player: Player)
 			sign.Size = UDim2.fromOffset(220, 50)
 			sign.StudsOffset = Vector3.new(0, 6, 0)
 			sign.AlwaysOnTop = false
+			sign.MaxDistance = 450 -- v2.42: no base names floating in the far sky
 			local label = Instance.new("TextLabel")
 			label.Size = UDim2.fromScale(1, 1)
 			label.BackgroundTransparency = 1

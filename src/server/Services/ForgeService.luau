@@ -20,7 +20,7 @@ local TotemModels = require(ReplicatedStorage.Shared.TotemModels)
 local ForgeService = {}
 
 local DataService, Remotes
-local REALM_Y = 1400
+local REALM_Y = 400
 local realmSpots = {} -- [biome] = CFrame where you arrive
 local altarSpots = {} -- [biome] = CFrame back at the temple
 
@@ -230,21 +230,6 @@ end
 ------------------------------------------------------------------------
 -- realms (placeholders: themed platform + sign + return portal)
 ------------------------------------------------------------------------
-local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, props)
-	local p = Instance.new("Part")
-	p.Name = name
-	p.Anchored = true
-	p.Size = size
-	p.CFrame = cf
-	p.Color = color
-	p.TopSurface = Enum.SurfaceType.Smooth
-	for k, v in props or {} do
-		(p :: any)[k] = v
-	end
-	p.Parent = parent
-	return p
-end
-
 local function teleport(player: Player, cf: CFrame)
 	local char = player.Character
 	if not char then
@@ -256,63 +241,66 @@ local function teleport(player: Player, cf: CFrame)
 	char:PivotTo(cf + Vector3.new(0, 4, 0))
 end
 
+-- v2.42 (director): each realm is a huge sealed, themed cube built by
+-- RealmBuilder, parked far away from the world (x/z ~9000+) so it is never
+-- seen from the map, and not Persistent (only streamed near you)
 local function buildRealms()
-	local folder = Instance.new("Model")
+	local RealmBuilder = require(script.Parent:WaitForChild("RealmBuilder"))
+	local folder = Instance.new("Folder")
 	folder.Name = "Realms"
-	folder.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+	folder.Parent = workspace
 	for i, biome in ForgeDefs.Biomes do
 		local t = ForgeDefs.Totems[biome]
-		local center = Vector3.new(-3000 + i * 500, REALM_Y, 3000)
-		local m = Instance.new("Model")
-		m.Name = biome .. "Realm"
-		local deck = part(m, "Floor", Vector3.new(140, 4, 140), CFrame.new(center), t.Color:Lerp(Color3.new(1, 1, 1), 0.35), { Material = Enum.Material.Slate })
-		deck.TopSurface = Enum.SurfaceType.Studs
-		part(m, "Rim", Vector3.new(146, 2, 146), CFrame.new(center - Vector3.new(0, 2.5, 0)), t.Color, { Material = Enum.Material.Neon })
-		-- a few themed pillars so it reads as that biome
-		for k = 1, 8 do
-			local a = k / 8 * math.pi * 2
-			local p = center + Vector3.new(math.cos(a) * 55, 0, math.sin(a) * 55)
-			part(m, "Pillar" .. k, Vector3.new(5, 18 + (k % 3) * 6, 5), CFrame.new(p + Vector3.new(0, 11, 0)) * CFrame.Angles(0, a, 0), t.Color:Lerp(Color3.new(0, 0, 0), 0.25))
-			part(m, "PillarGlow" .. k, Vector3.one * 3, CFrame.new(p + Vector3.new(0, 23 + (k % 3) * 6, 0)), t.Color, { Shape = Enum.PartType.Ball, Material = Enum.Material.Neon, CanCollide = false })
+		local center = Vector3.new(9000 + (i - 1) * 700, REALM_Y, 9000)
+		local ok, built = pcall(RealmBuilder.Build, folder, biome, center, t.Realm, Random.new(7000 + i))
+		if not ok or not built then
+			warn("[Forge] realm build failed", biome, built)
+			continue
 		end
-		-- sign
-		local sign = part(m, "Sign", Vector3.new(30, 8, 1), CFrame.new(center + Vector3.new(0, 14, -40)), Color3.fromRGB(30, 30, 45))
-		local gui = Instance.new("SurfaceGui")
-		gui.Face = Enum.NormalId.Back
-		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-		gui.PixelsPerStud = 30
-		gui.LightInfluence = 0
-		local label = Instance.new("TextLabel")
-		label.Size = UDim2.fromScale(1, 1)
-		label.BackgroundTransparency = 1
-		label.Font = Enum.Font.FredokaOne
-		label.TextScaled = true
-		label.TextColor3 = t.Color:Lerp(Color3.new(1, 1, 1), 0.4)
-		label.Text = `{t.Realm}\ncoming soon`
-		label.Parent = gui
-		gui.Parent = sign
-		-- arrival point + return portal
-		local arrive = CFrame.new(center + Vector3.new(0, 3, 20))
-		realmSpots[biome] = arrive
-		local ring = part(m, "ReturnPortal", Vector3.new(1, 14, 14), CFrame.new(center + Vector3.new(0, 9, 45)) * CFrame.Angles(0, math.pi / 2, 0), t.Color,
-			{ Shape = Enum.PartType.Cylinder, Material = Enum.Material.Neon, Transparency = 0.3, CanCollide = false })
+		realmSpots[biome] = built.Arrive
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.ActionText = "Return"
 		prompt.ObjectText = "Portal home"
 		prompt.HoldDuration = 0.5
 		prompt.MaxActivationDistance = 14
 		prompt.RequiresLineOfSight = false
-		prompt.Parent = ring
+		prompt.Parent = built.Portal
 		prompt.Triggered:Connect(function(player)
 			local back = altarSpots[biome]
 			if back then
 				teleport(player, back)
-				hint(player, "Back from " .. t.Realm .. "!", 3)
+				hint(player, "Back from the " .. t.Realm .. "!", 3)
 			end
 		end)
-		m.Parent = folder
+		-- thunder bog: lightning bolts flash now and then
+		local bolts = {}
+		for _, d in built.Model:GetDescendants() do
+			if d:IsA("BasePart") and d:GetAttribute("Lightning") then
+				table.insert(bolts, d)
+			end
+		end
+		if #bolts > 0 then
+			task.spawn(function()
+				while built.Model.Parent do
+					task.wait(math.random(30, 70) / 10)
+					local bolt = bolts[math.random(1, #bolts)]
+					local flash = bolt:FindFirstChild("Flash") :: PointLight?
+					for _ = 1, math.random(1, 2) do
+						bolt.Transparency = 0.05
+						if flash then
+							flash.Brightness = 8
+						end
+						task.wait(0.09)
+						bolt.Transparency = 1
+						if flash then
+							flash.Brightness = 0
+						end
+						task.wait(0.07)
+					end
+				end
+			end)
+		end
 	end
-	folder.Parent = workspace
 end
 
 ------------------------------------------------------------------------
